@@ -1,12 +1,9 @@
 import unittest
 
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
-from mavis.tools import (
-    _convert_tool_row,
-    SUPPORTED_TOOL,
-    _parse_transabyss,
-)
-from mavis.tools.vcf import parse_bnd_alt as _parse_bnd_alt, convert_record as _parse_vcf_record
+from mavis.tools import SUPPORTED_TOOL, _convert_tool_row, _parse_transabyss
+from mavis.tools.vcf import convert_record as _parse_vcf_record
+from mavis.tools.vcf import parse_bnd_alt as _parse_bnd_alt
 
 from .mock import Mock
 
@@ -285,8 +282,8 @@ class TestManta(unittest.TestCase):
         self.assertEqual(9412400, bpp.break2.start)
         self.assertEqual(9412404, bpp.break2.end)
         self.assertEqual('21', bpp.break2.chr)
-        print(bpp, bpp.tracking_id)
-        self.assertEqual('manta-MantaDEL:20644:0:2:0:0:0', bpp.tracking_id)
+        print(bpp, bpp.data['tracking_id'])
+        self.assertEqual('manta-MantaDEL:20644:0:2:0:0:0', bpp.data['tracking_id'])
 
     def test_convert_duplication(self):
         row = Mock(
@@ -302,7 +299,7 @@ class TestManta(unittest.TestCase):
         bpp = bpp_list[0]
         self.assertEqual('1', bpp.break1.chr)
         self.assertEqual('1', bpp.break2.chr)
-        self.assertEqual('manta-MantaDUP:TANDEM:22477:0:1:0:9:0', bpp.tracking_id)
+        self.assertEqual('manta-MantaDUP:TANDEM:22477:0:1:0:9:0', bpp.data['tracking_id'])
 
     def test_non_trans_bnd(self):
         row = Mock(
@@ -330,7 +327,7 @@ class TestManta(unittest.TestCase):
         self.assertEqual(234912188, bpp.break2.start)
         self.assertEqual('R', bpp.break1.orient)
         self.assertEqual('R', bpp.break2.orient)
-        self.assertEqual('manta-MantaBND:207:0:1:0:0:0:0', bpp.tracking_id)
+        self.assertEqual('manta-MantaBND:207:0:1:0:0:0:0', bpp.data['tracking_id'])
         self.assertEqual(1, len(bpp_list))
 
     def test_non_trans_bnd_from_mate(self):
@@ -359,7 +356,7 @@ class TestManta(unittest.TestCase):
         self.assertEqual(234912188, bpp.break2.start)
         self.assertEqual('R', bpp.break1.orient)
         self.assertEqual('R', bpp.break2.orient)
-        self.assertEqual('manta-MantaBND:207:0:1:0:0:0:1', bpp.tracking_id)
+        self.assertEqual('manta-MantaBND:207:0:1:0:0:0:1', bpp.data['tracking_id'])
         self.assertEqual(1, len(bpp_list))
 
 
@@ -386,7 +383,7 @@ class TestDefuse(unittest.TestCase):
         self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
-        self.assertEqual('defuse-1', bpp.tracking_id)
+        self.assertEqual('defuse-1', bpp.data['tracking_id'])
 
     def test_convert_translocation(self):
         row = {
@@ -410,7 +407,7 @@ class TestDefuse(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
-        self.assertEqual('defuse-1', bpp.tracking_id)
+        self.assertEqual('defuse-1', bpp.data['tracking_id'])
 
     def test_convert_indel(self):
         row = {
@@ -434,7 +431,7 @@ class TestDefuse(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
-        self.assertEqual('defuse-1', bpp.tracking_id)
+        self.assertEqual('defuse-1', bpp.data['tracking_id'])
 
     def test_convert_inversion(self):
         row = {
@@ -458,7 +455,7 @@ class TestDefuse(unittest.TestCase):
         self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
         self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
         self.assertEqual(False, bpp.stranded)
-        self.assertEqual('defuse-1', bpp.tracking_id)
+        self.assertEqual('defuse-1', bpp.data['tracking_id'])
 
 
 class TestChimerascan(unittest.TestCase):

@@ -37,7 +37,6 @@ def main(
     library: str,
     config: Dict,
     start_time=int(time.time()),
-    **kwargs
 ):
     """
     Args:
@@ -225,11 +224,11 @@ def main(
         aligner_fa_input_file=contig_aligner_fa,
         aligner_output_file=contig_aligner_output,
         clean_files=config['validate.clean_aligner_files'],
-        aligner=kwargs.get('aligner', config['validate.aligner']),
+        aligner=config['validate.aligner'],
         aligner_reference=config['reference.aligner_reference'][0],
         aligner_output_log=contig_aligner_log,
-        blat_min_identity=kwargs.get('blat_min_identity', config['validate.blat_min_identity']),
-        blat_limit_top_aln=kwargs.get('blat_limit_top_aln', config['validate.blat_limit_top_aln']),
+        blat_min_identity=config['validate.blat_min_identity'],
+        blat_limit_top_aln=config['validate.blat_limit_top_aln'],
         log=LOG,
     )
     for evidence in evidence_clusters:

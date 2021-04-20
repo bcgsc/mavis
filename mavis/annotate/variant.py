@@ -47,14 +47,9 @@ class Annotation(BreakpointPair):
             opposing_strands=bpp.opposing_strands,
             stranded=bpp.stranded,
             untemplated_seq=bpp.untemplated_seq,
+            **bpp.data,
+            **kwargs
         )
-        self.data.update(bpp.data)
-        if data is not None:
-            conflicts = set(kwargs.keys()) & set(data.keys())
-            self.data.update(data)
-            if conflicts:
-                raise TypeError('got multiple values for data elements:', conflicts)
-        self.data.update(kwargs)
 
         # match transcript to breakpoint if reveresed
         if bpp.break1.key[0:3] < bpp.break2.key[0:3]:

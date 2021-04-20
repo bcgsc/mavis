@@ -4,10 +4,10 @@ from unittest import mock
 from mavis.align import call_paired_read_event, select_contig_alignments
 from mavis.annotate.file_io import load_reference_genome
 from mavis.annotate.genomic import PreTranscript, Transcript
-from mavis.bam.cache import BamCache
-from mavis.bam.read import sequenced_strand, SamRead, read_pair_type
-from mavis.bam.cigar import convert_string_to_cigar
 from mavis.bam import cigar as _cigar
+from mavis.bam.cache import BamCache
+from mavis.bam.cigar import convert_string_to_cigar
+from mavis.bam.read import SamRead, read_pair_type, sequenced_strand
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE
 from mavis.interval import Interval
@@ -15,8 +15,8 @@ from mavis.validate import call
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
-from . import mock_read_pair, MockBamFileHandle, MockRead, get_example_genes, MockLongString
 from ..util import get_data
+from . import MockBamFileHandle, MockLongString, MockRead, get_example_genes, mock_read_pair
 
 REFERENCE_GENOME = None
 
@@ -448,12 +448,14 @@ class TestEvidenceConsumption(unittest.TestCase):
             read_length=100,
             median_fragment_size=200,
             stdev_fragment_size=50,
-            stdev_count_abnormal=3,
-            min_flanking_pairs_resolution=1,
-            min_splits_reads_resolution=1,
-            min_spanning_reads_resolution=3,
-            min_linking_split_reads=1,
-            min_call_complexity=0,
+            config={
+                'validate.stdev_count_abnormal': 3,
+                'validate.min_flanking_pairs_resolution': 1,
+                'validate.min_splits_reads_resolution': 1,
+                'validate.min_spanning_reads_resolution': 3,
+                'validate.min_linking_split_reads': 1,
+                'validate.min_call_complexity': 0,
+            },
         )
         return evidence
 
@@ -850,12 +852,14 @@ class TestCallBySupportingReads(unittest.TestCase):
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=100,
-            stdev_count_abnormal=2,
-            min_splits_reads_resolution=1,
-            min_flanking_pairs_resolution=1,
-            min_linking_split_reads=1,
-            min_spanning_reads_resolution=3,
-            min_call_complexity=0,
+            config={
+                'validate.stdev_count_abnormal': 2,
+                'validate.min_splits_reads_resolution': 1,
+                'validate.min_flanking_pairs_resolution': 1,
+                'validate.min_linking_split_reads': 1,
+                'validate.min_spanning_reads_resolution': 3,
+                'validate. min_call_complexity': 0,
+            },
         )
         self.dup = GenomeEvidence(
             Breakpoint('fake', 50, orient=ORIENT.RIGHT),
@@ -866,12 +870,14 @@ class TestCallBySupportingReads(unittest.TestCase):
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=100,
-            stdev_count_abnormal=2,
-            min_splits_reads_resolution=1,
-            min_flanking_pairs_resolution=1,
-            min_linking_split_reads=1,
-            min_spanning_reads_resolution=3,
-            min_call_complexity=0,
+            config={
+                'validate.stdev_count_abnormal': 2,
+                'validate.min_splits_reads_resolution': 1,
+                'validate.min_flanking_pairs_resolution': 1,
+                'validate.min_linking_split_reads': 1,
+                'validate.min_spanning_reads_resolution': 3,
+                'validate. min_call_complexity': 0,
+            },
         )
 
     def test_empty(self):
@@ -1108,10 +1114,12 @@ class TestCallBySupportingReads(unittest.TestCase):
             read_length=125,
             stdev_fragment_size=100,
             median_fragment_size=380,
-            stdev_count_abnormal=3,
-            min_flanking_pairs_resolution=1,
-            min_splits_reads_resolution=1,
-            min_linking_split_reads=1,
+            config={
+                'validate.stdev_count_abnormal': 3,
+                'validate.min_flanking_pairs_resolution': 1,
+                'validate.min_splits_reads_resolution': 1,
+                'validate.min_linking_split_reads': 1,
+            },
         )
         evidence.split_reads[0].add(
             MockRead(
@@ -1195,9 +1203,11 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             read_length=25,
             stdev_fragment_size=25,
             median_fragment_size=100,
-            stdev_count_abnormal=2,
-            min_flanking_pairs_resolution=1,
-            min_call_complexity=0,
+            config={
+                'validate.stdev_count_abnormal': 2,
+                'validate.min_flanking_pairs_resolution': 1,
+                'validate.min_call_complexity': 0,
+            },
         )
 
     def test_call_coverage_too_large(self):
@@ -1423,8 +1433,10 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=180,
-            stdev_count_abnormal=2,
-            min_flanking_pairs_resolution=1,
+            config={
+                'validate.stdev_count_abnormal': 2,
+                'validate.min_flanking_pairs_resolution': 1,
+            },
         )
         ev.flanking_pairs.add(
             mock_read_pair(
@@ -1475,7 +1487,7 @@ class TestCallByFlankingReadsGenome(unittest.TestCase):
             read_length=150,
             stdev_fragment_size=98,
             median_fragment_size=433,
-            min_flanking_pairs_resolution=1,
+            config={'validate.min_flanking_pairs_resolution': 1},
         )
         evidence.flanking_pairs.add(
             mock_read_pair(
@@ -1510,11 +1522,13 @@ class TestCallByFlankingReadsTranscriptome(unittest.TestCase):
             read_length=50,
             stdev_fragment_size=100,
             median_fragment_size=100,
-            stdev_count_abnormal=3,
-            min_splits_reads_resolution=1,
-            min_flanking_pairs_resolution=1,
-            strand_determining_read=2,
-            min_call_complexity=0,
+            config={
+                'validate.stdev_count_abnormal': 3,
+                'validate.min_splits_reads_resolution': 1,
+                'validate.min_flanking_pairs_resolution': 1,
+                'validate.strand_determining_read': 2,
+                'validate.min_call_complexity': 0,
+            },
         )
 
     def test_call_translocation(self):
@@ -1585,8 +1599,10 @@ class TestCallBySpanningReads(unittest.TestCase):
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=180,
-            min_flanking_pairs_resolution=1,
-            min_spanning_reads_resolution=1,
+            config={
+                'validate.min_flanking_pairs_resolution': 1,
+                'validate.min_spanning_reads_resolution': 1,
+            },
         )
         print(ev.outer_window1, ev.outer_window2)
         spanning_reads = [

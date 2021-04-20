@@ -140,6 +140,74 @@ class BreakpointPair:
         return self.untemplated_seq < other.untemplated_seq
 
     @property
+    def library(self) -> Optional[str]:
+        return self.data.get(COLUMNS.library)
+
+    @property
+    def cdna_synon(self) -> Optional[bool]:
+        return self.data.get(COLUMNS.cdna_synon)
+
+    @property
+    def contig_remapped_reads(self) -> Optional[int]:
+        return self.data.get(COLUMNS.contig_remapped_reads)
+
+    @property
+    def disease_status(self) -> Optional[str]:
+        return self.data.get(COLUMNS.disease_status)
+
+    @property
+    def event_type(self) -> Optional[str]:
+        return self.data.get(COLUMNS.event_type)
+
+    @property
+    def inferred_pairing(self) -> Optional[str]:
+        return self.data.get(COLUMNS.inferred_pairing)
+
+    @property
+    def pairing(self) -> Optional[str]:
+        return self.data.get(COLUMNS.pairing)
+
+    @property
+    def protocol(self) -> Optional[str]:
+        return self.data.get(COLUMNS.protocol)
+
+    @property
+    def fusion_cdna_coding_start(self) -> Optional[int]:
+        return self.data.get(COLUMNS.fusion_cdna_coding_start)
+
+    @property
+    def fusion_cdna_coding_end(self) -> Optional[int]:
+        return self.data.get(COLUMNS.fusion_cdna_coding_end)
+
+    @property
+    def fusion_sequence_fasta_id(self) -> Optional[str]:
+        return self.data.get(COLUMNS.fusion_sequence_fasta_id)
+
+    @property
+    def fusion_splicing_pattern(self) -> Optional[str]:
+        return self.data.get(COLUMNS.fusion_splicing_pattern)
+
+    @property
+    def linking_split_reads(self) -> Optional[int]:
+        return self.data.get(COLUMNS.linking_split_reads)
+
+    @property
+    def repeat_count(self) -> Optional[int]:
+        return self.data.get(COLUMNS.repeat_count)
+
+    @property
+    def tracking_id(self) -> Optional[str]:
+        return self.data.get(COLUMNS.tracking_id)
+
+    @property
+    def cluster_id(self) -> Optional[str]:
+        return self.data.get(COLUMNS.cluster_id)
+
+    @property
+    def annotation_id(self) -> Optional[str]:
+        return self.data.get(COLUMNS.annotation_id)
+
+    @property
     def interchromosomal(self) -> bool:
         """bool: True if the breakpoints are on different chromosomes, False otherwise"""
         if self.break1.chr == self.break2.chr:
@@ -242,6 +310,9 @@ class BreakpointPair:
         # try classifying to make sure it's a valid combination
         BreakpointPair.classify(self)
 
+    def column(self, colname: str):
+        return self.data.get(COLUMNS[colname])
+
     def __str__(self):
         return 'BPP({}, {}{}{})'.format(
             str(self.break1),
@@ -332,7 +403,7 @@ class BreakpointPair:
                     return {SVTYPE.DEL, SVTYPE.INS}
                 elif pair.break1.orient == ORIENT.RIGHT or pair.break2.orient == ORIENT.LEFT:
                     return {SVTYPE.DUP}
-                raise InvalidRearrangement(pair)
+                return {SVTYPE.DEL, SVTYPE.INS, SVTYPE.DUP}
         else:  # interchromosomal
             if pair.opposing_strands:
                 if pair.LR or pair.RL:

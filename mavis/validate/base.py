@@ -1,6 +1,6 @@
 import itertools
 import logging
-from abc import abstractproperty
+from abc import abstractmethod
 from typing import Dict, List, Optional, Set, Tuple
 
 import pysam
@@ -45,7 +45,7 @@ class Evidence(BreakpointPair):
                 max(
                     [
                         self.median_fragment_size
-                        - self.stdev_fragment_size * self.stdev_count_abnormal,
+                        - self.stdev_fragment_size * self.config['validate.stdev_count_abnormal'],
                         0,
                     ]
                 ),
@@ -57,31 +57,14 @@ class Evidence(BreakpointPair):
     def max_expected_fragment_size(self):
         return int(
             round(
-                self.median_fragment_size + self.stdev_fragment_size * self.stdev_count_abnormal, 0
+                self.median_fragment_size
+                + self.stdev_fragment_size * self.config['validate.stdev_count_abnormal'],
+                0,
             )
         )
 
-    @abstractproperty
-    def strand_determining_read(self):
-        pass
-
-    @abstractproperty
-    def outer_window1(self):
-        pass
-
-    @abstractproperty
-    def outer_window2(self):
-        pass
-
-    @abstractproperty
-    def inner_window1(self):
-        pass
-
-    @abstractproperty
-    def inner_window2(self):
-        pass
-
-    @abstractproperty
+    @property
+    @abstractmethod
     def min_mapping_quality(self):
         pass
 
@@ -100,6 +83,7 @@ class Evidence(BreakpointPair):
         classification=None,
         config=DEFAULTS,
         assembly_max_kmer_size=None,
+        strand_determining_read=2,
         **kwargs,
     ):
         """
@@ -115,7 +99,8 @@ class Evidence(BreakpointPair):
         # initialize the breakpoint pair
         self.bam_cache = bam_cache
         self.stranded = stranded and bam_cache.stranded
-        self.config = config
+        self.config = dict(**DEFAULTS)
+        self.config.update(config)
         BreakpointPair.__init__(
             self,
             break1,
@@ -154,12 +139,13 @@ class Evidence(BreakpointPair):
         )
         self.bam_cache = bam_cache
         self.classification = classification
-        self.reference_genome = reference_genome
-        self.read_length = read_length
-        self.stdev_fragment_size = stdev_fragment_size
-        self.median_fragment_size = median_fragment_size
         self.compatible_window1 = None
         self.compatible_window2 = None
+        self.median_fragment_size = median_fragment_size
+        self.read_length = read_length
+        self.reference_genome = reference_genome
+        self.stdev_fragment_size = stdev_fragment_size
+        self.strand_determining_read = strand_determining_read
 
         if self.classification is not None and self.classification not in BreakpointPair.classify(
             self
@@ -235,8 +221,8 @@ class Evidence(BreakpointPair):
         read.cigar = _cigar.join(cigar)
         read.cigar = _cigar.merge_internal_events(
             read.cigar,
-            inner_anchor=self.contig_aln_merge_inner_anchor,
-            outer_anchor=self.contig_aln_merge_outer_anchor,
+            inner_anchor=self.config['validate.contig_aln_merge_inner_anchor'],
+            outer_anchor=self.config['validate.contig_aln_merge_outer_anchor'],
         )
         read.reference_start = read.reference_start + prefix
 
@@ -876,22 +862,22 @@ class Evidence(BreakpointPair):
 
         log('assembly size of {} sequences'.format(len(assembly_sequences) // 2))
 
-        kmer_size = self.read_length * self.assembly_kmer_size
+        kmer_size = self.read_length * self.config['validate.assembly_kmer_size']
         remap_min_overlap = max(
-            self.read_length - self.assembly_min_exact_match_to_remap, kmer_size
+            self.read_length - self.config['validate.assembly_min_exact_match_to_remap'], kmer_size
         )
 
         contigs = assemble(
             assembly_sequences,
             kmer_size,
-            min_edge_trim_weight=self.assembly_min_edge_trim_weight,
-            assembly_max_paths=self.assembly_max_paths,
+            min_edge_trim_weight=self.config['validate.assembly_min_edge_trim_weight'],
+            assembly_max_paths=self.config['validate.assembly_max_paths'],
             min_contig_length=self.read_length,
             log=log,
             remap_min_overlap=remap_min_overlap,
-            remap_min_exact_match=self.assembly_min_exact_match_to_remap,
-            assembly_min_uniq=self.assembly_min_uniq,
-            min_complexity=self.min_call_complexity,
+            remap_min_exact_match=self.config['validate.assembly_min_exact_match_to_remap'],
+            assembly_min_uniq=self.config['validate.assembly_min_uniq'],
+            min_complexity=self.config['validate.min_call_complexity'],
         )
 
         # add the input reads
@@ -970,8 +956,8 @@ class Evidence(BreakpointPair):
         for contig in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.seq)):
             # filter on evidence level
             if (
-                contig.remap_score() < self.assembly_min_remapped_seq
-                or contig.remap_coverage() < self.assembly_min_remap_coverage
+                contig.remap_score() < self.config['validate.assembly_min_remapped_seq']
+                or contig.remap_coverage() < self.config['validate.assembly_min_remap_coverage']
             ):
                 continue
             if self.stranded and self.bam_cache.stranded:
@@ -995,7 +981,7 @@ class Evidence(BreakpointPair):
                 return True
             elif any(
                 [
-                    self.filter_secondary_alignments and read.is_secondary,
+                    self.config['validate.filter_secondary_alignments'] and read.is_secondary,
                     read.mapping_quality < self.min_mapping_quality,
                 ]
             ):
@@ -1028,7 +1014,7 @@ class Evidence(BreakpointPair):
             if not cache_if_true(read):
                 if any(
                     [
-                        self.filter_secondary_alignments and read.is_secondary,
+                        self.config['validate.filter_secondary_alignments'] and read.is_secondary,
                         read.mapping_quality < self.min_mapping_quality,
                     ]
                 ):
@@ -1049,9 +1035,9 @@ class Evidence(BreakpointPair):
             '{0}'.format(self.break1.chr),
             self.outer_window1[0],
             self.outer_window1[1],
-            read_limit=self.fetch_reads_limit,
-            sample_bins=self.fetch_reads_bins,
-            min_bin_size=self.fetch_min_bin_size,
+            read_limit=self.config['validate.fetch_reads_limit'],
+            sample_bins=self.config['validate.fetch_reads_bins'],
+            min_bin_size=self.config['validate.fetch_min_bin_size'],
             cache=True,
             cache_if=cache_if_true,
             filter_if=filter_if_true,
@@ -1080,9 +1066,9 @@ class Evidence(BreakpointPair):
             '{0}'.format(self.break2.chr),
             self.outer_window2[0],
             self.outer_window2[1],
-            read_limit=self.fetch_reads_limit,
-            sample_bins=self.fetch_reads_bins,
-            min_bin_size=self.fetch_min_bin_size,
+            read_limit=self.config['validate.fetch_reads_limit'],
+            sample_bins=self.config['validate.fetch_reads_bins'],
+            min_bin_size=self.config['validate.fetch_min_bin_size'],
             cache=True,
             cache_if=cache_if_true,
             filter_if=filter_if_true,
@@ -1132,9 +1118,9 @@ class Evidence(BreakpointPair):
                 '{0}'.format(self.break1.chr),
                 self.compatible_window1[0],
                 self.compatible_window1[1],
-                read_limit=self.fetch_reads_limit,
-                sample_bins=self.fetch_reads_bins,
-                min_bin_size=self.fetch_min_bin_size,
+                read_limit=self.config['validate.fetch_reads_limit'],
+                sample_bins=self.config['validate.fetch_reads_bins'],
+                min_bin_size=self.config['validate.fetch_min_bin_size'],
                 cache=True,
                 cache_if=cache_if_true,
                 filter_if=filter_if_true,
@@ -1146,9 +1132,9 @@ class Evidence(BreakpointPair):
                 '{0}'.format(self.break2.chr),
                 self.compatible_window2[0],
                 self.compatible_window2[1],
-                read_limit=self.fetch_reads_limit,
-                sample_bins=self.fetch_reads_bins,
-                min_bin_size=self.fetch_min_bin_size,
+                read_limit=self.config['validate.fetch_reads_limit'],
+                sample_bins=self.config['validate.fetch_reads_bins'],
+                min_bin_size=self.config['validate.fetch_min_bin_size'],
                 cache=True,
                 cache_if=cache_if_true,
                 filter_if=filter_if_true,

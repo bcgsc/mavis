@@ -11,27 +11,27 @@ class TestFilterByAnnotations(unittest.TestCase):
             Breakpoint('1', 1),
             Breakpoint('1', 10),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.fusion_cdna_coding_end: None,
                 COLUMNS.fusion_cdna_coding_start: None,
-            },
+            }
         )
         self.gev2 = BreakpointPair(
             Breakpoint('1', 1),
             Breakpoint('1', 100),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
                 COLUMNS.fusion_cdna_coding_start: None,
                 COLUMNS.fusion_cdna_coding_end: None,
-            },
+            }
         )
         self.best_transcripts = {'ABCA': True, 'ABCD': True}
 

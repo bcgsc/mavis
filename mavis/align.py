@@ -534,11 +534,13 @@ def select_contig_alignments(evidence, reads_by_query):
     def filter_pass(alignment):
         return not any(
             [
-                alignment.query_consumption() < evidence.contig_aln_min_query_consumption,
-                alignment.score() < evidence.contig_aln_min_score,
+                alignment.query_consumption()
+                < evidence.config['validate.contig_aln_min_query_consumption'],
+                alignment.score() < evidence.config['validate.contig_aln_min_score'],
                 alignment.mapping_quality() == Interval(0),
                 alignment.read2 is not None
-                and alignment.query_overlap_extension() < evidence.contig_aln_min_extend_overlap,
+                and alignment.query_overlap_extension()
+                < evidence.config['validate.contig_aln_min_extend_overlap'],
             ]
         )
 
@@ -563,8 +565,8 @@ def select_contig_alignments(evidence, reads_by_query):
             read = evidence.standardize_read(raw_read)
             read.cigar = _cigar.merge_internal_events(
                 read.cigar,
-                inner_anchor=evidence.contig_aln_merge_inner_anchor,
-                outer_anchor=evidence.contig_aln_merge_outer_anchor,
+                inner_anchor=evidence.config['validate.contig_aln_merge_inner_anchor'],
+                outer_anchor=evidence.config['validate.contig_aln_merge_outer_anchor'],
             )
             read = evidence.standardize_read(
                 read
@@ -581,8 +583,8 @@ def select_contig_alignments(evidence, reads_by_query):
                 _read.convert_events_to_softclipping(
                     read,
                     evidence.break1.orient,
-                    max_event_size=evidence.contig_aln_max_event_size,
-                    min_anchor_size=evidence.contig_aln_min_anchor_size,
+                    max_event_size=evidence.config['validate.contig_aln_max_event_size'],
+                    min_anchor_size=evidence.config['validate.contig_aln_min_anchor_size'],
                 )
             )
             if evidence.break1.orient == evidence.break2.orient:
@@ -591,8 +593,8 @@ def select_contig_alignments(evidence, reads_by_query):
                 _read.convert_events_to_softclipping(
                     read,
                     evidence.break2.orient,
-                    max_event_size=evidence.contig_aln_max_event_size,
-                    min_anchor_size=evidence.contig_aln_min_anchor_size,
+                    max_event_size=evidence.config['validate.contig_aln_max_event_size'],
+                    min_anchor_size=evidence.config['validate.contig_aln_min_anchor_size'],
                 )
             )
 

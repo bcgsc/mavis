@@ -1,15 +1,14 @@
 import unittest
+from functools import partial
 
 from mavis.annotate.file_io import load_reference_genome
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import CIGAR, ORIENT, reverse_complement, STRAND
+from mavis.constants import CIGAR, ORIENT, STRAND, reverse_complement
 from mavis.interval import Interval
 from mavis.validate.evidence import TranscriptomeEvidence
-from mavis.validate.constants import DEFAULTS
-from functools import partial
 
-from . import MockRead, MockObject, get_example_genes
 from ..util import get_data
+from . import MockObject, MockRead, get_example_genes
 
 REFERENCE_GENOME = None
 REF_CHR = 'fake'

@@ -15,7 +15,6 @@ def main(
     output: str,
     config: Dict,
     start_time=int(time.time()),
-    **kwargs,
 ):
     """
     Args:
@@ -82,8 +81,10 @@ def main(
         category = (bpp.break1.chr, bpp.break2.chr, bpp.opposing_strands, bpp.event_type)
         bpp.data[COLUMNS.product_id] = product_key(bpp)
         calls_by_cat.setdefault(category, []).append(bpp)
-        if bpp.gene1 or bpp.gene2:
-            calls_by_ann.setdefault((bpp.transcript1, bpp.transcript2), []).append(bpp)
+        if bpp.data.get(COLUMNS.gene1) or bpp.data.get(COLUMNS.gene2):
+            calls_by_ann.setdefault(
+                (bpp.data.get(COLUMNS.transcript1), bpp.data.get(COLUMNS.transcript2)), []
+            ).append(bpp)
         bpp.data[COLUMNS.pairing] = ''
         bpp.data[COLUMNS.inferred_pairing] = ''
 

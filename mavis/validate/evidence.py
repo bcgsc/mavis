@@ -31,8 +31,8 @@ class GenomeEvidence(Evidence):
         return self.config['validate.fetch_reads_limit']
 
     def __init__(self, *pos, **kwargs):
+        kwargs[COLUMNS.protocol] = PROTOCOL.GENOME
         Evidence.__init__(self, *pos, **kwargs)
-        self.protocol = PROTOCOL.GENOME
 
         self.outer_window1 = self.generate_window(self.break1)
         self.outer_window2 = self.generate_window(self.break2)
@@ -109,9 +109,9 @@ class TranscriptomeEvidence(Evidence):
         return self.config['validate.trans_fetch_reads_limit']
 
     def __init__(self, annotations, *pos, **kwargs):
+        kwargs[COLUMNS.protocol] = PROTOCOL.TRANS
         Evidence.__init__(self, *pos, **kwargs)
 
-        self.protocol = PROTOCOL.TRANS
         # get the list of overlapping transcripts
         self.overlapping_transcripts = overlapping_transcripts(
             annotations, self.break1

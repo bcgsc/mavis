@@ -30,13 +30,13 @@ def filter_by_annotations(bpp_list, best_transcripts):
 
         result.extend(
             [
-                0 if bpp.transcript1 in best_transcripts else 1,
-                0 if bpp.transcript2 in best_transcripts else 1,
-                sum([bpp.transcript1 is None, bpp.transcript2 is None]),
-                string_ranks[bpp.gene1],
-                string_ranks[bpp.gene2],
-                string_ranks[bpp.transcript1],
-                string_ranks[bpp.transcript2],
+                0 if bpp.data['transcript1'] in best_transcripts else 1,
+                0 if bpp.data['transcript2'] in best_transcripts else 1,
+                sum([bpp.data['transcript1'] is None, bpp.data['transcript2'] is None]),
+                string_ranks[bpp.data['gene1']],
+                string_ranks[bpp.data['gene2']],
+                string_ranks[bpp.data['transcript1']],
+                string_ranks[bpp.data['transcript2']],
             ]
         )
         return tuple(result)
@@ -281,35 +281,39 @@ def filter_by_evidence(
     filtered = []
     removed = []
     for bpp in bpps:
-        if bpp.call_method == CALL_METHOD.CONTIG:
+        if bpp.column('call_method') == CALL_METHOD.CONTIG:
             # inherently the breakpoints have been linked
             if int(bpp.contig_remapped_reads) < filter_min_remapped_reads:
                 removed.append(bpp)
                 continue
-        elif bpp.call_method == CALL_METHOD.SPAN:
+        elif bpp.column('call_method') == CALL_METHOD.SPAN:
             if bpp.spanning_reads < filter_min_spanning_reads:
                 removed.append(bpp)
                 continue
-        elif bpp.call_method == CALL_METHOD.SPLIT:
-            linking_split_reads = bpp.linking_split_reads
+        elif bpp.column('call_method') == CALL_METHOD.SPLIT:
+            linking_split_reads = bpp.column('linking_split_reads')
             if bpp.event_type == SVTYPE.INS:
-                linking_split_reads += bpp.flanking_pairs
+                linking_split_reads += bpp.column('flanking_pairs')
             if any(
                 [
-                    bpp.break1_split_reads + bpp.break1_split_reads_forced < filter_min_split_reads,
-                    bpp.break2_split_reads + bpp.break2_split_reads_forced < filter_min_split_reads,
+                    bpp.column('break1_split_reads') + bpp.column('break1_split_reads_forced')
+                    < filter_min_split_reads,
+                    bpp.column('break2_split_reads') + bpp.column('break2_split_reads_forced')
+                    < filter_min_split_reads,
                     linking_split_reads < filter_min_linking_split_reads,
-                    bpp.break1_split_reads < 1,
-                    bpp.break2_split_reads < 1,
+                    bpp.column('break1_split_reads') < 1,
+                    bpp.column('break2_split_reads') < 1,
                 ]
             ):
                 removed.append(bpp)
                 continue
-        elif bpp.call_method == CALL_METHOD.FLANK:
-            if bpp.flanking_pairs < filter_min_flanking_reads:
+        elif bpp.column('call_method') == CALL_METHOD.FLANK:
+            if bpp.column('flanking_pairs') < filter_min_flanking_reads:
                 removed.append(bpp)
                 continue
-        elif bpp.call_method != CALL_METHOD.INPUT:
-            raise AssertionError('unexpected value for call_method: {}'.format(bpp.call_method))
+        elif bpp.column('call_method') != CALL_METHOD.INPUT:
+            raise AssertionError(
+                'unexpected value for call_method: {}'.format(bpp.column('call_method'))
+            )
         filtered.append(bpp)
     return filtered, removed

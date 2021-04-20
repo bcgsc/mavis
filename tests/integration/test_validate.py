@@ -1,16 +1,17 @@
 import unittest
 
 from mavis.annotate.file_io import load_reference_genome
-from mavis.bam.cache import BamCache
-from mavis.breakpoint import Breakpoint
-from mavis.constants import ORIENT, PYSAM_READ_FLAGS, NA_MAPPING_QUALITY
-from mavis.validate.evidence import GenomeEvidence
-from mavis.validate.base import Evidence
-from mavis.bam.read import SamRead
 from mavis.bam import cigar as _cigar
+from mavis.bam.cache import BamCache
+from mavis.bam.read import SamRead
+from mavis.breakpoint import Breakpoint
+from mavis.constants import NA_MAPPING_QUALITY, ORIENT, PYSAM_READ_FLAGS
+from mavis.schemas import DEFAULTS
+from mavis.validate.base import Evidence
+from mavis.validate.evidence import GenomeEvidence
 
-from . import mock_read_pair, MockRead, RUN_FULL, MockObject, MockLongString
 from ..util import get_data
+from . import RUN_FULL, MockLongString, MockObject, MockRead, mock_read_pair
 
 REFERENCE_GENOME = None
 
@@ -57,11 +58,13 @@ class TestFullEvidenceGathering(unittest.TestCase):
             read_length=125,
             stdev_fragment_size=100,
             median_fragment_size=380,
-            stdev_count_abnormal=3,
-            min_flanking_pairs_resolution=3,
-            max_sc_preceeding_anchor=3,
-            outer_window_min_event_size=0,
-            min_mapping_quality=20,
+            config={
+                'validate.stdev_count_abnormal': 3,
+                'validate.min_flanking_pairs_resolution': 3,
+                'validate.max_sc_preceeding_anchor': 3,
+                'validate.outer_window_min_event_size': 0,
+                'validate.min_mapping_quality': 20,
+            },
         )
         print(ge.min_expected_fragment_size, ge.max_expected_fragment_size)
         print(ge.break1.chr, ge.outer_window1)
@@ -565,9 +568,11 @@ class TestEvidenceGathering(unittest.TestCase):
             read_length=125,
             stdev_fragment_size=100,
             median_fragment_size=380,
-            stdev_count_abnormal=3,
-            min_flanking_pairs_resolution=3,
-            assembly_min_edge_trim_weight=3,
+            config={
+                'validate.stdev_count_abnormal': 3,
+                'validate.min_flanking_pairs_resolution': 3,
+                'validate.assembly_min_edge_trim_weight': 3,
+            },
         )
 
     def test_collect_split_read(self):
@@ -738,8 +743,11 @@ class TestStandardizeRead(unittest.TestCase):
                 )
             },
             bam_cache=MockObject(get_read_reference_name=lambda x: x.reference_name),
-            contig_aln_merge_inner_anchor=10,
-            contig_aln_merge_outer_anchor=20,
+            config={
+                'validate.contig_aln_merge_inner_anchor': 10,
+                'validate.contig_aln_merge_outer_anchor': 20,
+                **DEFAULTS,
+            },
         )
 
     def test_bwa_mem(self):
