@@ -51,3 +51,14 @@ jobs:
           --durations=10
       env:
         RUN_FULL: 0
+  docker:
+    runs-on: ubuntu-latest
+    name: docker build
+    steps:
+      - uses: actions/checkout@v2
+      - name: build the docker container
+        run: |
+          docker build --file Dockerfile --tag bcgsc/mavis .
+      - name: test the help menu
+        run: |
+          docker run bcgsc/mavis -h

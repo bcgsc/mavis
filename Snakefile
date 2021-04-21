@@ -6,7 +6,7 @@ import re
 import json
 import pandas as pd
 
-CONTAINER = 'creisle/mavis:latest'
+CONTAINER = 'bcgsc/mavis:latest'
 
 def output_dir(*paths):
     return os.path.join(config['output_dir'], *paths)
