@@ -126,7 +126,7 @@ setup(
         ]
     },
     include_package_data=True,
-    data_files=[('mavis', ['mavis/schemas/config.json', 'mavis/schemas/overlay.json'])],
+    data_files=[('mavis', ['src/mavis/schemas/config.json', 'src/mavis/schemas/overlay.json'])],
     project_urls={'mavis': 'http://mavis.bcgsc.ca'},
 )
 check_nonpython_dependencies()
