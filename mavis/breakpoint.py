@@ -87,17 +87,6 @@ class BreakpointPair:
     untemplated_seq: Optional[str]
     data: Dict
 
-    # def __getattr__(self, attr):
-    #     data = object.__getattribute__(self, 'data')
-    #     try:
-    #         return data[COLUMNS[attr]]
-    #     except (KeyError, AttributeError):
-    #         try:
-    #             return data[attr]
-    #         except KeyError:
-    #             pass
-    #     raise AttributeError(attr)
-
     def __getitem__(self, index):
         try:
             index = int(index)
