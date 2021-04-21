@@ -34,7 +34,7 @@ decision from the annotation step
 
 ## event\_type
 
-**type**: `mavis.constants.SVTYPE`
+**type**: [`mavis.constants.SVTYPE`](/package/mavis/constants/#class-mavisconstantssvtype)
 
 The
 classification of the event
@@ -57,7 +57,7 @@ Gene for the current annotation at the first breakpoint
 
 ## gene1\_direction
 
-**type**: `mavis.constants.PRIME`
+**type**: [`mavis.constants.PRIME`](/package/mavis/constants/#class-mavisconstantsprime)
 
 The
 direction/prime of the gene
@@ -68,7 +68,7 @@ Gene for the current annotation at the second breakpoint
 
 ## gene2\_direction
 
-**type**: `mavis.constants.PRIME`
+**type**: [`mavis.constants.PRIME`](/package/mavis/constants/#class-mavisconstantsprime)
 
 The
 direction/prime of the gene. Has the following possible values
@@ -85,7 +85,7 @@ second breakpoint
 
 ## gene\_product\_type
 
-**type**: `mavis.constants.GENE_PRODUCT_TYPE`
+**type**: [`mavis.constants.GENE_PRODUCT_TYPE`](/package/mavis/constants/#class-mavisconstantsgene_product_type)
 
 Describes if the putative fusion product will be
 sense or anti-sense
@@ -105,7 +105,8 @@ Transcript for the current annotation at the second breakpoint
 
 ## fusion\_splicing\_pattern
 
-`mavis.constants.SPLICE_TYPE` -
+**type**: [`mavis.constants.SPLICE_TYPE`](/package/mavis/constants/#class-mavisconstantsslice_type)
+
 Type of splicing pattern used to create the fusion cDNA.
 
 ## fusion\_cdna\_coding\_start
@@ -205,14 +206,14 @@ End integer inclusive
 
 ## break1\_orientation
 
-**type**: `mavis.constants.ORIENT`
+**type**: [`mavis.constants.ORIENT`](/package/mavis/constants/#class-mavisconstantsorient)
 
 The side
 of the breakpoint wrt the positive/forward strand that is retained.
 
 ## break1\_strand
 
-**type**: `mavis.constants.STRAND`
+**type**: [`mavis.constants.STRAND`](/package/mavis/constants/#class-mavisconstantsstrand)
 
 The
 strand wrt to the reference positive/forward strand at this
@@ -246,14 +247,14 @@ End integer inclusive
 
 ## break2\_orientation
 
-**type**: `mavis.constants.ORIENT`
+**type**: [`mavis.constants.ORIENT`](/package/mavis/constants/#class-mavisconstantsorient)
 
 The side
 of the breakpoint wrt the positive/forward strand that is retained.
 
 ## break2\_strand
 
-**type**: `mavis.constants.STRAND`
+**type**: [`mavis.constants.STRAND`](/package/mavis/constants/#class-mavisconstantsstrand)
 
 The
 strand wrt to the reference positive/forward strand at this
@@ -283,7 +284,8 @@ protocol was strand specific or not. Expects a boolean
 
 ## protocol
 
-`mavis.constants.PROTOCOL` -
+**type**: [`mavis.constants.PROTOCOL`](/package/mavis/constants/#class-mavisconstantsprotocol)
+
 Specifies the type of library
 
 ## tools
@@ -404,7 +406,7 @@ event
 
 ## call\_method
 
-**type**: `mavis.constants.CALL_METHOD`
+**type**: [`mavis.constants.CALL_METHOD`](/package/mavis/constants/#class-mavisconstantscall_method)
 
 The
 method used to call the breakpoints
