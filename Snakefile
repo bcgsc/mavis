@@ -18,7 +18,7 @@ try:
     # TODO: replace with URL so that the user does not need a copy of the config schema
     validate(
         config,
-        os.path.join(os.getcwd(), 'mavis/schemas/config.json')
+        os.path.join(os.getcwd(), 'src/mavis/schemas/config.json')
     )
     for key in [
         "libraries",

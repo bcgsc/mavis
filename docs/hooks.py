@@ -130,9 +130,9 @@ def generate_settings_doc(schema_file):
 
 
 def build_package_docs(config):
-    schema_file = os.path.join(os.path.dirname(__file__), '../mavis/schemas/config.json')
+    schema_file = os.path.join(os.path.dirname(__file__), '../src/mavis/schemas/config.json')
     generate_settings_doc(schema_file)
-    package_dir = os.path.join(os.path.dirname(__file__), '../mavis')
+    package_dir = os.path.join(os.path.dirname(__file__), '../src/mavis')
     output_dir = os.path.join(os.path.dirname(__file__), 'package')
 
     extract_to_markdown(
