@@ -15,8 +15,7 @@ from shortuuid import uuid
 from tab import tab
 
 from .breakpoint import Breakpoint, BreakpointPair
-from .constants import (COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE,
-                        MavisNamespace, sort_columns)
+from .constants import COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE, MavisNamespace, sort_columns
 from .error import InvalidRearrangement
 from .interval import Interval
 
