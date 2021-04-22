@@ -1,14 +1,16 @@
 import itertools
 import json
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
+
 from shortuuid import uuid
 
-from .fusion import determine_prime, FusionTranscript
-from .genomic import IntergenicRegion
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import COLUMNS, GENE_PRODUCT_TYPE, PROTOCOL, STOP_AA, STRAND, SVTYPE
 from ..error import NotSpecifiedError
 from ..interval import Interval
 from ..util import DEVNULL
+from .fusion import FusionTranscript, determine_prime
+from .genomic import Gene, IntergenicRegion, PreTranscript, Transcript
 
 
 class Annotation(BreakpointPair):
@@ -17,8 +19,22 @@ class Annotation(BreakpointPair):
     will also hold the other annotations for overlapping and encompassed and nearest genes
     """
 
+    encompassed_genes: Set[Gene]
+    genes_proximal_to_break1: Set[Gene]
+    genes_proximal_to_break2: Set[Gene]
+    genes_overlapping_break1: Set[Gene]
+    genes_overlapping_break2: Set[Gene]
+    proximity: int
+    fusion: Optional[FusionTranscript]
+    transcript1: Optional[Transcript]
+    transcript2: Optional[Transcript]
+
+    @property
+    def validation_id(self) -> Optional[str]:
+        return self.data.get(COLUMNS.validation_id)
+
     def __init__(
-        self, bpp, transcript1=None, transcript2=None, proximity=5000, data=None, **kwargs
+        self, bpp: BreakpointPair, transcript1=None, transcript2=None, proximity=5000, **kwargs
     ):
         """
         Holds a breakpoint call and a set of transcripts, other information is gathered relative to these
@@ -27,8 +43,6 @@ class Annotation(BreakpointPair):
             bpp (BreakpointPair): the breakpoint pair call. Will be adjusted and then stored based on the transcripts
             transcript1 (Transcript): transcript at the first breakpoint
             transcript2 (Transcript): Transcript at the second breakpoint
-            data (dict): optional dictionary to hold related attributes
-            event_type (SVTYPE): the type of event
         """
         # narrow the breakpoint windows by the transcripts being used for annotation
         temp = bpp.break1 if transcript1 is None else bpp.break1 & transcript1
@@ -47,14 +61,9 @@ class Annotation(BreakpointPair):
             opposing_strands=bpp.opposing_strands,
             stranded=bpp.stranded,
             untemplated_seq=bpp.untemplated_seq,
+            **bpp.data,
+            **kwargs
         )
-        self.data.update(bpp.data)
-        if data is not None:
-            conflicts = set(kwargs.keys()) & set(data.keys())
-            self.data.update(data)
-            if conflicts:
-                raise TypeError('got multiple values for data elements:', conflicts)
-        self.data.update(kwargs)
 
         # match transcript to breakpoint if reveresed
         if bpp.break1.key[0:3] < bpp.break2.key[0:3]:
@@ -533,15 +542,19 @@ def overlapping_transcripts(ref_ann, breakpoint):
     return putative_annotations
 
 
-def _gather_breakpoint_annotations(ref_ann, breakpoint):
+def _gather_breakpoint_annotations(
+    ref_ann: Dict[str, List[Gene]], breakpoint: Breakpoint
+) -> Tuple[
+    List[Union[PreTranscript, IntergenicRegion]], List[Union[PreTranscript, IntergenicRegion]]
+]:
     """
     Args:
-        ref_ann (Dict[str,List[Gene]]): the reference annotations split
+        ref_ann: the reference annotations split
             into lists of genes by chromosome
-        breakpoint (Breakpoint): the breakpoint annotations are to be gathered for
+        breakpoint: the breakpoint annotations are to be gathered for
 
     Returns:
-        Tuple[List[Union[PreTranscript,IntergenicRegion]],List[Union[PreTranscript,IntergenicRegion]]]:
+        transcripts:
             - transcripts or intergenic regions overlapping the breakpoint on the positive strand
             - transcripts or intergenic regions overlapping the breakpoint on the negative strand
 
@@ -623,16 +636,15 @@ def _gather_breakpoint_annotations(ref_ann, breakpoint):
     )
 
 
-def _gather_annotations(ref, bp, proximity=None):
+def _gather_annotations(ref: Dict[str, List[Gene]], bp: BreakpointPair, proximity=None):
     """
     each annotation is defined by the annotations selected at the breakpoints
     the other annotations are given relative to this
     the annotation at the breakpoint can be a transcript or an intergenic region
 
     Args:
-        ref (Dict[str,List[Gene]]): the list of reference genes hashed
-            by chromosomes
-        breakpoint_pairs (List[BreakpointPair]): breakpoint pairs we wish to annotate as events
+        ref: the list of reference genes hashedby chromosomes
+        breakpoint_pairs: breakpoint pair we wish to annotate as events
 
     Returns:
         List[Annotation]: The annotations
@@ -641,7 +653,9 @@ def _gather_annotations(ref, bp, proximity=None):
     break1_pos, break1_neg = _gather_breakpoint_annotations(ref, bp.break1)
     break2_pos, break2_neg = _gather_breakpoint_annotations(ref, bp.break2)
 
-    combinations = []
+    combinations: List[
+        Tuple[Union[PreTranscript, IntergenicRegion], Union[PreTranscript, IntergenicRegion]]
+    ] = []
 
     if bp.stranded:
         if bp.break1.strand == STRAND.POS:
@@ -658,7 +672,7 @@ def _gather_annotations(ref, bp, proximity=None):
         # single transcript starts ....
         for t in (set(break1_pos) | set(break1_neg)) & (set(break2_pos) | set(break2_neg)):
             try:
-                t.gene
+                t.gene  # type: ignore
             except AttributeError:
                 pass
             else:
@@ -687,7 +701,7 @@ def _gather_annotations(ref, bp, proximity=None):
         if (a1, a2) in annotations:  # ignore duplicates
             continue
         try:
-            if a1.gene == a2.gene and a1 != a2:
+            if a1.gene == a2.gene and a1 != a2:  # type: ignore
                 continue
         except AttributeError:
             pass
@@ -724,7 +738,7 @@ def _gather_annotations(ref, bp, proximity=None):
     return filtered
 
 
-def choose_more_annotated(ann_list):
+def choose_more_annotated(ann_list: List[Annotation]) -> List[Annotation]:
     """
     for a given set of annotations if there are annotations which contain transcripts and
     annotations that are simply intergenic regions, discard the intergenic region annotations
@@ -734,18 +748,18 @@ def choose_more_annotated(ann_list):
     that land in the intergenic region
 
     Args:
-        ann_list (List[Annotation]): list of input annotations
+        ann_list: list of input annotations
 
     Warning:
         input annotations are assumed to be the same event (the same validation_id)
         the logic used would not apply to different events
 
     Returns:
-        List[Annotation]: the filtered list
+        the filtered list
     """
-    two_transcript = []
-    one_transcript = []
-    intergenic = []
+    two_transcript: List[Annotation] = []
+    one_transcript: List[Annotation] = []
+    intergenic: List[Annotation] = []
 
     for ann in ann_list:
         if isinstance(ann.transcript1, IntergenicRegion) and isinstance(
@@ -767,7 +781,7 @@ def choose_more_annotated(ann_list):
         return intergenic
 
 
-def choose_transcripts_by_priority(ann_list):
+def choose_transcripts_by_priority(ann_list: List[Annotation]):
     """
     for each set of annotations with the same combinations of genes, choose the
     annotation with the most "best_transcripts" or most "alphanumeric" choices
@@ -783,8 +797,10 @@ def choose_transcripts_by_priority(ann_list):
     Returns:
         List[Annotation]: the filtered list
     """
-    annotations_by_gene_combination = {}
-    genes = set()
+    annotations_by_gene_combination: Dict[
+        Tuple[Optional[Gene], Optional[Gene]], List[Annotation]
+    ] = {}
+    genes: Set[Gene] = set()
 
     for ann in ann_list:
         gene1 = None
@@ -827,16 +843,16 @@ def choose_transcripts_by_priority(ann_list):
 
 
 def annotate_events(
-    bpps,
-    annotations,
-    reference_genome,
-    max_proximity=5000,
-    min_orf_size=200,
-    min_domain_mapping_match=0.95,
-    max_orf_cap=3,
-    log=DEVNULL,
-    filters=None,
-):
+    bpps: List[BreakpointPair],
+    annotations: Dict[str, List[Gene]],
+    reference_genome: Dict[str, str],
+    max_proximity: int = 5000,
+    min_orf_size: int = 200,
+    min_domain_mapping_match: float = 0.95,
+    max_orf_cap: int = 3,
+    log: Callable = DEVNULL,
+    filters: List[Callable] = None,
+) -> List[Annotation]:
     """
     Args:
         bpps (List[mavis.breakpoint.BreakpointPair]): list of events

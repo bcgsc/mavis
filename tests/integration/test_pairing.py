@@ -12,7 +12,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 1),
             Breakpoint('1', 10),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
@@ -23,7 +23,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 1),
             Breakpoint('1', 10),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
@@ -100,7 +100,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 1),
             Breakpoint('1', 10),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
@@ -115,7 +115,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 50),
             Breakpoint('1', 60),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
@@ -136,7 +136,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 1),
             Breakpoint('1', 10),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'a',
@@ -151,7 +151,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 50),
             Breakpoint('1', 60),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'a',
@@ -169,7 +169,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 1),
             Breakpoint('1', 10),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'a',
@@ -184,7 +184,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 50),
             Breakpoint('1', 60),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'b',
@@ -202,7 +202,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 350, orient=ORIENT.LEFT),
             Breakpoint('1', 400, orient=ORIENT.RIGHT),
             opposing_strands=False,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
@@ -215,7 +215,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 350, orient=ORIENT.LEFT),
             Breakpoint('1', 400, orient=ORIENT.RIGHT),
             opposing_strands=False,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
@@ -239,7 +239,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 350, orient=ORIENT.LEFT),
             Breakpoint('1', 400, orient=ORIENT.RIGHT),
             opposing_strands=False,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
@@ -252,7 +252,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 350, orient=ORIENT.LEFT),
             Breakpoint('1', 400, orient=ORIENT.RIGHT),
             opposing_strands=False,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,

@@ -1,11 +1,15 @@
 import itertools
 import logging
+from abc import abstractmethod
+from typing import Dict, List, Optional, Set, Tuple
+
+import pysam
 
 from ..assemble import assemble
 from ..bam import cigar as _cigar
 from ..bam import read as _read
 from ..bam.cache import BamCache
-from ..breakpoint import BreakpointPair
+from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import (
     CIGAR,
     COLUMNS,
@@ -19,11 +23,35 @@ from ..constants import (
 )
 from ..error import NotSpecifiedError
 from ..interval import Interval
+from ..schemas import DEFAULTS
 from ..util import DEVNULL
-from .constants import DEFAULTS
 
 
 class Evidence(BreakpointPair):
+    assembly_max_kmer_size: int
+    bam_cache: BamCache
+    classification: Optional[str]
+    compatible_flanking_pairs: Set
+    compatible_window1: Optional[Interval]
+    compatible_window2: Optional[Interval]
+    config: Dict
+    contigs: List
+    counts: List[int]
+    flanking_pairs: Set
+    half_mapped: Tuple[Set, Set]
+    median_fragment_size: int
+    read_length: int
+    reference_genome: Dict
+    spanning_reads: Set
+    split_reads: Tuple[Set, Set]
+    stdev_fragment_size: int
+    strand_determining_read: int
+    # abstract properties
+    inner_window1: Interval
+    inner_window2: Interval
+    outer_window1: Interval
+    outer_window2: Interval
+
     @property
     def min_expected_fragment_size(self):
         # cannot be negative
@@ -32,7 +60,7 @@ class Evidence(BreakpointPair):
                 max(
                     [
                         self.median_fragment_size
-                        - self.stdev_fragment_size * self.stdev_count_abnormal,
+                        - self.stdev_fragment_size * self.config['validate.stdev_count_abnormal'],
                         0,
                     ]
                 ),
@@ -44,9 +72,16 @@ class Evidence(BreakpointPair):
     def max_expected_fragment_size(self):
         return int(
             round(
-                self.median_fragment_size + self.stdev_fragment_size * self.stdev_count_abnormal, 0
+                self.median_fragment_size
+                + self.stdev_fragment_size * self.config['validate.stdev_count_abnormal'],
+                0,
             )
         )
+
+    @property
+    @abstractmethod
+    def min_mapping_quality(self):
+        pass
 
     def __init__(
         self,
@@ -60,9 +95,11 @@ class Evidence(BreakpointPair):
         stranded=False,
         opposing_strands=None,
         untemplated_seq=None,
-        data={},
         classification=None,
-        **kwargs
+        config=DEFAULTS,
+        assembly_max_kmer_size=None,
+        strand_determining_read=2,
+        **kwargs,
     ):
         """
         Args:
@@ -77,6 +114,8 @@ class Evidence(BreakpointPair):
         # initialize the breakpoint pair
         self.bam_cache = bam_cache
         self.stranded = stranded and bam_cache.stranded
+        self.config = dict(**DEFAULTS)
+        self.config.update(config)
         BreakpointPair.__init__(
             self,
             break1,
@@ -84,7 +123,7 @@ class Evidence(BreakpointPair):
             stranded=stranded,
             opposing_strands=opposing_strands,
             untemplated_seq=untemplated_seq,
-            **data
+            **kwargs,
         )
         # check that the breakpoints are within the reference length
         if reference_genome:
@@ -110,24 +149,18 @@ class Evidence(BreakpointPair):
                         len(reference_genome[self.break2.chr].seq),
                     )
                 )
-        defaults = dict()
-        for arg in kwargs:
-            if arg not in DEFAULTS:
-                raise AttributeError('unrecognized attribute', arg)
-        defaults.update(DEFAULTS.items())
-        kwargs.setdefault('assembly_max_kmer_size', int(read_length * 0.7))
-        defaults.update(kwargs)  # input arguments should override the defaults
-        for arg, val in defaults.items():
-            setattr(self, arg, val)
-
+        self.assembly_max_kmer_size = (
+            assembly_max_kmer_size if assembly_max_kmer_size is not None else int(read_length * 0.7)
+        )
         self.bam_cache = bam_cache
         self.classification = classification
-        self.reference_genome = reference_genome
-        self.read_length = read_length
-        self.stdev_fragment_size = stdev_fragment_size
-        self.median_fragment_size = median_fragment_size
         self.compatible_window1 = None
         self.compatible_window2 = None
+        self.median_fragment_size = median_fragment_size
+        self.read_length = read_length
+        self.reference_genome = reference_genome
+        self.stdev_fragment_size = stdev_fragment_size
+        self.strand_determining_read = strand_determining_read
 
         if self.classification is not None and self.classification not in BreakpointPair.classify(
             self
@@ -163,11 +196,11 @@ class Evidence(BreakpointPair):
             pass
 
     @staticmethod
-    def distance(start, end):
+    def distance(start: int, end: int):
         return Interval(abs(end - start))
 
     @staticmethod
-    def traverse(start, distance, direction):
+    def traverse(start: int, distance: int, direction: str) -> Interval:
         if direction == ORIENT.LEFT:
             return Interval(start - distance)
         return Interval(start + distance)
@@ -195,14 +228,16 @@ class Evidence(BreakpointPair):
         )
         prefix = 0
         try:
-            cigar, prefix = _cigar.extend_softclipping(cigar, self.min_anchor_exact)
+            cigar, prefix = _cigar.extend_softclipping(
+                cigar, self.config['validate.min_anchor_exact']
+            )
         except AttributeError:
             pass
         read.cigar = _cigar.join(cigar)
         read.cigar = _cigar.merge_internal_events(
             read.cigar,
-            inner_anchor=self.contig_aln_merge_inner_anchor,
-            outer_anchor=self.contig_aln_merge_outer_anchor,
+            inner_anchor=self.config['validate.contig_aln_merge_inner_anchor'],
+            outer_anchor=self.config['validate.contig_aln_merge_outer_anchor'],
         )
         read.reference_start = read.reference_start + prefix
 
@@ -229,11 +264,8 @@ class Evidence(BreakpointPair):
             return SVTYPE.INS
         return None
 
-    def compute_fragment_size(self, read, mate):
+    def compute_fragment_size(self, read: pysam.AlignedSegment, mate: pysam.AlignedSegment):
         """
-        Args:
-            read (pysam.AlignedSegment):
-            mate (pysam.AlignedSegment):
         Returns:
             Interval: interval representing the range of possible fragment sizes for this read pair
         """
@@ -251,7 +283,7 @@ class Evidence(BreakpointPair):
         result.update(self.spanning_reads)
         return result
 
-    def collect_spanning_read(self, read):
+    def collect_spanning_read(self, read: pysam.AlignedSegment):
         """
         spanning read: a read covering BOTH breakpoints
 
@@ -259,7 +291,7 @@ class Evidence(BreakpointPair):
         here since they will be collected already
 
         Args:
-            read (pysam.AlignedSegment): the putative spanning read
+            read: the putative spanning read
 
         Returns:
             bool:
@@ -302,14 +334,16 @@ class Evidence(BreakpointPair):
                         return True
         return False
 
-    def collect_compatible_flanking_pair(self, read, mate, compatible_type):
+    def collect_compatible_flanking_pair(
+        self, read: pysam.AlignedSegment, mate: pysam.AlignedSegment, compatible_type: str
+    ) -> bool:
         """
         checks if a given read meets the minimum quality criteria to be counted as evidence as stored as support for
         this event
 
         Args:
-            read (pysam.AlignedSegment): the read to add
-            mate (pysam.AlignedSegment): the mate
+            read: the read to add
+            mate: the mate
             compatible_type (SVTYPE): the type we are collecting for
 
         Returns:
@@ -394,14 +428,14 @@ class Evidence(BreakpointPair):
 
         return False
 
-    def collect_flanking_pair(self, read, mate):
+    def collect_flanking_pair(self, read: pysam.AlignedSegment, mate: pysam.AlignedSegment):
         """
         checks if a given read meets the minimum quality criteria to be counted as evidence as stored as support for
         this event
 
         Args:
-            read (pysam.AlignedSegment): the read to add
-            mate (pysam.AlignedSegment): the mate
+            read: the read to add
+            mate: the mate
 
         Returns:
             bool:
@@ -505,11 +539,11 @@ class Evidence(BreakpointPair):
 
         return False
 
-    def collect_half_mapped(self, read, mate):
+    def collect_half_mapped(self, read: pysam.AlignedSegment, mate: pysam.AlignedSegment):
         """
         Args:
-            read (pysam.AlignedSegment): the read to add
-            mate (pysam.AlignedSegment): the unmapped mate
+            read: the read to add
+            mate: the unmapped mate
 
         Returns:
             bool:
@@ -534,12 +568,12 @@ class Evidence(BreakpointPair):
             added = True
         return added
 
-    def collect_split_read(self, read, first_breakpoint):
+    def collect_split_read(self, read: pysam.AlignedSegment, first_breakpoint: bool):
         """
         adds a split read if it passes the criteria filters and raises a warning if it does not
 
         Args:
-            read (pysam.AlignedSegment): the read to add
+            read: the read to add
             first_breakpoint (bool): add to the first breakpoint (or second if false)
         Returns:
             bool:
@@ -605,7 +639,10 @@ class Evidence(BreakpointPair):
                 len(read.query_sequence),
             )
 
-        if len(primary) < self.min_anchor_exact or len(clipped) < self.min_softclipping:
+        if (
+            len(primary) < self.config['validate.min_anchor_exact']
+            or len(clipped) < self.config['validate.min_softclipping']
+        ):
             # split read does not meet the minimum anchor criteria
             return False
         if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(
@@ -614,14 +651,17 @@ class Evidence(BreakpointPair):
             read = self.standardize_read(read)
         # data quality filters
         if (
-            _cigar.alignment_matches(read.cigar) >= self.min_sample_size_to_apply_percentage
-            and _cigar.match_percent(read.cigar) < self.min_anchor_match
+            _cigar.alignment_matches(read.cigar)
+            >= self.config['validate.min_sample_size_to_apply_percentage']
+            and _cigar.match_percent(read.cigar) < self.config['validate.min_anchor_match']
         ):
             return False  # too poor quality of an alignment
         if (
-            _cigar.longest_exact_match(read.cigar) < self.min_anchor_exact
-            and _cigar.longest_fuzzy_match(read.cigar, self.fuzzy_mismatch_number)
-            < self.min_anchor_fuzzy
+            _cigar.longest_exact_match(read.cigar) < self.config['validate.min_anchor_exact']
+            and _cigar.longest_fuzzy_match(
+                read.cigar, self.config['validate.fuzzy_mismatch_number']
+            )
+            < self.config['validate.min_anchor_fuzzy']
         ):
             return False  # too poor quality of an alignment
         else:
@@ -636,14 +676,14 @@ class Evidence(BreakpointPair):
         putative_alignments = None
         # figure out how much of the read must match when remaped
         min_match_tgt = read.cigar[-1][1] if breakpoint.orient == ORIENT.LEFT else read.cigar[0][1]
-        min_match_tgt = min(min_match_tgt * self.min_anchor_match, min_match_tgt - 1) / len(
-            read.query_sequence
-        )
+        min_match_tgt = min(
+            min_match_tgt * self.config['validate.min_anchor_match'], min_match_tgt - 1
+        ) / len(read.query_sequence)
         if not self.opposing_strands:  # same strand
             sc_align = _read.nsb_align(
                 opposite_breakpoint_ref,
                 read.query_sequence,
-                min_consecutive_match=self.min_anchor_exact,
+                min_consecutive_match=self.config['validate.min_anchor_exact'],
                 min_match=min_match_tgt,
                 min_overlap_percent=min_match_tgt,
             )  # split half to this side
@@ -657,7 +697,7 @@ class Evidence(BreakpointPair):
             revcomp_sc_align = _read.nsb_align(
                 opposite_breakpoint_ref,
                 revcomp_sc_align,
-                min_consecutive_match=self.min_anchor_exact,
+                min_consecutive_match=self.config['validate.min_anchor_exact'],
                 min_match=min_match_tgt,
                 min_overlap_percent=min_match_tgt,
             )
@@ -683,7 +723,9 @@ class Evidence(BreakpointPair):
             alignment.next_reference_id = read.next_reference_id
             alignment.mapping_quality = NA_MAPPING_QUALITY
             try:
-                cigar, offset = _cigar.extend_softclipping(alignment.cigar, self.min_anchor_exact)
+                cigar, offset = _cigar.extend_softclipping(
+                    alignment.cigar, self.config['validate.min_anchor_exact']
+                )
                 alignment.cigar = cigar
                 alignment.reference_start = alignment.reference_start + offset
             except AttributeError:
@@ -705,27 +747,31 @@ class Evidence(BreakpointPair):
                 alignment.template_length = 0
             if (
                 _cigar.alignment_matches(alignment.cigar)
-                >= self.min_sample_size_to_apply_percentage
-                and _cigar.match_percent(alignment.cigar) < self.min_anchor_match
+                >= self.config['validate.min_sample_size_to_apply_percentage']
+                and _cigar.match_percent(alignment.cigar) < self.config['validate.min_anchor_match']
             ):
                 continue
             if (
-                _cigar.longest_exact_match(alignment.cigar) < self.min_anchor_exact
-                and _cigar.longest_fuzzy_match(alignment.cigar, self.fuzzy_mismatch_number)
-                < self.min_anchor_fuzzy
+                _cigar.longest_exact_match(alignment.cigar)
+                < self.config['validate.min_anchor_exact']
+                and _cigar.longest_fuzzy_match(
+                    alignment.cigar, self.config['validate.fuzzy_mismatch_number']
+                )
+                < self.config['validate.min_anchor_fuzzy']
             ):
                 continue
-            if self.max_sc_preceeding_anchor is not None:
+            if self.config['validate.max_sc_preceeding_anchor'] is not None:
                 if opposite_breakpoint.orient == ORIENT.LEFT:
                     if (
                         alignment.cigar[0][0] == CIGAR.S
-                        and alignment.cigar[0][1] > self.max_sc_preceeding_anchor
+                        and alignment.cigar[0][1] > self.config['validate.max_sc_preceeding_anchor']
                     ):
                         continue
                 elif opposite_breakpoint.orient == ORIENT.RIGHT:
                     if (
                         alignment.cigar[-1][0] == CIGAR.S
-                        and alignment.cigar[-1][1] > self.max_sc_preceeding_anchor
+                        and alignment.cigar[-1][1]
+                        > self.config['validate.max_sc_preceeding_anchor']
                     ):
                         continue
             alignment.set_key()  # set the hash key before we add the read as evidence
@@ -747,7 +793,7 @@ class Evidence(BreakpointPair):
             )  # add to the opposite breakpoint
         return True
 
-    def decide_sequenced_strand(self, reads):
+    def decide_sequenced_strand(self, reads: Set[pysam.AlignedSegment]):
         """
         given a set of reads, determines the sequenced strand (if possible) and then returns the majority
         strand found
@@ -780,9 +826,9 @@ class Evidence(BreakpointPair):
         else:
             ratio = strand_calls[STRAND.POS] / (strand_calls[STRAND.NEG] + strand_calls[STRAND.POS])
             neg_ratio = 1 - ratio
-            if ratio >= self.assembly_strand_concordance:
+            if ratio >= self.config['validate.assembly_strand_concordance']:
                 return STRAND.POS
-            elif neg_ratio >= self.assembly_strand_concordance:
+            elif neg_ratio >= self.config['validate.assembly_strand_concordance']:
                 return STRAND.NEG
             raise ValueError(
                 'Could not determine the strand. Equivocal POS/(NEG + POS) ratio',
@@ -831,22 +877,22 @@ class Evidence(BreakpointPair):
 
         log('assembly size of {} sequences'.format(len(assembly_sequences) // 2))
 
-        kmer_size = self.read_length * self.assembly_kmer_size
+        kmer_size = self.read_length * self.config['validate.assembly_kmer_size']
         remap_min_overlap = max(
-            self.read_length - self.assembly_min_exact_match_to_remap, kmer_size
+            self.read_length - self.config['validate.assembly_min_exact_match_to_remap'], kmer_size
         )
 
         contigs = assemble(
             assembly_sequences,
             kmer_size,
-            min_edge_trim_weight=self.assembly_min_edge_trim_weight,
-            assembly_max_paths=self.assembly_max_paths,
+            min_edge_trim_weight=self.config['validate.assembly_min_edge_trim_weight'],
+            assembly_max_paths=self.config['validate.assembly_max_paths'],
             min_contig_length=self.read_length,
             log=log,
             remap_min_overlap=remap_min_overlap,
-            remap_min_exact_match=self.assembly_min_exact_match_to_remap,
-            assembly_min_uniq=self.assembly_min_uniq,
-            min_complexity=self.min_call_complexity,
+            remap_min_exact_match=self.config['validate.assembly_min_exact_match_to_remap'],
+            assembly_min_uniq=self.config['validate.assembly_min_uniq'],
+            min_complexity=self.config['validate.min_call_complexity'],
         )
 
         # add the input reads
@@ -910,9 +956,9 @@ class Evidence(BreakpointPair):
                         build_strand[STRAND.NEG] + build_strand[STRAND.POS]
                     )
                     neg_ratio = 1 - ratio
-                    if ratio >= self.assembly_strand_concordance:
+                    if ratio >= self.config['validate.assembly_strand_concordance']:
                         flipped_build = False
-                    elif neg_ratio >= self.assembly_strand_concordance:
+                    elif neg_ratio >= self.config['validate.assembly_strand_concordance']:
                         flipped_build = True
                     else:
                         continue
@@ -925,8 +971,8 @@ class Evidence(BreakpointPair):
         for contig in sorted(contigs, key=lambda x: (x.remap_score() * -1, x.seq)):
             # filter on evidence level
             if (
-                contig.remap_score() < self.assembly_min_remapped_seq
-                or contig.remap_coverage() < self.assembly_min_remap_coverage
+                contig.remap_score() < self.config['validate.assembly_min_remapped_seq']
+                or contig.remap_coverage() < self.config['validate.assembly_min_remap_coverage']
             ):
                 continue
             if self.stranded and self.bam_cache.stranded:
@@ -950,7 +996,7 @@ class Evidence(BreakpointPair):
                 return True
             elif any(
                 [
-                    self.filter_secondary_alignments and read.is_secondary,
+                    self.config['validate.filter_secondary_alignments'] and read.is_secondary,
                     read.mapping_quality < self.min_mapping_quality,
                 ]
             ):
@@ -983,7 +1029,7 @@ class Evidence(BreakpointPair):
             if not cache_if_true(read):
                 if any(
                     [
-                        self.filter_secondary_alignments and read.is_secondary,
+                        self.config['validate.filter_secondary_alignments'] and read.is_secondary,
                         read.mapping_quality < self.min_mapping_quality,
                     ]
                 ):
@@ -1004,9 +1050,9 @@ class Evidence(BreakpointPair):
             '{0}'.format(self.break1.chr),
             self.outer_window1[0],
             self.outer_window1[1],
-            read_limit=self.fetch_reads_limit,
-            sample_bins=self.fetch_reads_bins,
-            min_bin_size=self.fetch_min_bin_size,
+            read_limit=self.config['validate.fetch_reads_limit'],
+            sample_bins=self.config['validate.fetch_reads_bins'],
+            min_bin_size=self.config['validate.fetch_min_bin_size'],
             cache=True,
             cache_if=cache_if_true,
             filter_if=filter_if_true,
@@ -1035,9 +1081,9 @@ class Evidence(BreakpointPair):
             '{0}'.format(self.break2.chr),
             self.outer_window2[0],
             self.outer_window2[1],
-            read_limit=self.fetch_reads_limit,
-            sample_bins=self.fetch_reads_bins,
-            min_bin_size=self.fetch_min_bin_size,
+            read_limit=self.config['validate.fetch_reads_limit'],
+            sample_bins=self.config['validate.fetch_reads_bins'],
+            min_bin_size=self.config['validate.fetch_min_bin_size'],
             cache=True,
             cache_if=cache_if_true,
             filter_if=filter_if_true,
@@ -1087,9 +1133,9 @@ class Evidence(BreakpointPair):
                 '{0}'.format(self.break1.chr),
                 self.compatible_window1[0],
                 self.compatible_window1[1],
-                read_limit=self.fetch_reads_limit,
-                sample_bins=self.fetch_reads_bins,
-                min_bin_size=self.fetch_min_bin_size,
+                read_limit=self.config['validate.fetch_reads_limit'],
+                sample_bins=self.config['validate.fetch_reads_bins'],
+                min_bin_size=self.config['validate.fetch_min_bin_size'],
                 cache=True,
                 cache_if=cache_if_true,
                 filter_if=filter_if_true,
@@ -1101,9 +1147,9 @@ class Evidence(BreakpointPair):
                 '{0}'.format(self.break2.chr),
                 self.compatible_window2[0],
                 self.compatible_window2[1],
-                read_limit=self.fetch_reads_limit,
-                sample_bins=self.fetch_reads_bins,
-                min_bin_size=self.fetch_min_bin_size,
+                read_limit=self.config['validate.fetch_reads_limit'],
+                sample_bins=self.config['validate.fetch_reads_bins'],
+                min_bin_size=self.config['validate.fetch_min_bin_size'],
                 cache=True,
                 cache_if=cache_if_true,
                 filter_if=filter_if_true,
@@ -1180,3 +1226,26 @@ class Evidence(BreakpointPair):
         bed.append((self.break2.chr, self.outer_window2[0] - 1, self.outer_window2[1], name))
         bed.append((self.break2.chr, self.inner_window2[0] - 1, self.inner_window2[1], name))
         return bed
+
+    def generate_window(self, breakpoint: Breakpoint) -> Interval:
+        """
+        given some input breakpoint uses the current evidence setting to determine an
+        appropriate window/range of where one should search for supporting reads
+
+        Args:
+            breakpoint (Breakpoint): the breakpoint we are generating the evidence window for
+            read_length (int): the read length
+            call_error (int):
+                adds a buffer to the calculations if confidence in the breakpoint calls is low can increase this
+        Returns:
+            Interval: the range where reads should be read from the bam looking for evidence for this event
+        """
+        call_error = self.config['validate.call_error']
+        start = breakpoint.start - self.max_expected_fragment_size - call_error + 1
+        end = breakpoint.end + self.max_expected_fragment_size + call_error - 1
+
+        if breakpoint.orient == ORIENT.LEFT:
+            end = breakpoint.end + call_error + self.read_length - 1
+        elif breakpoint.orient == ORIENT.RIGHT:
+            start = breakpoint.start - call_error - self.read_length + 1
+        return Interval(max([1, start]), max([end, 1]))

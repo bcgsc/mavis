@@ -1,41 +1,44 @@
 """
 Should take in a sam file from a aligner like bwa aln or bwa mem and convert it into a
 """
-from copy import copy
 import itertools
 import os
 import re
 import subprocess
 import warnings
+from copy import copy
 
 import pysam
 
 from .bam import cigar as _cigar
 from .bam import read as _read
-from .breakpoint import BreakpointPair, Breakpoint
+from .breakpoint import Breakpoint, BreakpointPair
 from .constants import (
     CIGAR,
     COLUMNS,
-    MavisNamespace,
+    NA_MAPPING_QUALITY,
     ORIENT,
-    reverse_complement,
     STRAND,
     SVTYPE,
-    NA_MAPPING_QUALITY,
+    MavisNamespace,
+    reverse_complement,
 )
 from .error import InvalidRearrangement
 from .interval import Interval
 from .util import DEVNULL
 
 
-SUPPORTED_ALIGNER = MavisNamespace(
-    BWA_MEM='bwa mem', BLAT='blat', __name__='mavis.align.SUPPORTED_ALIGNER'
-)
-"""MavisNamespace: supported aligners
+class SUPPORTED_ALIGNER(MavisNamespace):
+    """
+    supported aligners
 
-- [blat](/glossary/#blat)
-- [bwa mem<BWA>](/glossary/#bwa-mem<BWA>)
-"""
+    Attributes:
+        BLAT: [blat](/glossary/#blat)
+        BWA_MEM: [bwa mem<BWA>](/glossary/#bwa-mem<BWA>)
+    """
+
+    BWA_MEM = 'bwa mem'
+    BLAT = 'blat'
 
 
 class SplitAlignment(BreakpointPair):
@@ -229,9 +232,9 @@ def convert_to_duplication(alignment, reference_genome):
                 ),
                 untemplated_seq=alignment.untemplated_seq[dup_len:],
                 opposing_strands=alignment.opposing_strands,
-                data=alignment.data,
                 read1=alignment.read1,
                 read2=alignment.read2,
+                **alignment.data
             )
             return result
     return alignment
@@ -535,11 +538,13 @@ def select_contig_alignments(evidence, reads_by_query):
     def filter_pass(alignment):
         return not any(
             [
-                alignment.query_consumption() < evidence.contig_aln_min_query_consumption,
-                alignment.score() < evidence.contig_aln_min_score,
+                alignment.query_consumption()
+                < evidence.config['validate.contig_aln_min_query_consumption'],
+                alignment.score() < evidence.config['validate.contig_aln_min_score'],
                 alignment.mapping_quality() == Interval(0),
                 alignment.read2 is not None
-                and alignment.query_overlap_extension() < evidence.contig_aln_min_extend_overlap,
+                and alignment.query_overlap_extension()
+                < evidence.config['validate.contig_aln_min_extend_overlap'],
             ]
         )
 
@@ -564,8 +569,8 @@ def select_contig_alignments(evidence, reads_by_query):
             read = evidence.standardize_read(raw_read)
             read.cigar = _cigar.merge_internal_events(
                 read.cigar,
-                inner_anchor=evidence.contig_aln_merge_inner_anchor,
-                outer_anchor=evidence.contig_aln_merge_outer_anchor,
+                inner_anchor=evidence.config['validate.contig_aln_merge_inner_anchor'],
+                outer_anchor=evidence.config['validate.contig_aln_merge_outer_anchor'],
             )
             read = evidence.standardize_read(
                 read
@@ -582,8 +587,8 @@ def select_contig_alignments(evidence, reads_by_query):
                 _read.convert_events_to_softclipping(
                     read,
                     evidence.break1.orient,
-                    max_event_size=evidence.contig_aln_max_event_size,
-                    min_anchor_size=evidence.contig_aln_min_anchor_size,
+                    max_event_size=evidence.config['validate.contig_aln_max_event_size'],
+                    min_anchor_size=evidence.config['validate.contig_aln_min_anchor_size'],
                 )
             )
             if evidence.break1.orient == evidence.break2.orient:
@@ -592,8 +597,8 @@ def select_contig_alignments(evidence, reads_by_query):
                 _read.convert_events_to_softclipping(
                     read,
                     evidence.break2.orient,
-                    max_event_size=evidence.contig_aln_max_event_size,
-                    min_anchor_size=evidence.contig_aln_min_anchor_size,
+                    max_event_size=evidence.config['validate.contig_aln_max_event_size'],
+                    min_anchor_size=evidence.config['validate.contig_aln_min_anchor_size'],
                 )
             )
 

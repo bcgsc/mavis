@@ -45,11 +45,19 @@ def test_workflow(output_dir):
             assert glob_exists(os.path.join(output_dir, 'summary', 'MAVIS.COMPLETE'))
             assert glob_exists(os.path.join(output_dir, 'pairing', 'MAVIS.COMPLETE'))
             assert glob_exists(os.path.join(output_dir, 'mock-A47933', 'cluster', 'MAVIS.COMPLETE'))
-            assert glob_exists(os.path.join(output_dir, 'mock-A47933', 'validate', '*', 'MAVIS.COMPLETE'))
-            assert glob_exists(os.path.join(output_dir, 'mock-A47933', 'annotate', '*', 'MAVIS.COMPLETE'))
+            assert glob_exists(
+                os.path.join(output_dir, 'mock-A47933', 'validate', '*', 'MAVIS.COMPLETE')
+            )
+            assert glob_exists(
+                os.path.join(output_dir, 'mock-A47933', 'annotate', '*', 'MAVIS.COMPLETE')
+            )
             assert glob_exists(os.path.join(output_dir, 'mock-A36971', 'cluster', 'MAVIS.COMPLETE'))
-            assert glob_exists(os.path.join(output_dir, 'mock-A36971', 'validate', '*', 'MAVIS.COMPLETE'))
-            assert glob_exists(os.path.join(output_dir, 'mock-A36971', 'annotate', '*', 'MAVIS.COMPLETE'))
+            assert glob_exists(
+                os.path.join(output_dir, 'mock-A36971', 'validate', '*', 'MAVIS.COMPLETE')
+            )
+            assert glob_exists(
+                os.path.join(output_dir, 'mock-A36971', 'annotate', '*', 'MAVIS.COMPLETE')
+            )
         except SystemExit as err:
             if err.code != 0:
                 raise err

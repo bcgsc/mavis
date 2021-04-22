@@ -44,7 +44,7 @@ class TestConvert(unittest.TestCase):
             self.assertTrue(unique_exists(outputfile))
         result = {}
         for pair in read_bpp_from_input_file(outputfile):
-            result.setdefault(pair.tracking_id, []).append(pair)
+            result.setdefault(pair.data['tracking_id'], []).append(pair)
         return result
 
     def test_chimerascan(self):
@@ -58,6 +58,8 @@ class TestConvert(unittest.TestCase):
         # test the contents were converted successfully
         self.assertEqual(1, len(result['delly-DUP00000424']))
         bpp = result['delly-DUP00000424'][0]
+        print(bpp.data)
+        print(bpp)
         self.assertEqual(SVTYPE.DUP, bpp.event_type)
         self.assertEqual('1', bpp.break1.chr)
         self.assertEqual('1', bpp.break2.chr)

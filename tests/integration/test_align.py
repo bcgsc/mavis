@@ -2,20 +2,20 @@ import shutil
 import unittest
 from unittest import mock
 
+import mavis.bam.cigar as _cigar
 from mavis import align
 from mavis.annotate.file_io import load_reference_genome
 from mavis.assemble import Contig
 from mavis.bam.cache import BamCache
-import mavis.bam.cigar as _cigar
-from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import CIGAR, ORIENT, reverse_complement, STRAND, SVTYPE
-from mavis.interval import Interval
-from mavis.validate.evidence import GenomeEvidence
-from mavis.validate.constants import DEFAULTS
 from mavis.bam.read import SamRead
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import CIGAR, ORIENT, STRAND, SVTYPE, reverse_complement
+from mavis.interval import Interval
+from mavis.schemas import DEFAULTS
+from mavis.validate.evidence import GenomeEvidence
 
-from . import MockBamFileHandle, MockObject, MockLongString, MockRead
 from ..util import get_data
+from . import MockBamFileHandle, MockLongString, MockObject, MockRead
 
 REFERENCE_GENOME = None
 
@@ -66,9 +66,11 @@ class TestAlign(unittest.TestCase):
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=100,
-            stdev_count_abnormal=2,
-            min_splits_reads_resolution=1,
-            min_flanking_pairs_resolution=1,
+            config={
+                'validate.stdev_count_abnormal': 2,
+                'validate.min_splits_reads_resolution': 1,
+                'validate.min_flanking_pairs_resolution': 1,
+            },
         )
         ev.contigs = [
             Contig(
@@ -110,9 +112,11 @@ class TestAlign(unittest.TestCase):
             read_length=40,
             stdev_fragment_size=25,
             median_fragment_size=100,
-            stdev_count_abnormal=2,
-            min_splits_reads_resolution=1,
-            min_flanking_pairs_resolution=1,
+            config={
+                'validate.stdev_count_abnormal': 2,
+                'validate.min_splits_reads_resolution': 1,
+                'validate.min_flanking_pairs_resolution': 1,
+            },
         )
         ev.contigs = [
             Contig(
@@ -717,13 +721,11 @@ class TestSelectContigAlignments(unittest.TestCase):
             break2=MockObject(orient=ORIENT.RIGHT, chr='3'),
             contigs=[MockObject(seq=s, alignments=set())],
             standardize_read=lambda x: x,
-            contig_aln_max_event_size=DEFAULTS.contig_aln_max_event_size,
-            contig_aln_merge_inner_anchor=5,
-            contig_aln_merge_outer_anchor=DEFAULTS.contig_aln_merge_outer_anchor,
-            contig_aln_min_query_consumption=0.9,
-            contig_aln_min_extend_overlap=DEFAULTS.contig_aln_min_extend_overlap,
-            contig_aln_min_anchor_size=DEFAULTS.contig_aln_min_anchor_size,
-            contig_aln_min_score=DEFAULTS.contig_aln_min_score,
+            config={
+                **DEFAULTS,
+                'validate.contig_aln_merge_inner_anchor': 5,
+                'validate.contig_aln_min_query_consumption': 0.9,
+            },
             outer_window1=Interval(1000, 1200),
             outer_window2=Interval(2000, 2200),
             LR=False,

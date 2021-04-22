@@ -1,22 +1,19 @@
+import os
 import random
 import unittest
-import os
 
+from mavis.annotate import fusion, genomic, protein, variant
 from mavis.annotate.base import BioInterval
 from mavis.annotate.file_io import load_templates
-from mavis.annotate import genomic
-from mavis.annotate import protein
-from mavis.annotate import variant
-from mavis.annotate import fusion
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import ORIENT, PROTOCOL, STRAND, SVTYPE
-from mavis.illustrate.constants import DiagramSettings, DEFAULTS
+from mavis.illustrate.constants import DEFAULTS, DiagramSettings
 from mavis.illustrate.diagram import (
+    HEX_BLACK,
+    HEX_WHITE,
     draw_multi_transcript_overlay,
     draw_sv_summary_diagram,
     generate_interval_mapping,
-    HEX_BLACK,
-    HEX_WHITE,
 )
 from mavis.illustrate.elements import draw_genes, draw_legend, draw_template, draw_ustranscript
 from mavis.illustrate.scatter import ScatterPlot
@@ -24,8 +21,8 @@ from mavis.illustrate.util import dynamic_label_color, split_intervals_into_trac
 from mavis.interval import Interval
 from svgwrite import Drawing
 
-from . import build_transcript, MockObject, MockString, OUTPUT_SVG
 from ..util import get_data
+from . import OUTPUT_SVG, MockObject, MockString, build_transcript
 
 TEMPLATE_METADATA = None
 DEFAULTS.domain_name_regex_filter = r'.*'
@@ -65,7 +62,7 @@ class TestDraw(unittest.TestCase):
         #  _generate_interval_mapping [genomic.IntergenicRegion(11:77361962_77361962+)] 1181.39453125 5 30 None 77356962 77366962)
         ir = genomic.IntergenicRegion('11', 5000, 5000, STRAND.POS)
         tgt_width = 1000
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         d.gene_min_buffer = 10
         # (self, canvas, gene, width, height, fill, label='', reference_genome=None)
         draw_genes(d, self.canvas, [ir], tgt_width, [])
@@ -91,7 +88,7 @@ class TestDraw(unittest.TestCase):
         y = genomic.Gene('1', 5000, 7000, strand=STRAND.NEG)
         z = genomic.Gene('1', 1500, 2500, strand=STRAND.POS)
 
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         breakpoints = [Breakpoint('1', 1100, 1200, orient=ORIENT.RIGHT)]
         g = draw_genes(
             d,
@@ -121,7 +118,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(breakpoints[0], g.labels['B1'])
 
     def test_draw_ustranscript(self):
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         # domains = [protein.Domain()]
         d1 = protein.Domain('first', [(55, 61), (71, 73)])
         d2 = protein.Domain('second', [(10, 20), (30, 34)])
@@ -172,7 +169,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(d2.name, g.labels['D2'])
 
     def test_draw_consec_exons(self):
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         # domains = [protein.Domain()]
         t = build_transcript(
             gene=None,
@@ -209,7 +206,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(HEX_BLACK, dynamic_label_color(HEX_WHITE))
 
     def test_draw_legend(self):
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         swatches = [
             ('#000000', 'black'),
             ('#FF0000', 'red'),
@@ -233,7 +230,7 @@ class TestDraw(unittest.TestCase):
         )
 
     def test_draw_layout_single_transcript(self):
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         d1 = protein.Domain('first', [(55, 61), (71, 73)])
         d2 = protein.Domain('second', [(10, 20), (30, 34)])
         g1 = genomic.Gene('1', 150, 1000, strand=STRAND.POS)
@@ -275,7 +272,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(expected_height, canvas.attribs['height'])
 
     def test_draw_layout_single_genomic(self):
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         d1 = protein.Domain('first', [(55, 61), (71, 73)])
         d2 = protein.Domain('second', [(10, 20), (30, 34)])
         g1 = genomic.Gene('1', 150, 1000, strand=STRAND.POS)
@@ -339,7 +336,7 @@ class TestDraw(unittest.TestCase):
             canvas.saveas('test_draw_layout_single_genomic.svg')
 
     def test_draw_layout_translocation(self):
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         d1 = protein.Domain('first', [(55, 61), (71, 73)])
         d2 = protein.Domain('second', [(10, 20), (30, 34)])
         g1 = genomic.Gene('1', 150, 1000, strand=STRAND.POS)
@@ -406,7 +403,7 @@ class TestDraw(unittest.TestCase):
 
     def test_draw_template(self):
         # def draw_template(self, canvas, template, target_width, height, labels=None, colors=None):
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         canvas = Drawing(size=(1000, 50))
         t = genomic.Template(
             '1',
@@ -428,7 +425,7 @@ class TestDraw(unittest.TestCase):
         self.assertEqual(2, len(canvas.elements))
 
     def test_draw_translocation_with_template(self):
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         d1 = protein.Domain('PF0001', [(55, 61), (71, 73)])
         d2 = protein.Domain('PF0002', [(10, 20), (30, 34)])
         g1 = genomic.Gene(TEMPLATE_METADATA['1'], 150, 1000, strand=STRAND.POS, aliases=['HUGO2'])
@@ -547,7 +544,7 @@ class TestDraw(unittest.TestCase):
             gene=gene,
             domains=[],
         )
-        d = DiagramSettings()
+        d = DiagramSettings(domain_name_regex_filter=r'.*')
         for i, t in enumerate(gene.transcripts):
             t.name = 'transcript {}'.format(i + 1)
         scatterx = [x + 100 for x in range(gene.start, gene.end + 1, 400)]

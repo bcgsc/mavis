@@ -7,7 +7,6 @@ import logging
 import statistics as stats
 
 import pysam
-
 from mavis.annotate.file_io import load_reference_genome
 from mavis.constants import SVTYPE
 from mavis.util import LOG as log
@@ -196,7 +195,7 @@ class RefAltCalculator:
         for bpp in bpps:
             # only use precise bpps that are within a certain event size
             try:
-                processed_bpps[bpp.product_id] = self.calculate_ref_counts(bpp)
+                processed_bpps[bpp.data['product_id']] = self.calculate_ref_counts(bpp)
             except ValueError:
                 # wrong event type to calculate a ref/alt count
                 filtered_events.append(bpp)

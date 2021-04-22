@@ -1,9 +1,10 @@
+from typing import Dict
+
 from ..constants import COLUMNS, ORIENT
+from .constants import SUPPORTED_TOOL, TRACKING_COLUMN
 
-from .constants import TRACKING_COLUMN, SUPPORTED_TOOL
 
-
-def convert_row(row):
+def convert_row(row: Dict) -> Dict:
     """
     transforms the chimerscan output into the common format for expansion. Maps the input column
     names to column names which MAVIS can read

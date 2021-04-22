@@ -1,10 +1,11 @@
 import itertools
 import math
 import statistics
+from typing import List, Optional, Set
 
-from ..align import SplitAlignment, call_read_events, call_paired_read_event, convert_to_duplication
+from ..align import SplitAlignment, call_paired_read_event, call_read_events, convert_to_duplication
+from ..assemble import Contig
 from ..bam import read as _read
-
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import (
     CALL_METHOD,
@@ -16,6 +17,7 @@ from ..constants import (
     reverse_complement,
 )
 from ..interval import Interval
+from ..validate.base import Evidence
 
 
 class EventCall(BreakpointPair):
@@ -25,20 +27,29 @@ class EventCall(BreakpointPair):
     just a reference to the evidence object and decisions on class, exact breakpoints, etc
     """
 
+    spanning_reads: Set
+    flanking_pairs: Set
+    break1_split_reads: Set
+    break2_split_reads: Set
+    compatible_flanking_pairs: Set
+    compatible_type: Optional[str]
+    contig: Optional[Contig]
+    contig_alignment: Optional[SplitAlignment]
+
     @property
     def has_compatible(self):
         return False if self.compatible_type is None else True
 
     def __init__(
         self,
-        b1,
-        b2,
-        source_evidence,
-        event_type,
-        call_method,
-        contig=None,
-        contig_alignment=None,
-        untemplated_seq=None,
+        b1: Breakpoint,
+        b2: Breakpoint,
+        source_evidence: Evidence,
+        event_type: str,
+        call_method: str,
+        contig: Optional[Contig] = None,
+        contig_alignment: Optional[SplitAlignment] = None,
+        untemplated_seq: Optional[str] = None,
     ):
         """
         Args:
@@ -78,7 +89,7 @@ class EventCall(BreakpointPair):
             event_type, self.compatible_type = self.compatible_type, event_type
             putative_types = BreakpointPair.classify(self, source_evidence.distance)
 
-        self.event_type = SVTYPE.enforce(event_type)
+        self.data[COLUMNS.event_type] = SVTYPE.enforce(event_type)
         if event_type not in putative_types | {self.compatible_type}:
             raise ValueError(
                 'event_type is not compatible with the breakpoint call',
@@ -615,7 +626,7 @@ def filter_consumed_pairs(pairs, consumed_reads):
     return temp
 
 
-def _call_by_spanning_reads(source_evidence, consumed_evidence):
+def _call_by_spanning_reads(source_evidence: Evidence, consumed_evidence):
     spanning_calls = {}
     available_flanking_pairs = filter_consumed_pairs(
         source_evidence.flanking_pairs, consumed_evidence
@@ -625,8 +636,9 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
             event = convert_to_duplication(event, source_evidence.reference_genome)
             if all(
                 [
-                    event.query_consumption() >= source_evidence.contig_aln_min_query_consumption,
-                    event.score() >= source_evidence.contig_aln_min_score,
+                    event.query_consumption()
+                    >= source_evidence.config['validate.contig_aln_min_query_consumption'],
+                    event.score() >= source_evidence.config['validate.contig_aln_min_score'],
                 ]
             ):
                 spanning_calls.setdefault(event, set()).add(read)
@@ -634,7 +646,7 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
     for event, reads in spanning_calls.items():
         if any(
             [
-                len(reads) < source_evidence.min_spanning_reads_resolution,
+                len(reads) < source_evidence.config['validate.min_spanning_reads_resolution'],
                 source_evidence.opposing_strands != event.opposing_strands,
             ]
         ):
@@ -685,7 +697,7 @@ def _call_by_spanning_reads(source_evidence, consumed_evidence):
     return filtered_events
 
 
-def call_events(source_evidence):
+def call_events(source_evidence) -> List[EventCall]:
     """
     generates a set of event calls based on the evidence associated with the source_evidence object
     will also narrow down the event type
@@ -725,12 +737,15 @@ def call_events(source_evidence):
 
         try:
             call = _call_by_flanking_pairs(source_evidence, event_type, type_consumed_evidence)
-            if len(call.flanking_pairs) < source_evidence.min_flanking_pairs_resolution:
+            if (
+                len(call.flanking_pairs)
+                < source_evidence.config['validate.min_flanking_pairs_resolution']
+            ):
                 errors.add(
                     'flanking call ({}) failed to supply the minimum evidence required ({} < {})'.format(
                         event_type,
                         len(call.flanking_pairs),
-                        source_evidence.min_flanking_pairs_resolution,
+                        source_evidence.config['validate.min_flanking_pairs_resolution'],
                     )
                 )
             else:
@@ -874,7 +889,7 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
             ]
         else:
             break
-    if len(selected_flanking_pairs) < evidence.min_flanking_pairs_resolution:
+    if len(selected_flanking_pairs) < evidence.config['validate.min_flanking_pairs_resolution']:
         raise AssertionError(
             'insufficient flanking pairs ({}) to call {} by flanking reads'.format(
                 len(selected_flanking_pairs), event_type
@@ -931,7 +946,7 @@ def _call_by_flanking_pairs(evidence, event_type, consumed_evidence=None):
     if call.has_compatible:
         call.add_flanking_support(evidence.compatible_flanking_pairs, is_compatible=True)
 
-    if len(call.flanking_pairs) < evidence.min_flanking_pairs_resolution:
+    if len(call.flanking_pairs) < evidence.config['validate.min_flanking_pairs_resolution']:
         raise AssertionError(
             'insufficient flanking pairs ({}) to call {} by flanking reads'.format(
                 len(call.flanking_pairs), event_type
@@ -964,7 +979,7 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
                 pass
         putative_positions = list(pos_dict.keys())
         for pos in putative_positions:
-            if len(pos_dict[pos]) < evidence.min_splits_reads_resolution:
+            if len(pos_dict[pos]) < evidence.config['validate.min_splits_reads_resolution']:
                 del pos_dict[pos]
             else:
                 count = 0
@@ -973,7 +988,7 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
                         PYSAM_READ_FLAGS.TARGETED_ALIGNMENT
                     ):
                         count += 1
-                if count < evidence.min_non_target_aligned_split_reads:
+                if count < evidence.config['validate.min_non_target_aligned_split_reads']:
                     del pos_dict[pos]
 
     linked_pairings = []
@@ -991,15 +1006,15 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
                 links += 1
             if (read.query_name, read.query_sequence) in reads:
                 tgt_align += 1
-        if links < evidence.min_linking_split_reads:
+        if links < evidence.config['validate.min_linking_split_reads']:
             continue
         deletion_size = second - first - 1
-        if tgt_align >= evidence.min_double_aligned_to_estimate_insertion_size:
+        if tgt_align >= evidence.config['validate.min_double_aligned_to_estimate_insertion_size']:
             # we can estimate the fragment size
-            max_insert = evidence.read_length - 2 * evidence.min_softclipping
+            max_insert = evidence.read_length - 2 * evidence.config['validate.min_softclipping']
             if event_type == SVTYPE.INS and max_insert < deletion_size:
                 continue
-        elif links >= evidence.min_double_aligned_to_estimate_insertion_size:
+        elif links >= evidence.config['validate.min_double_aligned_to_estimate_insertion_size']:
             if deletion_size > evidence.max_expected_fragment_size and event_type == SVTYPE.INS:
                 continue
 
@@ -1086,12 +1101,12 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
                 if not any(
                     [
                         len(call.break1_split_read_names(both=True))
-                        < evidence.min_splits_reads_resolution,
+                        < evidence.config['validate.min_splits_reads_resolution'],
                         len(call.break2_split_read_names(both=True))
-                        < evidence.min_splits_reads_resolution,
+                        < evidence.config['validate.min_splits_reads_resolution'],
                         len(call.break1_split_read_names()) < 1,
                         len(call.break2_split_read_names()) < 1,
-                        linking_reads < evidence.min_linking_split_reads,
+                        linking_reads < evidence.config['validate.min_linking_split_reads'],
                         call.event_type != event_type,
                     ]
                 ):

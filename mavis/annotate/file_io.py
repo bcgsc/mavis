@@ -11,54 +11,10 @@ from Bio import SeqIO
 
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
-from ..util import DEVNULL, LOG, WeakMavisNamespace, filepath
+from ..util import DEVNULL, LOG, filepath
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, PreTranscript, Template, Transcript
 from .protein import Domain, Translation
-
-REFERENCE_DEFAULTS = WeakMavisNamespace()
-REFERENCE_DEFAULTS.add(
-    'template_metadata',
-    [],
-    cast_type=filepath,
-    listable=True,
-    defn='file containing the cytoband template information. Used for illustrations only',
-)
-REFERENCE_DEFAULTS.add(
-    'masking',
-    [],
-    cast_type=filepath,
-    listable=True,
-    defn='file containing regions for which input events overlapping them are dropped prior to validation',
-)
-REFERENCE_DEFAULTS.add(
-    'annotations',
-    [],
-    cast_type=filepath,
-    listable=True,
-    defn='path to the reference annotations of genes, transcript, exons, domains, etc',
-)
-REFERENCE_DEFAULTS.add(
-    'aligner_reference',
-    None,
-    cast_type=filepath,
-    nullable=True,
-    defn='path to the aligner reference file used for aligning the contig sequences',
-)
-REFERENCE_DEFAULTS.add(
-    'dgv_annotation',
-    [],
-    cast_type=filepath,
-    listable=True,
-    defn='Path to the dgv reference processed to look like the cytoband file.',
-)
-REFERENCE_DEFAULTS.add(
-    'reference_genome',
-    [],
-    cast_type=filepath,
-    listable=True,
-    defn='Path to the human reference genome fasta file',
-)
 
 
 def load_masking_regions(*filepaths):

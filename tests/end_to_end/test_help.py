@@ -28,7 +28,6 @@ class TestHelpMenu(unittest.TestCase):
             else:
                 self.assertEqual(0, returncode)
 
-
     def test_cluster(self):
         with patch.object(sys, 'argv', ['mavis', SUBCOMMAND.CLUSTER, '-h']):
             try:

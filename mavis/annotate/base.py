@@ -1,4 +1,5 @@
 import re
+from typing import Any, Dict, Optional
 
 from ..constants import STRAND
 from ..interval import Interval
@@ -49,6 +50,13 @@ class ReferenceName(str):
 
 
 class BioInterval:
+    position: Interval
+    name: Optional[str]
+    data: Dict
+    seq: Optional[str]
+    reference_object: Any
+    strand: Optional[str]
+
     def __init__(
         self, reference_object, start, end=None, name=None, seq=None, data=None, strand=None
     ):

@@ -1,19 +1,18 @@
-from functools import partial
 import unittest
+from functools import partial
 
-from mavis.annotate.genomic import Gene, Transcript, PreTranscript
+from mavis.annotate.genomic import Gene, PreTranscript, Transcript
+from mavis.bam import cigar as _cigar
 from mavis.bam.cache import BamCache
 from mavis.bam.read import SamRead
-from mavis.bam import cigar as _cigar
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CIGAR, ORIENT, STRAND
 from mavis.interval import Interval
-from mavis.validate.constants import DEFAULTS
+from mavis.schemas import DEFAULTS
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
-from . import mock_read_pair, MockBamFileHandle, MockRead, MockObject
-
+from . import MockBamFileHandle, MockObject, MockRead, mock_read_pair
 
 REFERENCE_GENOME = None
 
@@ -173,7 +172,7 @@ class TestComputeFragmentSizes(unittest.TestCase):
             read_length=self.read_length,
             stdev_fragment_size=100,
             median_fragment_size=100,
-            stdev_count_abnormal=1,
+            config={'validate.stdev_count_abnormal': 1},
         )
         self.genomic_ev = GenomeEvidence(
             b1,
@@ -184,7 +183,7 @@ class TestComputeFragmentSizes(unittest.TestCase):
             read_length=self.read_length,
             stdev_fragment_size=100,
             median_fragment_size=100,
-            stdev_count_abnormal=1,
+            config={'validate.stdev_count_abnormal': 1},
         )
 
     def test_genomic_vs_trans_no_annotations(self):
@@ -366,14 +365,17 @@ class TestTranscriptomeEvidenceWindow(unittest.TestCase):
             self.pre_transcript.transcripts.append(Transcript(self.pre_transcript, spl))
         self.annotations = {gene.chr: [gene]}
         self.genome_evidence = MockObject(
-            annotations={}, read_length=100, max_expected_fragment_size=550, call_error=11
+            annotations={},
+            read_length=100,
+            max_expected_fragment_size=550,
+            config={**DEFAULTS, 'validate.call_error': 11},
         )
         self.trans_evidence = MockObject(
             annotations={},
             read_length=100,
             max_expected_fragment_size=550,
-            call_error=11,
             overlapping_transcripts={self.pre_transcript},
+            config={**DEFAULTS, 'validate.call_error': 11},
         )
         setattr(
             self.trans_evidence,
@@ -506,7 +508,12 @@ class TestGenomeEvidenceWindow(unittest.TestCase):
     def test_orient_ns(self):
         bpp = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.NS)
         window = GenomeEvidence.generate_window(
-            MockObject(read_length=100, max_expected_fragment_size=550, call_error=11), bpp
+            MockObject(
+                read_length=100,
+                max_expected_fragment_size=550,
+                config={**DEFAULTS, 'validate.call_error': 11},
+            ),
+            bpp,
         )
         self.assertEqual(440, window.start)
         self.assertEqual(1560, window.end)
@@ -515,7 +522,12 @@ class TestGenomeEvidenceWindow(unittest.TestCase):
     def test_orient_left(self):
         bpp = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.LEFT)
         window = GenomeEvidence.generate_window(
-            MockObject(read_length=100, call_error=11, max_expected_fragment_size=550), bpp
+            MockObject(
+                read_length=100,
+                max_expected_fragment_size=550,
+                config={**DEFAULTS, 'validate.call_error': 11},
+            ),
+            bpp,
         )
         self.assertEqual(440, window.start)
         self.assertEqual(1110, window.end)
@@ -524,7 +536,12 @@ class TestGenomeEvidenceWindow(unittest.TestCase):
     def test_orient_right(self):
         bpp = Breakpoint(chr='1', start=1000, end=1000, orient=ORIENT.RIGHT)
         window = GenomeEvidence.generate_window(
-            MockObject(read_length=100, call_error=11, max_expected_fragment_size=550), bpp
+            MockObject(
+                read_length=100,
+                max_expected_fragment_size=550,
+                config={**DEFAULTS, 'validate.call_error': 11},
+            ),
+            bpp,
         )
         self.assertEqual(890, window.start)
         self.assertEqual(1560, window.end)
@@ -540,8 +557,7 @@ class TestGenomeEvidenceWindow(unittest.TestCase):
             read_length=150,
             stdev_fragment_size=500,
             median_fragment_size=100,
-            call_error=0,
-            stdev_count_abnormal=1,
+            config={'validate.stdev_count_abnormal': 1, 'validate.call_error': 0},
         )
         self.assertEqual(901, ge.outer_window1.start)
         self.assertEqual(1649, ge.outer_window1.end)
@@ -565,8 +581,7 @@ class TestGenomeEvidenceAddReads(unittest.TestCase):
             read_length=150,
             stdev_fragment_size=500,
             median_fragment_size=100,
-            call_error=0,
-            stdev_count_abnormal=1,
+            config={'validate.stdev_count_abnormal': 1, 'validate.call_error': 0},
         )
         # outer windows (901, 1649)  (5852, 6600)
         # inner windows (1351, 1649)  (5852, 6150)

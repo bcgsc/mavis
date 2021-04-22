@@ -199,27 +199,6 @@ class TestBreakpointPair(unittest.TestCase):
                 opposing_strands=True,
             )
 
-    def test_accessing_data_attributes(self):
-        bp1 = Breakpoint(1, 1, 2, ORIENT.LEFT)
-        bp2 = Breakpoint(2, 1, 2, ORIENT.LEFT)
-        bpp = BreakpointPair(bp1, bp2, opposing_strands=True)
-        bpp.data['a'] = 1
-        print(bpp.data)
-        self.assertEqual(1, bpp.a)
-        with self.assertRaises(AttributeError):
-            bpp.random_attr
-
-        with self.assertRaises(AttributeError):
-            bpp.call_method
-
-        bpp.data[COLUMNS.call_method] = 1
-        print(bpp.data)
-        self.assertEqual(1, bpp.call_method)
-
-        COLUMNS.call_method = 'bbreak2_call_method'
-        bpp.data[COLUMNS.call_method] = 2
-        self.assertEqual(2, bpp.call_method)
-
 
 class TestClassifyBreakpointPair(unittest.TestCase):
     def test_inverted_translocation(self):

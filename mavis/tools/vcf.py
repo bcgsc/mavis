@@ -1,14 +1,14 @@
 import re
+from typing import Dict, List, Tuple
 
 from pysam import VariantFile
 
 from ..constants import COLUMNS, ORIENT, SVTYPE
 from ..util import DEVNULL
-
 from .constants import SUPPORTED_TOOL
 
 
-def parse_bnd_alt(alt):
+def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
     """
     parses the alt statement from vcf files using the specification in vcf 4.2/4.2.
 
@@ -74,7 +74,7 @@ def parse_bnd_alt(alt):
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def convert_record(record, record_mapping={}, log=DEVNULL):
+def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
     """
     converts a vcf record
 

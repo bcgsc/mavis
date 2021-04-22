@@ -1,32 +1,35 @@
-from ..constants import MavisNamespace, SVTYPE
+from ..constants import SVTYPE, MavisNamespace
 
-SUPPORTED_TOOL = MavisNamespace(
-    MANTA='manta',
-    DELLY='delly',
-    TA='transabyss',
-    PINDEL='pindel',
-    CHIMERASCAN='chimerascan',
-    MAVIS='mavis',
-    DEFUSE='defuse',
-    BREAKDANCER='breakdancer',
-    VCF='vcf',
-    BREAKSEQ='breakseq',
-    CNVNATOR='cnvnator',
-    STRELKA='strelka',
-    STARFUSION='starfusion',
-)
-"""
-Supported Tools used to call SVs and then used as input into MAVIS
 
-- chimerascan [Iyer-2011]_
-- defuse [McPherson-2011]_
-- delly [Rausch-2012]_
-- manta [Chen-2016]_
-- pindel [Ye-2009]_
-- transabyss [Robertson-2010]_
-"""
+class SUPPORTED_TOOL(MavisNamespace):
+    """
+    Supported Tools used to call SVs and then used as input into MAVIS
 
-TOOL_SVTYPE_MAPPING = {v: [v] for v in SVTYPE.values()}
+    Attributes:
+        CHIMERASCAN: chimerascan [Iyer-2011]_
+        DEFUSE: defuse [McPherson-2011]_
+        DELLY: delly [Rausch-2012]_
+        MANTA: manta [Chen-2016]_
+        PINDEL: pindel [Ye-2009]_
+        TA: transabyss [Robertson-2010]_
+    """
+
+    MANTA = 'manta'
+    DELLY = 'delly'
+    TA = 'transabyss'
+    PINDEL = 'pindel'
+    CHIMERASCAN = 'chimerascan'
+    MAVIS = 'mavis'
+    DEFUSE = 'defuse'
+    BREAKDANCER = 'breakdancer'
+    VCF = 'vcf'
+    BREAKSEQ = 'breakseq'
+    CNVNATOR = 'cnvnator'
+    STRELKA = 'strelka'
+    STARFUSION = 'starfusion'
+
+
+TOOL_SVTYPE_MAPPING = {v: [v] for v in SVTYPE.values()}  # type: ignore
 TOOL_SVTYPE_MAPPING.update(
     {
         'DEL': [SVTYPE.DEL],

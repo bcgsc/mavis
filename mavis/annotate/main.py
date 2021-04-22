@@ -6,9 +6,9 @@ from typing import Dict, List
 
 from ..constants import COLUMNS, PRIME, PROTOCOL, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
-from ..illustrate.constants import DEFAULTS as ILLUSTRATION_DEFAULTS
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.diagram import draw_sv_summary_diagram
+from ..schemas import DEFAULTS, get_by_prefix
 from ..util import LOG, generate_complete_stamp, mkdirp, read_inputs
 from .constants import PASS_FILENAME
 from .file_io import ReferenceFile
@@ -167,9 +167,7 @@ def main(
     )
 
     # now try generating the svg
-    drawing_config = DiagramSettings(
-        **{k: v for k, v in kwargs.items() if k in ILLUSTRATION_DEFAULTS}
-    )
+    drawing_config = DiagramSettings(**get_by_prefix(config, 'illustrate.'))
 
     header_req = {
         COLUMNS.break1_strand,

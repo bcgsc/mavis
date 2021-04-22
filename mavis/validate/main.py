@@ -15,8 +15,8 @@ from ..annotate.file_io import ReferenceFile
 from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
 from ..breakpoint import BreakpointPair
-from ..config import get_by_prefix
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL
+from ..schemas import get_by_prefix
 from ..util import (
     LOG,
     filter_on_overlap,
@@ -37,7 +37,6 @@ def main(
     library: str,
     config: Dict,
     start_time=int(time.time()),
-    **kwargs
 ):
     """
     Args:
@@ -105,11 +104,11 @@ def main(
                     opposing_strands=bpp.opposing_strands,
                     stranded=bpp.stranded,
                     untemplated_seq=bpp.untemplated_seq,
-                    data=bpp.data,
                     stdev_fragment_size=config['libraries'][library]['stdev_fragment_size'],
                     read_length=config['libraries'][library]['read_length'],
                     median_fragment_size=config['libraries'][library]['median_fragment_size'],
-                    **get_by_prefix(config, 'validate.')
+                    config=config,
+                    **bpp.data
                 )
                 evidence_clusters.append(evidence)
             except ValueError as err:
@@ -127,12 +126,12 @@ def main(
                     opposing_strands=bpp.opposing_strands,
                     stranded=bpp.stranded,
                     untemplated_seq=bpp.untemplated_seq,
-                    data=bpp.data,
                     stdev_fragment_size=config['libraries'][library]['stdev_fragment_size'],
                     read_length=config['libraries'][library]['read_length'],
                     median_fragment_size=config['libraries'][library]['median_fragment_size'],
                     strand_determining_read=config['libraries'][library]['strand_determining_read'],
-                    **get_by_prefix(config, 'validate.')
+                    config=config,
+                    **bpp.data
                 )
                 evidence_clusters.append(evidence)
             except ValueError as err:
@@ -225,11 +224,11 @@ def main(
         aligner_fa_input_file=contig_aligner_fa,
         aligner_output_file=contig_aligner_output,
         clean_files=config['validate.clean_aligner_files'],
-        aligner=kwargs.get('aligner', config['validate.aligner']),
+        aligner=config['validate.aligner'],
         aligner_reference=config['reference.aligner_reference'][0],
         aligner_output_log=contig_aligner_log,
-        blat_min_identity=kwargs.get('blat_min_identity', config['validate.blat_min_identity']),
-        blat_limit_top_aln=kwargs.get('blat_limit_top_aln', config['validate.blat_limit_top_aln']),
+        blat_min_identity=config['validate.blat_min_identity'],
+        blat_limit_top_aln=config['validate.blat_limit_top_aln'],
         log=LOG,
     )
     for evidence in evidence_clusters:

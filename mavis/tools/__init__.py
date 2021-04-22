@@ -1,30 +1,30 @@
 import itertools
+from typing import Callable, Dict, List
 
-from shortuuid import uuid
 import tab
+from shortuuid import uuid
 
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from ..error import InvalidRearrangement
 from ..util import DEVNULL, read_bpp_from_input_file
-
-from .constants import SUPPORTED_TOOL, TRACKING_COLUMN, TOOL_SVTYPE_MAPPING
-from .transabyss import convert_row as _parse_transabyss
-from .cnvnator import convert_row as _parse_cnvnator
-from .vcf import convert_file as read_vcf
 from .breakdancer import convert_file as _convert_breakdancer_file
-from .starfusion import convert_row as _parse_starfusion
 from .chimerascan import convert_row as _parse_chimerascan
+from .cnvnator import convert_row as _parse_cnvnator
+from .constants import SUPPORTED_TOOL, TOOL_SVTYPE_MAPPING, TRACKING_COLUMN
+from .starfusion import convert_row as _parse_starfusion
+from .transabyss import convert_row as _parse_transabyss
+from .vcf import convert_file as read_vcf
 
 
 def convert_tool_output(
-    fnames,
-    file_type=SUPPORTED_TOOL.MAVIS,
-    stranded=False,
-    log=DEVNULL,
-    collapse=True,
-    assume_no_untemplated=True,
-):
+    fnames: List[str],
+    file_type: str = SUPPORTED_TOOL.MAVIS,
+    stranded: bool = False,
+    log: Callable = DEVNULL,
+    collapse: bool = True,
+    assume_no_untemplated: bool = True,
+) -> List[BreakpointPair]:
     """
     Reads output from a given SV caller and converts to a set of MAVIS breakpoint pairs. Also collapses duplicates
     """
@@ -36,7 +36,7 @@ def convert_tool_output(
             )
         )
     if collapse:
-        collapse_mapping = {}
+        collapse_mapping: Dict[BreakpointPair, List[BreakpointPair]] = {}
         for bpp in result:
             collapse_mapping.setdefault(bpp, []).append(bpp)
         log('collapsed', len(result), 'to', len(collapse_mapping), 'calls')
@@ -62,7 +62,9 @@ def convert_tool_output(
     return result
 
 
-def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
+def _convert_tool_row(
+    row: Dict, file_type: str, stranded: bool, assume_no_untemplated: bool = True
+) -> List[BreakpointPair]:
     """
     converts a row parsed from an input file to the appropriate column names for it to be converted to MAVIS style row
     """
@@ -214,8 +216,8 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
                 opposing_strands=oppose,
                 untemplated_seq=untemplated_seq,
                 event_type=event_type,
-                data={COLUMNS.tools: file_type, COLUMNS.tracking_id: std_row[COLUMNS.tracking_id]},
                 stranded=stranded,
+                **{COLUMNS.tools: file_type, COLUMNS.tracking_id: std_row[COLUMNS.tracking_id]}
             )
 
             for col, value in std_row.items():
@@ -237,12 +239,12 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
 
 
 def _convert_tool_output(
-    input_file,
-    file_type=SUPPORTED_TOOL.MAVIS,
-    stranded=False,
-    log=DEVNULL,
-    assume_no_untemplated=True,
-):
+    input_file: str,
+    file_type: str = SUPPORTED_TOOL.MAVIS,
+    stranded: bool = False,
+    log: Callable = DEVNULL,
+    assume_no_untemplated: bool = True,
+) -> List[BreakpointPair]:
     log('reading:', input_file)
     result = []
     rows = None
