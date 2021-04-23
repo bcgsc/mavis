@@ -13,8 +13,16 @@ import pysam
 from .bam import cigar as _cigar
 from .bam import read as _read
 from .breakpoint import Breakpoint, BreakpointPair
-from .constants import (CIGAR, COLUMNS, NA_MAPPING_QUALITY, ORIENT, STRAND,
-                        SVTYPE, MavisNamespace, reverse_complement)
+from .constants import (
+    CIGAR,
+    COLUMNS,
+    NA_MAPPING_QUALITY,
+    ORIENT,
+    STRAND,
+    SVTYPE,
+    MavisNamespace,
+    reverse_complement,
+)
 from .error import InvalidRearrangement
 from .interval import Interval
 from .util import DEVNULL
