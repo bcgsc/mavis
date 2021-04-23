@@ -48,7 +48,7 @@ def main(
         stdev_fragment_size (int): the standard deviation in fragment size
         read_length (int): read length
         reference_genome (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_reference_genome`
-        annotations (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_reference_genes`
+        annotations (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_annotations`
         masking (mavis.annotate.file_io.ReferenceFile): see :func:`mavis.annotate.file_io.load_masking_regions`
         aligner_reference (mavis.annotate.file_io.ReferenceFile): path to the aligner reference file (e.g 2bit file for blat)
     """
@@ -86,11 +86,13 @@ def main(
 
     bpps = read_inputs(
         inputs,
-        add_default={COLUMNS.cluster_id: None, COLUMNS.stranded: False},
-        add={COLUMNS.protocol: config['libraries'][library]['protocol'], COLUMNS.library: library},
+        add_default={COLUMNS.cluster_id: str(uuid()), COLUMNS.stranded: False},
+        overwrite={
+            COLUMNS.protocol: config['libraries'][library]['protocol'],
+            COLUMNS.library: library,
+        },
         expand_strand=False,
         expand_orient=True,
-        cast={COLUMNS.cluster_id: lambda x: str(uuid()) if not x else x},
     )
     evidence_clusters = []
     for bpp in bpps:

@@ -1,4 +1,4 @@
-#ensembl_gene_id	hugo_names	chr	strand	gene_start	gene_end	best_ensembl_transcript_id	ensembl_transcript_id	refseq_equivalents	transcript_genomic_start	transcript_genomic_end	cdna_coding_start	cdna_coding_end	genomic_exon_ranges	AA_domain_ranges
+ensembl_gene_id	hugo_names	chr	strand	gene_start	gene_end	best_ensembl_transcript_id	ensembl_transcript_id	refseq_equivalents	transcript_genomic_start	transcript_genomic_end	cdna_coding_start	cdna_coding_end	genomic_exon_ranges	AA_domain_ranges
 ENSG00000186354	C9orf47	fakereference9	1	1	5278	ENST00000375851	ENST00000375851	NP_001135885.1;NM_001142413.1	1	5278	134	685	1-322;608-833;990-5278	
 ENSG00000186354	C9orf47	fakereference9	1	1	5278	ENST00000375851	ENST00000375850		59	1202	76	783	59-322;608-1202	
 ENSG00000186354	C9orf47	fakereference9	1	1	5278	ENST00000375851	ENST00000334490	NP_001001938.1;NM_001001938.3	66	5278	69	677	66-379;608-833;990-5278	

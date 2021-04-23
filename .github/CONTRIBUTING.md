@@ -1,4 +1,3 @@
-
 ## Getting Started
 
 If you are new to the project a good way to get started is by adding to the documentation, or adding unit tests where
@@ -47,7 +46,6 @@ mkdocs build
 The contents of the user manual can then be viewed by opening the build-docs/index.html
 in any available web browser (i.e. google-chrome, firefox, etc.)
 
-
 ## Deploy to PyPi
 
 Install deployment dependencies
@@ -68,12 +66,10 @@ Use twine to upload
 twine upload -r pypi dist/*
 ```
 
-
 ## Reporting a Bug
 
 Please make sure to search through the issues before reporting a bug to ensure there isn't
 already an open issue.
-
 
 ## Conventions
 
@@ -82,7 +78,7 @@ already an open issue.
 Use [black](https://github.com/psf/black) with strings off and line length 100
 
 ```bash
-black mavis -S -l 100
+black src/mavis -S -l 100
 ```
 
 ### Docstrings
@@ -111,7 +107,6 @@ def some_function(some_arg: List[str]) -> None:
 ### Output Columns
 
 any column name which may appear in any of the intermediate or final output files must be defined in `mavis.constants.COLUMNS` as well as added to the [columns glossary](../outputs/columns)
-
 
 ### Tests
 

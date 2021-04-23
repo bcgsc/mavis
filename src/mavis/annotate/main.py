@@ -138,13 +138,11 @@ def main(
     # test that the sequence makes sense for a random transcript
     bpps = read_inputs(
         inputs,
-        in_={COLUMNS.protocol: PROTOCOL.values()},
         add_default={
             COLUMNS.protocol: config['libraries'][library]['protocol'],
             COLUMNS.library: library,
             COLUMNS.stranded: False,
         },
-        require=[COLUMNS.protocol, COLUMNS.library],
         expand_strand=False,
         expand_orient=True,
         expand_svtype=True,

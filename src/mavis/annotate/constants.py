@@ -1,31 +1,8 @@
 import re
 
-import tab
-
 from ..constants import MavisNamespace, float_fraction
 
 PASS_FILENAME = 'annotations.tab'
-
-
-class SPLICE_TYPE(MavisNamespace):
-    """
-    holds controlled vocabulary for allowed splice type classification values
-
-    Attributes:
-        RETAIN: an intron was retained
-        SKIP: an exon was skipped
-        NORMAL: no exons were skipped and no introns were retained. the normal/expected splicing pattern was followed
-        MULTI_RETAIN: multiple introns were retained
-        MULTI_SKIP: multiple exons were skipped
-        COMPLEX: some combination of exon skipping and intron retention
-    """
-
-    RETAIN: str = 'retained intron'
-    SKIP: str = 'skipped exon'
-    NORMAL: str = 'normal'
-    MULTI_RETAIN: str = 'retained multiple introns'
-    MULTI_SKIP: str = 'skipped multiple exons'
-    COMPLEX: str = 'complex'
 
 
 class SPLICE_SITE_TYPE(MavisNamespace):

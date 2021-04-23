@@ -4,15 +4,14 @@ from copy import copy as _copy
 from typing import Dict, Optional
 
 import snakemake
-import tab
 from snakemake.exceptions import WorkflowError
 from snakemake.utils import validate as snakemake_validate
 
 from .annotate.file_io import ReferenceFile
 from .bam import stats
 from .bam.cache import BamCache
-from .constants import PROTOCOL, SUBCOMMAND, float_fraction
-from .util import bash_expands, filepath
+from .constants import INTEGER_COLUMNS, PROTOCOL, SUBCOMMAND, float_fraction
+from .util import bash_expands, cast_boolean, filepath
 
 
 def calculate_bam_stats(config: Dict, library_name: str) -> Dict:
@@ -206,7 +205,7 @@ def get_metavar(arg_type):
         >>> get_metavar(bool)
         '{True,False}'
     """
-    if arg_type in [bool, tab.cast_boolean]:
+    if arg_type in [bool, cast_boolean]:
         return '{True,False}'
     elif arg_type in [float_fraction, float]:
         return 'FLOAT'

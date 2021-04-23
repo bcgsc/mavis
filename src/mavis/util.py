@@ -9,13 +9,25 @@ from argparse import Namespace
 from datetime import datetime
 from functools import partial
 from glob import glob
+from typing import Any, Callable, Dict, List, Optional, Set
 
+import pandas as pd
 from braceexpand import braceexpand
 from shortuuid import uuid
-from tab import tab
 
 from .breakpoint import Breakpoint, BreakpointPair
-from .constants import COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE, MavisNamespace, sort_columns
+from .constants import (
+    COLUMNS,
+    FLOAT_COLUMNS,
+    INTEGER_COLUMNS,
+    ORIENT,
+    PROTOCOL,
+    STRAND,
+    SUMMARY_LIST_COLUMNS,
+    SVTYPE,
+    MavisNamespace,
+    sort_columns,
+)
 from .error import InvalidRearrangement
 from .interval import Interval
 
@@ -84,6 +96,22 @@ class NullableType:
             return self.callback_func(item)
 
 
+def cast_null(input_value):
+    value = str(input_value).lower()
+    if value in ['none', 'null']:
+        return None
+    raise TypeError('casting to null/None failed', input_value)
+
+
+def cast_boolean(input_value):
+    value = str(input_value).lower()
+    if value in ['t', 'true', '1', 'y', 'yes', '+']:
+        return True
+    elif value in ['f', 'false', '0', 'n', 'no', '-']:
+        return False
+    raise TypeError('casting to boolean failed', input_value)
+
+
 def cast(value, cast_func):
     """
     cast a value to a given type
@@ -93,7 +121,7 @@ def cast(value, cast_func):
         1
     """
     if cast_func == bool:
-        value = tab.cast_boolean(value)
+        value = cast_boolean(value)
     else:
         value = cast_func(value)
     return value
@@ -113,7 +141,7 @@ def soft_cast(value, cast_type):
         return cast(value, cast_type)
     except (TypeError, ValueError):
         pass
-    return tab.cast_null(value)
+    return cast_null(value)
 
 
 def get_env_variable(arg, default, cast_type=None):
@@ -228,23 +256,21 @@ def filter_on_overlap(bpps, regions_by_reference_name):
     return passed, failed
 
 
-def read_inputs(inputs, **kwargs):
+def read_inputs(inputs, required_columns=[], **kwargs):
     bpps = []
-    kwargs.setdefault('require', [])
-    kwargs['require'] = list(set(kwargs['require'] + [COLUMNS.protocol]))
-    kwargs.setdefault('in_', {})
-    kwargs['in_'][COLUMNS.protocol] = PROTOCOL.values()
+
     for finput in bash_expands(*inputs):
-        try:
-            LOG('loading:', finput)
-            bpps.extend(read_bpp_from_input_file(finput, **kwargs))
-        except tab.EmptyFileError:
-            LOG('ignoring empty file:', finput)
+        LOG('loading:', finput)
+        bpps.extend(
+            read_bpp_from_input_file(
+                finput, required_columns=[COLUMNS.protocol, *required_columns], **kwargs
+            )
+        )
     LOG('loaded', len(bpps), 'breakpoint pairs')
     return bpps
 
 
-def output_tabbed_file(bpps, filename, header=None):
+def output_tabbed_file(bpps: List[BreakpointPair], filename: str, header=None):
     if header is None:
         custom_header = False
         header = set()
@@ -258,12 +284,10 @@ def output_tabbed_file(bpps, filename, header=None):
         if not custom_header:
             header.update(row.keys())
     header = sort_columns(header)
-
-    with open(filename, 'w') as fh:
-        LOG('writing:', filename)
-        fh.write('#' + '\t'.join(header) + '\n')
-        for row in rows:
-            fh.write('\t'.join([str(row.get(c, None)) for c in header]) + '\n')
+    LOG('writing:', filename)
+    df = pd.DataFrame.from_records(rows, columns=header)
+    df = df.fillna('None')
+    df.to_csv(filename, columns=header, index=False, sep='\t')
 
 
 def write_bed_file(filename, bed_rows):
@@ -351,7 +375,9 @@ def filter_uninformative(annotations_by_chr, breakpoint_pairs, max_proximity=500
     return result, filtered
 
 
-def unique_exists(pattern, allow_none=False, get_newest=False):
+def unique_exists(
+    pattern: str, allow_none: bool = False, get_newest: bool = False
+) -> Optional[str]:
     result = bash_expands(pattern)
     if len(result) == 1:
         return result[0]
@@ -366,75 +392,135 @@ def unique_exists(pattern, allow_none=False, get_newest=False):
 
 
 def read_bpp_from_input_file(
-    filename, expand_orient=False, expand_strand=False, expand_svtype=False, **kwargs
-):
+    filename: str,
+    expand_orient: bool = False,
+    expand_strand: bool = False,
+    expand_svtype: bool = False,
+    integer_columns: Set[str] = INTEGER_COLUMNS,
+    float_columns: Set[str] = FLOAT_COLUMNS,
+    required_columns: Set[str] = set(),
+    add_default: Dict[str, Any] = {},
+    summary: bool = False,
+    apply: Dict[str, Callable] = {},
+    overwrite: Dict[str, Any] = {},
+) -> List[BreakpointPair]:
     """
     reads a file using the tab module. Each row is converted to a breakpoint pair and
     other column data is stored in the data attribute
 
     Args:
-        filename (str): path to the input file
-        expand_ns (bool): expand not specified orient/strand settings to all specific version
-            (for strand this is only applied if the bam itself is stranded)
-        explicit_strand (bool): used to stop unstranded breakpoint pairs from losing input strand information
+        filename: path to the input file
+        expand_ns: expand not specified orient/strand settings to all specific version (for strand this is only applied if the bam itself is stranded)
+        explicit_strand: used to stop unstranded breakpoint pairs from losing input strand information
+        summary: the input is post-summary so some float/int columns have been merged and delimited with semi-colons
+        overwrite: set column values for all breakpoints, if the column exists overwrite its current value
+
     Returns:
-        List[BreakpointPair]: a list of pairs
-
-    Example:
-        >>> read_bpp_from_input_file('filename')
-        [BreakpointPair(), BreakpointPair(), ...]
-
-    One can also validate other expected columns that will go in the data attribute using the usual arguments
-    to the tab.read_file function
-
-    Example:
-        >>> read_bpp_from_input_file('filename', cast={'index': int})
-        [BreakpointPair(), BreakpointPair(), ...]
+        a list of pairs
     """
 
     def soft_null_cast(value):
         try:
-            tab.cast_null(value)
+            cast_null(value)
         except TypeError:
             return value
 
-    kwargs['require'] = set() if 'require' not in kwargs else set(kwargs['require'])
-    kwargs['require'].update({COLUMNS.break1_chromosome, COLUMNS.break2_chromosome})
-    kwargs.setdefault('cast', {}).update(
-        {
-            COLUMNS.break1_position_start: int,
-            COLUMNS.break1_position_end: int,
-            COLUMNS.break2_position_start: int,
-            COLUMNS.break2_position_end: int,
-            COLUMNS.opposing_strands: lambda x: None if x == '?' else soft_cast(x, cast_type=bool),
-            COLUMNS.stranded: tab.cast_boolean,
-            COLUMNS.untemplated_seq: soft_null_cast,
-            COLUMNS.break1_chromosome: lambda x: re.sub('^chr', '', x),
-            COLUMNS.break2_chromosome: lambda x: re.sub('^chr', '', x),
-            COLUMNS.tracking_id: lambda x: x if x else str(uuid()),
-        }
-    )
-    kwargs.setdefault('add_default', {}).update(
-        {
-            COLUMNS.untemplated_seq: None,
-            COLUMNS.break1_orientation: ORIENT.NS,
-            COLUMNS.break1_strand: STRAND.NS,
-            COLUMNS.break2_orientation: ORIENT.NS,
-            COLUMNS.break2_strand: STRAND.NS,
-            COLUMNS.opposing_strands: None,
-            COLUMNS.tracking_id: '',
-        }
-    )
-    kwargs.setdefault('in_', {}).update(
-        {
-            COLUMNS.break1_orientation: ORIENT.values(),
-            COLUMNS.break1_strand: STRAND.values(),
-            COLUMNS.break2_orientation: ORIENT.values(),
-            COLUMNS.break2_strand: STRAND.values(),
-        }
-    )
-    _, rows = tab.read_file(filename, suppress_index=True, **kwargs)
-    restricted = [
+    if summary:
+        integer_columns = integer_columns - SUMMARY_LIST_COLUMNS
+        float_columns = float_columns - SUMMARY_LIST_COLUMNS
+
+    try:
+        df = pd.read_csv(
+            filename,
+            dtype={
+                **{col: pd.Int64Dtype() for col in integer_columns},
+                **{col: float for col in float_columns},
+                **{
+                    col: str
+                    for col in COLUMNS.keys()
+                    if col not in (float_columns | integer_columns)
+                },
+            },
+            sep='\t',
+            comment='#',
+            na_values=['None', 'none', 'N/A', 'n/a', 'null', 'NULL', 'Null', 'nan', '<NA>', 'NaN'],
+        )
+    except pd.errors.EmptyDataError:
+        return []
+
+    for col in required_columns:
+        if col not in df:
+            raise KeyError(f'missing required column: {col}')
+
+    # run the custom functions
+    for col, func in apply.items():
+        df[col] = df[col].apply(func)
+
+    if COLUMNS.opposing_strands in df:
+        df[COLUMNS.opposing_strands] = df[COLUMNS.opposing_strands].apply(
+            lambda x: None if x == '?' else soft_cast(x, cast_type=bool)
+        )
+    else:
+        df[COLUMNS.opposing_strands] = None
+
+    if COLUMNS.stranded in df:
+        df[COLUMNS.stranded] = df[COLUMNS.stranded].apply(cast_boolean)
+    else:
+        df[COLUMNS.stranded] = None
+
+    if COLUMNS.untemplated_seq in df:
+        df[COLUMNS.untemplated_seq] = df[COLUMNS.untemplated_seq].apply(soft_null_cast)
+    else:
+        df[COLUMNS.untemplated_seq] = None
+
+    for col in [COLUMNS.break1_chromosome, COLUMNS.break2_chromosome]:
+        df[col] = df[col].apply(lambda v: re.sub(r'^chr', '', v))
+
+    if COLUMNS.tracking_id not in df:
+        df[COLUMNS.tracking_id] = ''
+    else:
+        df[COLUMNS.tracking_id] = df[COLUMNS.tracking_id].fillna(str(uuid()))
+
+    # add default values
+    for col, default_value in add_default.items():
+        if col in df:
+            df[col] = df[col].fillna(default_value)
+        else:
+            df[col] = default_value
+
+    # set overwriting defaults
+    for col, value in overwrite.items():
+        df[col] = value
+
+    # enforce controlled vocabulary
+    for vocab, cols in [
+        (ORIENT, [COLUMNS.break1_orientation, COLUMNS.break2_orientation]),
+        (STRAND, [COLUMNS.break1_strand, COLUMNS.break2_strand]),
+        (PROTOCOL, [COLUMNS.protocol]),
+    ]:
+        for col in cols:
+            if col in df:
+                df[col].apply(lambda c: vocab.enforce(c))
+            elif hasattr(vocab, 'NS'):
+                df[col] = vocab.NS  # type: ignore
+
+    def validate_pipeline_id(value):
+        if not re.match(r'^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$', value):
+            raise AssertionError(
+                'All mavis pipeline step ids must satisfy the regex:',
+                '^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$',
+                value,
+            )
+
+    for col in [COLUMNS.cluster_id, COLUMNS.annotation_id, COLUMNS.validation_id]:
+        if col in df:
+            try:
+                df[col].apply(validate_pipeline_id)
+            except AssertionError as err:
+                raise AssertionError(f'error in column ({col}): {err}')
+
+    rows = df.where(df.notnull(), None).to_dict('records')
+    non_data_columns = {
         COLUMNS.break1_chromosome,
         COLUMNS.break1_position_start,
         COLUMNS.break1_position_end,
@@ -448,24 +534,17 @@ def read_bpp_from_input_file(
         COLUMNS.stranded,
         COLUMNS.opposing_strands,
         COLUMNS.untemplated_seq,
-    ]
-    pairs = []
+    }
+    pairs: List[BreakpointPair] = []
+
     for line_index, row in enumerate(rows):
         row['line_no'] = line_index + 1
+
         if '_index' in row:
             del row['_index']
         for attr, val in row.items():
             row[attr] = soft_null_cast(val)
-        for attr in row:
-            if attr in [COLUMNS.cluster_id, COLUMNS.annotation_id, COLUMNS.validation_id]:
-                if not re.match('^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$', row[attr]):
-                    raise AssertionError(
-                        'error in column',
-                        attr,
-                        'All mavis pipeline step ids must satisfy the regex:',
-                        '^([A-Za-z0-9-]+|)(;[A-Za-z0-9-]+)*$',
-                        row[attr],
-                    )
+
         stranded = row[COLUMNS.stranded]
 
         strand1 = row[COLUMNS.break1_strand] if stranded else STRAND.NS
@@ -474,7 +553,7 @@ def read_bpp_from_input_file(
         temp = []
         expand_strand = stranded and expand_strand
         event_type = [None]
-        if row.get(COLUMNS.event_type, None) not in [None, 'None']:
+        if not pd.isnull(row.get(COLUMNS.event_type)):
             try:
                 event_type = row[COLUMNS.event_type].split(';')
                 for putative_event_type in event_type:
@@ -509,7 +588,7 @@ def read_bpp_from_input_file(
                     orient=orient2,
                 )
 
-                data = {k: v for k, v in row.items() if k not in restricted}
+                data = {k: v for k, v in row.items() if k not in non_data_columns}
                 bpp = BreakpointPair(
                     break1,
                     break2,

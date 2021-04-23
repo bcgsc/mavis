@@ -2,27 +2,25 @@ import os
 import unittest
 
 from mavis.annotate.base import BioInterval, ReferenceName
-from mavis.annotate.file_io import load_reference_genes, load_reference_genome
-from mavis.annotate.genomic import Exon, Gene, Template, Transcript, PreTranscript
-from mavis.annotate.protein import calculate_orf, Domain, DomainRegion, translate, Translation
+from mavis.annotate.file_io import load_annotations, load_reference_genome
+from mavis.annotate.fusion import FusionTranscript, determine_prime
+from mavis.annotate.genomic import Exon, Gene, PreTranscript, Template, Transcript
+from mavis.annotate.protein import Domain, DomainRegion, Translation, calculate_orf, translate
 from mavis.annotate.variant import (
+    Annotation,
     _gather_annotations,
     _gather_breakpoint_annotations,
     annotate_events,
-    Annotation,
     flatten_fusion_transcript,
     overlapping_transcripts,
 )
-from mavis.annotate.fusion import determine_prime, FusionTranscript
-from mavis.annotate.constants import SPLICE_TYPE
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import ORIENT, PRIME, PROTOCOL, reverse_complement, STRAND, SVTYPE
+from mavis.constants import ORIENT, PRIME, PROTOCOL, SPLICE_TYPE, STRAND, SVTYPE, reverse_complement
 from mavis.error import NotSpecifiedError
 from mavis.interval import Interval
 
-from . import MockLongString, MockObject, get_example_genes
 from ..util import get_data
-
+from . import MockLongString, MockObject, get_example_genes
 
 REFERENCE_ANNOTATIONS = None
 REFERENCE_GENOME = None
@@ -33,7 +31,7 @@ ALT_REF_CHR = 'ref2'
 def setUpModule():
     global REFERENCE_ANNOTATIONS, REFERENCE_GENOME, REF_CHR, EXAMPLE_GENES
     EXAMPLE_GENES = get_example_genes()
-    REFERENCE_ANNOTATIONS = load_reference_genes(get_data('mock_reference_annotations.tsv'))
+    REFERENCE_ANNOTATIONS = load_annotations(get_data('mock_reference_annotations.tsv'))
     count = sum([len(genes) for genes in REFERENCE_ANNOTATIONS.values()])
     print('loaded annotations', count)
     assert count >= 6  # make sure this is the file we expect
@@ -1461,13 +1459,13 @@ class TestAnnotate(unittest.TestCase):
         self.assertEqual(1, len(d))
 
     def test_loading_json_annotations(self):
-        annotations = load_reference_genes(get_data('mock_reference_annotations.json'))
+        annotations = load_annotations(get_data('mock_reference_annotations.json'))
         self.assertEqual(1, len(annotations.keys()))
         self.assertEqual(1, len(list(annotations.values())[0]))
 
     def test_loading_annotations_not_found(self):
         with self.assertRaises(FileNotFoundError):
-            load_reference_genes('file.other')
+            load_annotations('file.other')
 
     def test_determine_prime(self):
         tneg = PreTranscript(exons=[(3, 4)], strand=STRAND.NEG)
@@ -1558,9 +1556,7 @@ class TestAnnotate(unittest.TestCase):
 
 class TestAnnotateEvents(unittest.TestCase):
     def test_annotate_events(self):
-        reference_annotations = load_reference_genes(
-            get_data('mock_reference_annotations.full.tsv')
-        )
+        reference_annotations = load_annotations(get_data('mock_reference_annotations.full.tsv'))
         b1 = Breakpoint('fakereference9', 658, orient=ORIENT.RIGHT, strand=STRAND.POS)
         b2 = Breakpoint('fakereference9', 10237, orient=ORIENT.RIGHT, strand=STRAND.NEG)
         bpp = BreakpointPair(

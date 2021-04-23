@@ -10,7 +10,6 @@ from Bio.Alphabet import Gapped
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Seq import Seq
-from tab import cast_boolean, cast_null
 
 PROGNAME: str = 'mavis'
 EXIT_OK: int = 0
@@ -121,6 +120,27 @@ def float_fraction(num):
     if num < 0 or num > 1:
         raise argparse.ArgumentTypeError('Must be a value between 0 and 1')
     return num
+
+
+class SPLICE_TYPE(MavisNamespace):
+    """
+    holds controlled vocabulary for allowed splice type classification values
+
+    Attributes:
+        RETAIN: an intron was retained
+        SKIP: an exon was skipped
+        NORMAL: no exons were skipped and no introns were retained. the normal/expected splicing pattern was followed
+        MULTI_RETAIN: multiple introns were retained
+        MULTI_SKIP: multiple exons were skipped
+        COMPLEX: some combination of exon skipping and intron retention
+    """
+
+    RETAIN: str = 'retained intron'
+    SKIP: str = 'skipped exon'
+    NORMAL: str = 'normal'
+    MULTI_RETAIN: str = 'retained multiple introns'
+    MULTI_SKIP: str = 'skipped multiple exons'
+    COMPLEX: str = 'complex'
 
 
 COMPLETE_STAMP: str = 'MAVIS.COMPLETE'
@@ -515,14 +535,12 @@ class COLUMNS(MavisNamespace):
     call_method: str = 'call_method'
     break1_ewindow: str = 'break1_ewindow'
     break1_ewindow_count: str = 'break1_ewindow_count'
-    break1_ewindow_practical_coverage: str = 'break1_ewindow_practical_coverage'
     break1_homologous_seq: str = 'break1_homologous_seq'
     break1_split_read_names: str = 'break1_split_read_names'
     break1_split_reads: str = 'break1_split_reads'
     break1_split_reads_forced: str = 'break1_split_reads_forced'
     break2_ewindow: str = 'break2_ewindow'
     break2_ewindow_count: str = 'break2_ewindow_count'
-    break2_ewindow_practical_coverage: str = 'break2_ewindow_practical_coverage'
     break2_homologous_seq: str = 'break2_homologous_seq'
     break2_split_read_names: str = 'break2_split_read_names'
     break2_split_reads: str = 'break2_split_reads'
@@ -576,3 +594,63 @@ def sort_columns(input_columns):
     temp = sorted([c for c in input_columns if c in order], key=lambda x: order[x])
     temp = temp + sorted([c for c in input_columns if c not in order])
     return temp
+
+
+INTEGER_COLUMNS = {
+    COLUMNS.break1_position_end,
+    COLUMNS.break1_position_start,
+    COLUMNS.break2_position_end,
+    COLUMNS.break2_position_start,
+}
+
+FLOAT_COLUMNS = {
+    COLUMNS.break1_ewindow_count,
+    COLUMNS.break1_split_reads_forced,
+    COLUMNS.break1_split_reads,
+    COLUMNS.break2_ewindow_count,
+    COLUMNS.break2_split_reads_forced,
+    COLUMNS.break2_split_reads,
+    COLUMNS.cluster_size,
+    COLUMNS.contig_alignment_query_consumption,
+    COLUMNS.contig_alignment_rank,
+    COLUMNS.contig_alignment_score,
+    COLUMNS.contig_break1_read_depth,
+    COLUMNS.contig_break2_read_depth,
+    COLUMNS.contig_build_score,
+    COLUMNS.contig_read_depth,
+    COLUMNS.contig_remap_score,
+    COLUMNS.contig_remapped_reads,
+    COLUMNS.contigs_assembled,
+    COLUMNS.flanking_pairs_compatible,
+    COLUMNS.flanking_pairs,
+    COLUMNS.linking_split_reads,
+    COLUMNS.raw_break1_half_mapped_reads,
+    COLUMNS.raw_break1_split_reads,
+    COLUMNS.raw_break2_half_mapped_reads,
+    COLUMNS.raw_break2_split_reads,
+    COLUMNS.raw_flanking_pairs,
+    COLUMNS.raw_spanning_reads,
+    COLUMNS.repeat_count,
+    COLUMNS.spanning_reads,
+}
+
+BOOLEAN_COLUMNS = {COLUMNS.opposing_strands, COLUMNS.stranded, COLUMNS.supplementary_call}
+
+SUMMARY_LIST_COLUMNS = {
+    COLUMNS.annotation_figure,
+    COLUMNS.annotation_id,
+    COLUMNS.break1_split_reads,
+    COLUMNS.break2_split_reads,
+    COLUMNS.call_method,
+    COLUMNS.contig_alignment_score,
+    COLUMNS.contig_remapped_reads,
+    COLUMNS.contig_seq,
+    COLUMNS.event_type,
+    COLUMNS.flanking_pairs,
+    COLUMNS.pairing,
+    COLUMNS.product_id,
+    COLUMNS.spanning_reads,
+    COLUMNS.tools,
+    COLUMNS.tools,
+    COLUMNS.tracking_id,
+}

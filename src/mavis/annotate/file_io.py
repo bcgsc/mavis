@@ -5,19 +5,21 @@ import json
 import os
 import re
 import warnings
+from typing import Callable, Dict, List, Optional, Tuple
 
-import tab
+import pandas as pd
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
 
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
-from ..util import DEVNULL, LOG, filepath
+from ..util import DEVNULL, LOG, cast_boolean, filepath
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, PreTranscript, Template, Transcript
 from .protein import Domain, Translation
 
 
-def load_masking_regions(*filepaths):
+def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
     """
     reads a file of regions. The expect input format for the file is tab-delimited and
     the header should contain the following columns
@@ -35,23 +37,20 @@ def load_masking_regions(*filepaths):
         chr20   25600000    27500000    centromere
 
     Args:
-        filepath (str): path to the input tab-delimited file
+        filepath: path to the input tab-delimited file
     Returns:
-        Dict[str,List[BioInterval]]: a dictionary keyed by chromosome name with values of lists of regions on the chromosome
-
-    Example:
-        >>> m = load_masking_regions('filename')
-        >>> m['1']
-        [BioInterval(), BioInterval(), ...]
+        a dictionary keyed by chromosome name with values of lists of regions on the chromosome
     """
-    regions = {}
+    regions: Dict[str, List[BioInterval]] = {}
     for filepath in filepaths:
-        _, rows = tab.read_file(
-            filepath,
-            require=['chr', 'start', 'end', 'name'],
-            cast={'start': int, 'end': int, 'chr': ReferenceName},
+        df = pd.read_csv(
+            filepath, sep='\t', dtype={'chr': str, 'start': int, 'end': int, 'name': str}
         )
-        for row in rows:
+        for col in ['chr', 'start', 'end', 'name']:
+            if col not in df:
+                raise KeyError(f'missing required column ({col})')
+        df['chr'] = df['chr'].apply(lambda c: ReferenceName(c))
+        for row in df.to_dict('records'):
             mask_region = BioInterval(
                 reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name']
             )
@@ -59,38 +58,32 @@ def load_masking_regions(*filepaths):
     return regions
 
 
-def load_reference_genes(*pos, **kwargs):
-    """
-    *Deprecated* Use :func:`load_annotations` instead
-    """
-    warnings.warn('this function has been replaced by load_annotations', DeprecationWarning)
-    return load_annotations(*pos, **kwargs)
-
-
-def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_transcripts_only=False):
+def load_annotations(
+    *filepaths: str,
+    warn: Callable = DEVNULL,
+    reference_genome: Optional[Dict[str, SeqRecord]] = None,
+    best_transcripts_only: bool = False,
+) -> Dict[str, List[Gene]]:
     """
     loads gene models from an input file. Expects a tabbed or json file.
 
     Args:
-        filepath (str): path to the input file
-        verbose (bool): output extra information to stdout
-        reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence by
-            template/chr name
-        filetype (str): json or tab/tsv. only required if the file type can't be interpolated from the path extension
+        filepath: path to the input file
+        reference_genome: dict of reference sequence by template/chr name
 
     Returns:
-        Dict[str,List[mavis.annotate.genomic.Gene]]: lists of genes keyed by chromosome name
+        lists of genes keyed by chromosome name
     """
-    total_annotations = {}
+    total_annotations: Dict[str, List[Gene]] = {}
 
     for filename in filepaths:
         data = None
 
-        if filename.endswith('.tab') or filename.endswith('.tsv'):
-            data = convert_tab_to_json(filename, warn)
-        else:
+        if filename.endswith('.json'):
             with open(filename) as fh:
                 data = json.load(fh)
+        else:
+            data = convert_tab_to_json(filename, warn)
 
         current_annotations = parse_annotations_json(
             data,
@@ -105,11 +98,17 @@ def load_annotations(*filepaths, warn=DEVNULL, reference_genome=None, best_trans
     return total_annotations
 
 
-def parse_annotations_json(data, reference_genome=None, best_transcripts_only=False, warn=DEVNULL):
+def parse_annotations_json(
+    data,
+    reference_genome: Optional[Dict[str, SeqRecord]] = None,
+    best_transcripts_only=False,
+    warn=DEVNULL,
+) -> Dict[str, List[Gene]]:
     """
     parses a json of annotation information into annotation objects
     """
-    genes_by_chr = {}
+    genes_by_chr: Dict[str, List[Gene]] = {}
+
     for gene_dict in data['genes']:
         if gene_dict['strand'] in ['1', '+', 1]:
             gene_dict['strand'] = STRAND.POS
@@ -131,7 +130,7 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
 
         has_best = False
         for transcript in gene_dict['transcripts']:
-            transcript['is_best_transcript'] = tab.cast_boolean(transcript['is_best_transcript'])
+            transcript['is_best_transcript'] = cast_boolean(transcript['is_best_transcript'])
             transcript.setdefault('exons', [])
             exons = [Exon(strand=gene.strand, **ex) for ex in transcript['exons']]
             if not exons:
@@ -206,7 +205,7 @@ def parse_annotations_json(data, reference_genome=None, best_transcripts_only=Fa
     return genes_by_chr
 
 
-def convert_tab_to_json(filepath, warn=DEVNULL):
+def convert_tab_to_json(filepath: str, warn: Callable = DEVNULL) -> Dict:
     """
     given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
 
@@ -236,17 +235,12 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
     Returns:
         Dict[str,List[Gene]]: a dictionary keyed by chromosome name with values of list of genes on the chromosome
 
-    Example:
-        >>> ref = load_reference_genes('filename')
-        >>> ref['1']
-        [Gene(), Gene(), ....]
-
     Warning:
         does not load translations unless then start with 'M', end with '*' and have a length of multiple 3
     """
 
     def parse_exon_list(row):
-        if not row:
+        if pd.isnull(row):
             return []
         exons = []
         for temp in re.split('[; ]', row):
@@ -258,7 +252,7 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
         return exons
 
     def parse_domain_list(row):
-        if not row:
+        if pd.isnull(row):
             return []
         domains = []
         for domain in row.split(';'):
@@ -272,38 +266,41 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
                 warn('error in domain:', domain, row, repr(err))
         return domains
 
-    def nullable_int(row):
-        try:
-            row = int(row)
-        except ValueError:
-            row = tab.cast_null(row)
-        return row
-
-    _, rows = tab.read_file(
+    df = pd.read_csv(
         filepath,
-        require=['ensembl_gene_id', 'chr', 'ensembl_transcript_id'],
-        add_default={
-            'cdna_coding_start': 'null',
-            'cdna_coding_end': 'null',
-            'AA_domain_ranges': '',
-            'genomic_exon_ranges': '',
-            'hugo_names': '',
-            'transcript_genomic_start': 'null',
-            'transcript_genomic_end': 'null',
-            'best_ensembl_transcript_id': 'null',
-        },
-        cast={
-            'genomic_exon_ranges': parse_exon_list,
-            'AA_domain_ranges': parse_domain_list,
-            'cdna_coding_end': nullable_int,
-            'cdna_coding_start': nullable_int,
-            'transcript_genomic_end': nullable_int,
-            'transcript_genomic_start': nullable_int,
+        dtype={
+            'ensembl_gene_id': str,
+            'ensembl_transcript_id': str,
+            'chr': str,
+            'cdna_coding_start': pd.Int64Dtype(),
+            'cdna_coding_end': pd.Int64Dtype(),
+            'AA_domain_ranges': str,
+            'genomic_exon_ranges': str,
+            'hugo_names': str,
+            'transcript_genomic_start': pd.Int64Dtype(),
+            'transcript_genomic_end': pd.Int64Dtype(),
+            'best_ensembl_transcript_id': str,
             'gene_start': int,
             'gene_end': int,
         },
+        sep='\t',
+        comment='#',
     )
+
+    for col in ['ensembl_gene_id', 'chr', 'ensembl_transcript_id', 'gene_start', 'gene_end']:
+        if col not in df:
+            raise KeyError(f'missing required column: {col}')
+
+    for col, parser in [
+        ('genomic_exon_ranges', parse_exon_list),
+        ('AA_domain_ranges', parse_domain_list),
+    ]:
+        if col in df:
+            df[col] = df[col].apply(parser)
+
     genes = {}
+    rows = df.where(df.notnull(), None).to_dict('records')
+
     for row in rows:
         gene = {
             'chr': row['chr'],
@@ -311,23 +308,26 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
             'end': row['gene_end'],
             'name': row['ensembl_gene_id'],
             'strand': row['strand'],
-            'aliases': row['hugo_names'].split(';') if row['hugo_names'] else [],
+            'aliases': row['hugo_names'].split(';') if row.get('hugo_names') else [],
             'transcripts': [],
         }
         if gene['name'] not in genes:
             genes[gene['name']] = gene
         else:
             gene = genes[gene['name']]
-
+        is_best_transcript = (
+            row.get('best_ensembl_transcript_id', row['ensembl_transcript_id'])
+            == row['ensembl_transcript_id']
+        )
         transcript = {
-            'is_best_transcript': row['best_ensembl_transcript_id'] == row['ensembl_transcript_id'],
+            'is_best_transcript': is_best_transcript,
             'name': row['ensembl_transcript_id'],
-            'exons': row['genomic_exon_ranges'],
-            'domains': row['AA_domain_ranges'],
-            'start': row['transcript_genomic_start'],
-            'end': row['transcript_genomic_end'],
-            'cdna_coding_start': row['cdna_coding_start'],
-            'cdna_coding_end': row['cdna_coding_end'],
+            'exons': row.get('genomic_exon_ranges', []),
+            'domains': row.get('AA_domain_ranges', []),
+            'start': row.get('transcript_genomic_start'),
+            'end': row.get('transcript_genomic_end'),
+            'cdna_coding_start': row.get('cdna_coding_start'),
+            'cdna_coding_end': row.get('cdna_coding_end'),
             'aliases': [],
         }
         gene['transcripts'].append(transcript)
@@ -335,13 +335,13 @@ def convert_tab_to_json(filepath, warn=DEVNULL):
     return {'genes': genes.values()}
 
 
-def load_reference_genome(*filepaths):
+def load_reference_genome(*filepaths: str) -> Dict[str, SeqRecord]:
     """
     Args:
-        filepaths (List[str]): the paths to the files containing the input fasta genomes
+        filepaths: the paths to the files containing the input fasta genomes
 
     Returns:
-        Dict[str,Bio.SeqRecord]: a dictionary representing the sequences in the fasta file
+        a dictionary representing the sequences in the fasta file
     """
     reference_genome = {}
     for filename in filepaths:
@@ -376,7 +376,7 @@ def load_reference_genome(*filepaths):
     return reference_genome
 
 
-def load_templates(*filepaths):
+def load_templates(*filepaths: str) -> Dict[str, Template]:
     """
     primarily useful if template drawings are required and is not necessary otherwise
     assumes the input file is 0-indexed with [start,end) style. Columns are expected in
@@ -395,26 +395,30 @@ def load_templates(*filepaths):
         chr1    0   2300000 p36.33  gneg
         chr1    2300000 5400000 p36.32  gpos25
 
-    Args:
-        filename (str): the path to the file with the cytoband template information
-
     Returns:
-        List[Template]: list of the templates loaded
-
+        templates loaded
     """
     header = ['name', 'start', 'end', 'band_name', 'giemsa_stain']
-    templates = {}
+    templates: Dict[str, Template] = {}
 
     for filename in filepaths:
-        header, rows = tab.read_file(
+        df = pd.read_csv(
             filename,
-            header=header,
-            cast={'start': int, 'end': int},
-            in_={'giemsa_stain': GIEMSA_STAIN.values()},
+            sep='\t',
+            dtype={
+                'start': int,
+                'end': int,
+                'name': str,
+                'band_name': str,
+                'giemsa_stain': str,
+            },
+            names=header,
+            comment='#',
         )
+        df['giemsa_stain'].apply(lambda v: GIEMSA_STAIN.enforce(v))
 
-        bands_by_template = {}
-        for row in rows:
+        bands_by_template: Dict[str, List[BioInterval]] = {}
+        for row in df.to_dict('records'):
             band = BioInterval(None, row['start'] + 1, row['end'], name=row['band_name'], data=row)
             bands_by_template.setdefault(row['name'], []).append(band)
 
@@ -427,10 +431,10 @@ def load_templates(*filepaths):
 
 
 class ReferenceFile:
+    # store loaded file to avoid re-loading
+    CACHE = {}  # type: ignore
 
-    CACHE = {}  # store loaded file to avoid re-loading
-
-    LOAD_FUNCTIONS = {
+    LOAD_FUNCTIONS: Dict[str, Optional[Callable]] = {
         'annotations': load_annotations,
         'reference_genome': load_reference_genome,
         'masking': load_masking_regions,
@@ -440,7 +444,14 @@ class ReferenceFile:
     }
     """dict: Mapping of file types (based on ENV name) to load functions"""
 
-    def __init__(self, file_type, *filepaths, eager_load=False, assert_exists=False, **opt):
+    def __init__(
+        self,
+        file_type: str,
+        *filepaths: str,
+        eager_load: bool = False,
+        assert_exists: bool = False,
+        **opt,
+    ):
         """
         Args:
             *filepaths (str): list of paths to load

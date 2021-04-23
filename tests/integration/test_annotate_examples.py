@@ -1,19 +1,18 @@
 import os
 import unittest
 
-from mavis.annotate.variant import (
-    annotate_events,
-    Annotation,
-    flatten_fusion_transcript,
-    call_protein_indel,
-    IndelCall,
-)
 from mavis.annotate.fusion import FusionTranscript
-from mavis.annotate.constants import SPLICE_TYPE
+from mavis.annotate.variant import (
+    Annotation,
+    IndelCall,
+    annotate_events,
+    call_protein_indel,
+    flatten_fusion_transcript,
+)
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import ORIENT, PROTOCOL, STRAND, SVTYPE
+from mavis.constants import ORIENT, PROTOCOL, SPLICE_TYPE, STRAND, SVTYPE
 
-from . import get_example_genes, MockObject, MockLongString
+from . import MockLongString, MockObject, get_example_genes
 
 
 def get_best(gene):

@@ -1,4 +1,4 @@
-#ensembl_gene_id	chr	strand	gene_start	gene_end	ensembl_transcript_id	transcript_genomic_start	transcript_genomic_end
+ensembl_gene_id	chr	strand	gene_start	gene_end	ensembl_transcript_id	transcript_genomic_start	transcript_genomic_end
 GENE-A	fake	+	100	200	TRANSCRIPT-A	100	200
 GENE-B	fake	-	250	350	TRANSCRIPT-B	250	350
 GENE-C	fake	+	300	400	TRANSCRIPT-C	300	400

@@ -4,11 +4,11 @@ import time
 from functools import partial
 from typing import Dict, List, Tuple
 
-import tab
+import pandas as pd
 
 from ..annotate.file_io import ReferenceFile
 from ..breakpoint import BreakpointPair
-from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
+from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SPLICE_TYPE, SVTYPE
 from ..util import LOG, generate_complete_stamp, output_tabbed_file, read_inputs, soft_cast
 from .constants import HOMOPOLYMER_MIN_LENGTH
 from .summary import (
@@ -19,13 +19,6 @@ from .summary import (
     get_pairing_state,
     group_by_distance,
 )
-
-
-def soft_cast_null(value):
-    try:
-        return tab.cast_null(value)
-    except TypeError:
-        return value
 
 
 def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time())):
@@ -45,7 +38,7 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
     bpps.extend(
         read_inputs(
             inputs,
-            require=[
+            required_columns=[
                 COLUMNS.event_type,
                 COLUMNS.product_id,
                 COLUMNS.fusion_cdna_coding_end,
@@ -69,50 +62,17 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
                 COLUMNS.disease_status,
             ],
             add_default={
-                **{
-                    k: None
-                    for k in [
-                        COLUMNS.contig_remapped_reads,
-                        COLUMNS.contig_seq,
-                        COLUMNS.break1_split_reads,
-                        COLUMNS.break1_split_reads_forced,
-                        COLUMNS.break2_split_reads,
-                        COLUMNS.break2_split_reads_forced,
-                        COLUMNS.linking_split_reads,
-                        COLUMNS.flanking_pairs,
-                        COLUMNS.contigs_assembled,
-                        COLUMNS.contig_alignment_score,
-                        COLUMNS.contig_remap_score,
-                        COLUMNS.spanning_reads,
-                        COLUMNS.annotation_figure,
-                        COLUMNS.gene1_aliases,
-                        COLUMNS.gene2_aliases,
-                        COLUMNS.protein_synon,
-                        COLUMNS.cdna_synon,
-                        COLUMNS.net_size,
-                        COLUMNS.tracking_id,
-                        COLUMNS.assumed_untemplated,
-                        'dgv',
-                        'summary_pairing',
-                    ]
-                },
                 COLUMNS.call_method: CALL_METHOD.INPUT,
+            },
+            apply={
+                COLUMNS.event_type: lambda x: SVTYPE.enforce(x),
+                COLUMNS.fusion_splicing_pattern: lambda x: SPLICE_TYPE.enforce(x)
+                if not pd.isnull(x)
+                else x,
             },
             expand_strand=False,
             expand_orient=False,
             expand_svtype=False,
-            cast={
-                COLUMNS.break1_split_reads: partial(soft_cast, cast_type=int),
-                COLUMNS.break2_split_reads: partial(soft_cast, cast_type=int),
-                COLUMNS.contig_remapped_reads: partial(soft_cast, cast_type=int),
-                COLUMNS.spanning_reads: partial(soft_cast, cast_type=int),
-                COLUMNS.break1_split_reads_forced: partial(soft_cast, cast_type=int),
-                COLUMNS.break2_split_reads_forced: partial(soft_cast, cast_type=int),
-                COLUMNS.flanking_pairs: partial(soft_cast, cast_type=int),
-                COLUMNS.linking_split_reads: partial(soft_cast, cast_type=int),
-                COLUMNS.protein_synon: soft_cast_null,
-                COLUMNS.cdna_synon: soft_cast_null,
-            },
         )
     )
     # load all transcripts
@@ -335,12 +295,12 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
             row.data.setdefault(COLUMNS.library, lib)
             # filter pairing ids based on what is still kept?
             paired_libraries = set()
-            for product_id in row.pairing.split(';'):
+            for product_id in (row.pairing or '').split(';'):
                 for lib in bpps_by_library:
                     if product_id.startswith(lib):
                         paired_libraries.add(lib)
             inferred_paired_libraries = set()
-            for product_id in row.inferred_pairing.split(';'):
+            for product_id in (row.inferred_pairing or '').split(';'):
                 for lib in bpps_by_library:
                     if product_id.startswith(lib):
                         inferred_paired_libraries.add(lib)

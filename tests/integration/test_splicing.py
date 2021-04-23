@@ -1,13 +1,13 @@
 import os
 import unittest
 
-from mavis.annotate.constants import SPLICE_SITE_RADIUS, SPLICE_TYPE
+from mavis.annotate.constants import SPLICE_SITE_RADIUS
 from mavis.annotate.file_io import load_annotations, load_reference_genome
 from mavis.annotate.genomic import Exon, PreTranscript
 from mavis.annotate.splicing import predict_splice_sites
 from mavis.annotate.variant import annotate_events
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import PROTOCOL, reverse_complement, STRAND, SVTYPE
+from mavis.constants import PROTOCOL, SPLICE_TYPE, STRAND, SVTYPE, reverse_complement
 from mavis.interval import Interval
 
 from . import DATA_DIR, MockLongString, MockObject, get_example_genes

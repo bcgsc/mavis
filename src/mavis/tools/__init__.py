@@ -1,7 +1,7 @@
 import itertools
 from typing import Callable, Dict, List
 
-import tab
+import pandas as pd
 from shortuuid import uuid
 
 from ..breakpoint import Breakpoint, BreakpointPair
@@ -253,9 +253,9 @@ def _convert_tool_output(
             input_file, expand_orient=True, expand_svtype=True, add_default={'stranded': stranded}
         )
     elif file_type == SUPPORTED_TOOL.CNVNATOR:
-        _, rows = tab.read_file(
+        df = pd.read_csv(
             input_file,
-            header=[
+            names=[
                 'event_type',
                 'coordinates',
                 'size',
@@ -266,7 +266,20 @@ def _convert_tool_output(
                 'e-val4',
                 'q0',
             ],
+            dtype={
+                'event_type': str,
+                'coordinates': str,
+                'size': pd.Int64Dtype(),
+                'normalized_RD': float,
+                'e-val1': float,
+                'e-val2': float,
+                'e-val3': float,
+                'e-val4': float,
+                'q0': float,
+            },
+            sep='\t',
         )
+        rows = df.where(df.notnull(), None).to_dict('records')
     elif file_type in [
         SUPPORTED_TOOL.DELLY,
         SUPPORTED_TOOL.MANTA,
@@ -279,7 +292,9 @@ def _convert_tool_output(
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
         rows = _convert_breakdancer_file(input_file)
     else:
-        _, rows = tab.read_file(input_file)
+        df = pd.read_csv(input_file, sep='\t', dtype=str, comment=None)
+        df.columns = [c[1:] if c.startswith('#') else c for c in df.columns]
+        rows = df.where(df.notnull(), None).to_dict('records')
     if rows:
         log('found', len(rows), 'rows')
         for row in rows:
