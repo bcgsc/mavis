@@ -12,7 +12,7 @@ reference files
 
 ### Configuration
 
-MAVIS no longer users command line arguments, config files, and environment variables for
+MAVIS no longer uses command line arguments, config files, and environment variables for
 configuration. Instead all configurable settings are controlled via a single input JSON
 config file
 
