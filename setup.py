@@ -101,7 +101,8 @@ setup(
     version='{}'.format(VERSION),
     url='https://github.com/bcgsc/mavis.git',
     download_url='https://github.com/bcgsc/mavis/archive/v{}.tar.gz'.format(VERSION),
-    packages=find_packages(exclude=['tests']),
+    package_dir={'': 'src'},
+    packages=find_packages(where='src'),
     description='A Structural Variant Post-Processing Package',
     long_description=parse_md_readme(),
     install_requires=INSTALL_REQS,
@@ -125,7 +126,7 @@ setup(
         ]
     },
     include_package_data=True,
-    data_files=[('mavis', ['mavis/schemas/config.json', 'mavis/schemas/overlay.json'])],
+    data_files=[('mavis', ['src/mavis/schemas/config.json', 'src/mavis/schemas/overlay.json'])],
     project_urls={'mavis': 'http://mavis.bcgsc.ca'},
 )
 check_nonpython_dependencies()

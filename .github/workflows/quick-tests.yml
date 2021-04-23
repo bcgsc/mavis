@@ -26,12 +26,12 @@ jobs:
       run: |
         pip install flake8
         # stop the build if there are Python syntax errors or undefined names
-        flake8 mavis --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 src/mavis --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Lint with black
       run: |
         pip install black
         # stop the build if black needs to be run
-        black mavis -S -l 100 --check
+        black src/mavis -S -l 100 --check
     - name: install bwa
       run: |
         git clone https://github.com/lh3/bwa.git
@@ -51,3 +51,14 @@ jobs:
           --durations=10
       env:
         RUN_FULL: 0
+  docker:
+    runs-on: ubuntu-latest
+    name: docker build
+    steps:
+      - uses: actions/checkout@v2
+      - name: build the docker container
+        run: |
+          docker build --file Dockerfile --tag bcgsc/mavis .
+      - name: test the help menu
+        run: |
+          docker run bcgsc/mavis -h
