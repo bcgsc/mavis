@@ -1,9 +1,9 @@
 import itertools
 
-from .base import BioInterval
-from .constants import ACCEPTOR_SEQ, DONOR_SEQ, SPLICE_SITE_RADIUS, SPLICE_SITE_TYPE, SPLICE_TYPE
-from ..constants import reverse_complement, STRAND
+from ..constants import SPLICE_TYPE, STRAND, reverse_complement
 from ..interval import Interval
+from .base import BioInterval
+from .constants import ACCEPTOR_SEQ, DONOR_SEQ, SPLICE_SITE_RADIUS, SPLICE_SITE_TYPE
 
 
 class SplicingPattern(list):

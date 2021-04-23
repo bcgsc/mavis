@@ -8,8 +8,6 @@ import sys
 import time
 from typing import Dict
 
-import tab
-
 from . import __version__
 from . import config as _config
 from . import util as _util
@@ -91,10 +89,10 @@ def create_parser(argv):
         help='Indicates the input file type to be parsed',
     )
     optional[SUBCOMMAND.CONVERT].add_argument(
-        '--strand_specific', type=tab.cast_boolean, default=False
+        '--strand_specific', type=_util.cast_boolean, default=False
     )
     optional[SUBCOMMAND.CONVERT].add_argument(
-        '--assume_no_untemplated', type=tab.cast_boolean, default=True
+        '--assume_no_untemplated', type=_util.cast_boolean, default=True
     )
     for command in [SUBCOMMAND.CONVERT, SUBCOMMAND.SETUP]:
         required[command].add_argument(

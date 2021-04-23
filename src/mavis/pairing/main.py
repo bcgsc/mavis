@@ -3,10 +3,11 @@ import os
 import time
 from typing import Dict, List, Set, Tuple
 
-from ..annotate.constants import SPLICE_TYPE
+import pandas as pd
+
 from ..annotate.file_io import ReferenceFile
 from ..breakpoint import BreakpointPair
-from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SVTYPE
+from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SPLICE_TYPE, SVTYPE
 from ..util import LOG, generate_complete_stamp, output_tabbed_file, read_inputs
 from .pairing import inferred_equivalent, pair_by_distance, product_key
 
@@ -36,23 +37,18 @@ def main(
     bpps.extend(
         read_inputs(
             inputs,
-            require=[
+            required_columns=[
                 COLUMNS.annotation_id,
                 COLUMNS.library,
                 COLUMNS.fusion_cdna_coding_start,
                 COLUMNS.fusion_cdna_coding_end,
                 COLUMNS.fusion_sequence_fasta_id,
             ],
-            in_={
-                COLUMNS.protocol: PROTOCOL.values(),
-                COLUMNS.event_type: SVTYPE.values(),
-                COLUMNS.fusion_splicing_pattern: SPLICE_TYPE.values() + [None, 'None'],
-            },
-            add_default={
-                COLUMNS.fusion_cdna_coding_start: None,
-                COLUMNS.fusion_cdna_coding_end: None,
-                COLUMNS.fusion_sequence_fasta_id: None,
-                COLUMNS.fusion_splicing_pattern: None,
+            apply={
+                COLUMNS.event_type: lambda x: SVTYPE.enforce(x),
+                COLUMNS.fusion_splicing_pattern: lambda x: SPLICE_TYPE.enforce(x)
+                if not pd.isnull(x)
+                else x,
             },
             expand_strand=False,
             expand_orient=False,

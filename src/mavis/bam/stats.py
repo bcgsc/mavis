@@ -117,7 +117,7 @@ def compute_transcriptome_bam_stats(
 
     Args:
         bam_file_handle (BamCache): the input bam file handle
-        annotations (object): see :func:`mavis.annotate.load_reference_genes`
+        annotations (object): see :func:`mavis.annotate.load_annotations`
         sample_size (int): the number of genes to compute stats over
         log (Callable): outputs logging information
         min_mapping_quality (int): the minimum mapping quality for a read to be used

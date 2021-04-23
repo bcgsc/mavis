@@ -2,7 +2,7 @@
 ## input file for picking best transcript: ens69_best_transcript.txt
 ## Ensembl Api version 69
 ## generated at: Thu Aug  4 16:38:01 2016
-#ensembl_gene_id	hugo_names	chr	strand	gene_start	gene_end	best_ensembl_transcript_id	ensembl_transcript_id	refseq_equivalents	transcript_genomic_start	transcript_genomic_end	cdna_coding_start	cdna_coding_end	genomic_exon_ranges	AA_domain_ranges
+ensembl_gene_id	hugo_names	chr	strand	gene_start	gene_end	best_ensembl_transcript_id	ensembl_transcript_id	refseq_equivalents	transcript_genomic_start	transcript_genomic_end	cdna_coding_start	cdna_coding_end	genomic_exon_ranges	AA_domain_ranges
 ENSG00000259662		15	1	63889592	63893885	ENST00000539570	ENST00000539570	NP_976307.2;NM_203373.2	63889592	63893885	1	744	63889592-63889944;63893495-63893885	SSF81383:9-49
 ENSG00000258865	DIO3	14	1	102027834	102028748	ENST00000510508	ENST00000510508	NP_001353.4;NM_001362.3	102027834	102028748	1	915	102027834-102028748	PF00837:38-293;SSF52833:125-198
 ENSG00000255738	GAGE4	X	1	49364778	49370618	ENST00000381700	ENST00000381700	NP_001035753.1;NM_001040663.2	49364778	49370618	1	354	49364778-49364861;49365327-49365447;49368271-49368396;49370596-49370618	PF05831:1-116

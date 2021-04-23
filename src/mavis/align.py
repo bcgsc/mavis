@@ -13,16 +13,8 @@ import pysam
 from .bam import cigar as _cigar
 from .bam import read as _read
 from .breakpoint import Breakpoint, BreakpointPair
-from .constants import (
-    CIGAR,
-    COLUMNS,
-    NA_MAPPING_QUALITY,
-    ORIENT,
-    STRAND,
-    SVTYPE,
-    MavisNamespace,
-    reverse_complement,
-)
+from .constants import (CIGAR, COLUMNS, NA_MAPPING_QUALITY, ORIENT, STRAND,
+                        SVTYPE, MavisNamespace, reverse_complement)
 from .error import InvalidRearrangement
 from .interval import Interval
 from .util import DEVNULL
@@ -91,7 +83,7 @@ class SplitAlignment(BreakpointPair):
             return total_overlap
         return 0
 
-    def score(self, consec_bonus=10):
+    def score(self, consec_bonus=10) -> float:
         """
         scores events between 0 and 1 penalizing events interrupting the alignment. Counts a split
         alignment as a single event

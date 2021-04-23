@@ -76,7 +76,7 @@ def main(
         output: path to the output directory
         library: the library to look for in each of the input files
         masking (ReferenceFile): see :func:`mavis.annotate.file_io.load_masking_regions`
-        annotations (ReferenceFile): see :func:`mavis.annotate.file_io.load_reference_genes`
+        annotations (ReferenceFile): see :func:`mavis.annotate.file_io.load_annotations`
     """
     masking = ReferenceFile.load_from_config(config, 'masking', eager_load=True)
     annotations = ReferenceFile.load_from_config(config, 'annotations')
@@ -95,7 +95,7 @@ def main(
     # load the input files
     breakpoint_pairs = read_inputs(
         inputs,
-        cast={
+        apply={
             COLUMNS.tools: lambda x: set(x.split(';'))
             if x
             else set()

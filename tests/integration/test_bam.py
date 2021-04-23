@@ -1,10 +1,11 @@
 import logging
 import os
 import unittest
-from unittest import mock
 import warnings
+from unittest import mock
 
-from mavis.annotate.file_io import load_reference_genes, load_reference_genome
+import timeout_decorator
+from mavis.annotate.file_io import load_annotations, load_reference_genome
 from mavis.bam import cigar as _cigar
 from mavis.bam import read as _read
 from mavis.bam.cache import BamCache
@@ -14,22 +15,20 @@ from mavis.bam.read import (
     read_pair_type,
     sequenced_strand,
 )
-from mavis.bam.stats import compute_genome_bam_stats, compute_transcriptome_bam_stats, Histogram
+from mavis.bam.stats import Histogram, compute_genome_bam_stats, compute_transcriptome_bam_stats
 from mavis.constants import (
     CIGAR,
     DNA_ALPHABET,
+    NA_MAPPING_QUALITY,
     ORIENT,
     READ_PAIR_TYPE,
     STRAND,
     SVTYPE,
-    NA_MAPPING_QUALITY,
 )
 from mavis.interval import Interval
-import timeout_decorator
 
-from . import MockRead, MockBamFileHandle
 from ..util import get_data
-
+from . import MockBamFileHandle, MockRead
 
 REFERENCE_GENOME = None
 
@@ -463,7 +462,7 @@ class TestBamStats(unittest.TestCase):
 
     def test_trans_bam_stats(self):
         bamfh = BamCache(get_data('mock_trans_reads_for_events.sorted.bam'))
-        annotations = load_reference_genes(get_data('mock_annotations.json'))
+        annotations = load_annotations(get_data('mock_annotations.json'))
         stats = compute_transcriptome_bam_stats(
             bamfh,
             annotations,

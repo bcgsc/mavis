@@ -13,7 +13,7 @@ import logging
 import math
 import re
 
-import tab
+import pandas as pd
 
 from .align import query_coverage_interval
 from .bam import cigar as _cigar
@@ -24,11 +24,11 @@ from .constants import (
     DNA_ALPHABET,
     NA_MAPPING_QUALITY,
     PYSAM_READ_FLAGS,
-    reverse_complement,
     STRAND,
+    reverse_complement,
 )
-from .util import LOG
 from .interval import Interval
+from .util import LOG
 
 
 class Blat:
@@ -107,7 +107,7 @@ class Blat:
 
     @staticmethod
     def read_pslx(filename, seqid_to_sequence_mapping, is_protein=False, verbose=True):
-        pslx_header = [
+        header = [
             'match',
             'mismatch',
             'repmatch',
@@ -139,10 +139,11 @@ class Blat:
         def split_csv_trailing_ints(x):
             return [int(s) for s in re.sub(',$', '', x).split(',')]
 
-        header, rows = tab.read_file(
+        df = pd.read_csv(
             filename,
-            header=pslx_header,
-            cast={
+            sep='\t',
+            names=header,
+            dtype={
                 'match': int,
                 'mismatch': int,
                 'repmatch': int,
@@ -158,18 +159,23 @@ class Blat:
                 'tstart': int,
                 'tend': int,
                 'block_count': int,
-                'tname': lambda x: re.sub('^chr', '', x),
-                'block_sizes': split_csv_trailing_ints,
-                'qstarts': split_csv_trailing_ints,
-                'tstarts': split_csv_trailing_ints,
-                'qseqs': split_csv_trailing_seq,
-                'tseqs': split_csv_trailing_seq,
+                'tname': str,
+                'block_sizes': str,
+                'qstarts': str,
+                'tstarts': str,
+                'qseqs': str,
+                'tseqs': str,
             },
-            validate={'strand': r'^[\+-]$'},
         )
 
+        for col in ['block_sizes', 'qstarts', 'tstarts']:
+            df[col] = df[col].apply(split_csv_trailing_ints)
+        for col in ['qseqs', 'tseqs']:
+            df[col] = df[col].apply(split_csv_trailing_seq)
+        df['strand'].apply(lambda x: STRAND.enforce(x))
+
         final_rows = []
-        for row in rows:
+        for row in df.to_dict('records'):
             try:
                 row['score'] = Blat.score(row, is_protein=is_protein)
                 row['percent_ident'] = Blat.percent_identity(row, is_protein=is_protein)
@@ -366,10 +372,7 @@ def process_blat_output(
     if is_protein:
         raise NotImplementedError('currently does not support aligning protein sequences')
 
-    try:
-        _, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
-    except tab.tab.EmptyFileError:
-        rows = []
+    _, rows = Blat.read_pslx(aligner_output_file, query_id_mapping, is_protein=is_protein)
 
     # split the rows by query id
     rows_by_query = {}

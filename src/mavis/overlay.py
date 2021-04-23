@@ -1,8 +1,6 @@
 import os
 from typing import Dict, List, Tuple, Union
 
-import tab
-
 from . import annotate as _annotate
 from . import util as _util
 from .annotate.file_io import ReferenceFile
@@ -59,7 +57,7 @@ def check_overlay_args(args, parser):
                 'argument --read_depth_plots: ymax must be an integer: {}'.format(plot[ymax])
             )
         try:
-            plot[stranded] = tab.cast_boolean(plot[stranded])
+            plot[stranded] = _util.cast_boolean(plot[stranded])
         except TypeError:
             parser.error(
                 'argument --read_depth_plots: stranded must be an boolean: {}'.format(

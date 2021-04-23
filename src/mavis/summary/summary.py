@@ -297,6 +297,7 @@ def filter_by_evidence(
             linking_split_reads = bpp.column('linking_split_reads')
             if bpp.event_type == SVTYPE.INS:
                 linking_split_reads += bpp.column('flanking_pairs')
+
             if any(
                 [
                     bpp.column('break1_split_reads') + bpp.column('break1_split_reads_forced')

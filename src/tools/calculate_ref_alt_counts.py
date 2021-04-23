@@ -190,7 +190,7 @@ class RefAltCalculator:
         processed_bpps = {}
         filtered_events = []
 
-        bpps = read_inputs(input_files, add_default={'stranded': False})
+        bpps = read_inputs(input_files, add_default={'stranded': False}, summary=True)
 
         for bpp in bpps:
             # only use precise bpps that are within a certain event size
