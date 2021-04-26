@@ -1,15 +1,12 @@
-import unittest
-
 from mavis.constants import ORIENT
-from mavis.validate.call import _call_interval_by_flanking_coverage
-from mavis.validate.evidence import GenomeEvidence
-from mavis.validate.base import Evidence
 from mavis.interval import Interval
+from mavis.validate.base import Evidence
+from mavis.validate.call import _call_interval_by_flanking_coverage
 
 from .mock import Mock
 
 
-class CallIntervalByFlankingCoverage(unittest.TestCase):
+class CallIntervalByFlankingCoverage:
     def test_invalid_input_attr(self):
         pass
 
@@ -22,8 +19,8 @@ class CallIntervalByFlankingCoverage(unittest.TestCase):
             distance=Evidence.distance,
             traverse=Evidence.traverse,
         )
-        self.assertEqual(110, i.start)
-        self.assertEqual(180, i.end)
+        assert i.start == 110
+        assert i.end == 180
 
         i = _call_interval_by_flanking_coverage(
             Mock(start=20, end=80),
@@ -33,8 +30,8 @@ class CallIntervalByFlankingCoverage(unittest.TestCase):
             distance=Evidence.distance,
             traverse=Evidence.traverse,
         )
-        self.assertEqual(80, i.start)
-        self.assertEqual(209, i.end)
+        assert i.start == 80
+        assert i.end == 209
 
     def test_right(self):
         i = _call_interval_by_flanking_coverage(
@@ -45,8 +42,8 @@ class CallIntervalByFlankingCoverage(unittest.TestCase):
             distance=Evidence.distance,
             traverse=Evidence.traverse,
         )
-        self.assertEqual(101, i.end)
-        self.assertEqual(31, i.start)
+        assert i.end == 101
+        assert i.start == 31
 
         i = _call_interval_by_flanking_coverage(
             Mock(start=150, end=200),
@@ -56,16 +53,16 @@ class CallIntervalByFlankingCoverage(unittest.TestCase):
             distance=Evidence.distance,
             traverse=Evidence.traverse,
         )
-        self.assertEqual(11, i.start)
-        self.assertEqual(150, i.end)
+        assert i.start == 11
+        assert i.end == 150
 
 
-class TestDistanceAndTraverse(unittest.TestCase):
+class TestDistanceAndTraverse:
     def test_distance(self):
-        self.assertEqual(Interval(10), Evidence.distance(1, 11))
+        assert Evidence.distance(1, 11) == Interval(10)
 
     def test_traverse_right(self):
-        self.assertEqual(Interval(11), Evidence.traverse(1, 10, ORIENT.RIGHT))
+        assert Evidence.traverse(1, 10, ORIENT.RIGHT) == Interval(11)
 
     def test_traverse_left(self):
-        self.assertEqual(Interval(10), Evidence.traverse(20, 10, ORIENT.LEFT))
+        assert Evidence.traverse(20, 10, ORIENT.LEFT) == Interval(10)

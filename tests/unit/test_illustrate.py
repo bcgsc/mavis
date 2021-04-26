@@ -1,9 +1,8 @@
-import unittest
 from mavis.illustrate.util import generate_interval_mapping
 from mavis.interval import Interval
 
 
-class TestGenerateIntervalMapping(unittest.TestCase):
+class TestGenerateIntervalMapping:
     def test_single_bp_window(self):
         regions = [
             Interval(4222347, 4222347),
@@ -20,7 +19,7 @@ class TestGenerateIntervalMapping(unittest.TestCase):
         mapping = generate_interval_mapping(
             regions, target, ratio, min_width, buffer_, start, end, min_inter
         )
-        self.assertEqual(7, len(mapping.keys()))
+        assert len(mapping.keys()) == 7
 
     def test_no_input_intervals(self):
         target = 911.9921875
@@ -33,4 +32,4 @@ class TestGenerateIntervalMapping(unittest.TestCase):
         mapping = generate_interval_mapping(
             [], target, ratio, min_width, buffer_, start, end, min_inter
         )
-        self.assertEqual(1, len(mapping.keys()))
+        assert len(mapping.keys()) == 1

@@ -1,7 +1,6 @@
-import os
 import random
-import unittest
 
+import pytest
 from mavis.annotate import fusion, genomic, protein, variant
 from mavis.annotate.base import BioInterval
 from mavis.annotate.file_io import load_templates
@@ -33,10 +32,12 @@ def setUpModule():
     TEMPLATE_METADATA = load_templates(get_data('cytoBand.txt'))
 
 
-class TestDraw(unittest.TestCase):
-    def setUp(self):
-        self.canvas = Drawing(height=100, width=1000)
+@pytest.fixture
+def canvas():
+    return Drawing(height=100, width=1000)
 
+
+class TestDraw:
     def test_generate_interval_mapping_outside_range_error(self):
         temp = [
             Interval(48556470, 48556646),
@@ -58,14 +59,14 @@ class TestDraw(unittest.TestCase):
         Interval.convert_pos(mapping, st)
         Interval.convert_pos(mapping, end)
 
-    def test_generate_gene_mapping_err(self):
+    def test_generate_gene_mapping_err(self, canvas):
         #  _generate_interval_mapping [genomic.IntergenicRegion(11:77361962_77361962+)] 1181.39453125 5 30 None 77356962 77366962)
         ir = genomic.IntergenicRegion('11', 5000, 5000, STRAND.POS)
         tgt_width = 1000
         d = DiagramSettings(domain_name_regex_filter=r'.*')
         d.gene_min_buffer = 10
         # (self, canvas, gene, width, height, fill, label='', reference_genome=None)
-        draw_genes(d, self.canvas, [ir], tgt_width, [])
+        draw_genes(d, canvas, [ir], tgt_width, [])
 
         # _generate_interval_mapping ['Interval(29684391, 29684391)', 'Interval(29663998, 29696515)'] 1181.39453125 5 60 None 29662998 29697515
         # def generate_interval_mapping(cls, input_intervals, target_width, ratio, min_width, buffer_length=None, start=None, end=None, min_inter_width=None)
@@ -77,12 +78,12 @@ class TestDraw(unittest.TestCase):
         # ------======--------
         # -----===============
         t = split_intervals_into_tracks([(1, 3), (3, 7), (2, 2), (4, 5), (3, 10)])
-        self.assertEqual(3, len(t))
-        self.assertEqual([(1, 3), (4, 5)], t[0])
-        self.assertEqual([(2, 2), (3, 7)], t[1])
-        self.assertEqual([(3, 10)], t[2])
+        assert len(t) == 3
+        assert t[0] == [(1, 3), (4, 5)]
+        assert t[1] == [(2, 2), (3, 7)]
+        assert t[2] == [(3, 10)]
 
-    def test_draw_genes(self):
+    def test_draw_genes(self, canvas):
 
         x = genomic.Gene('1', 1000, 2000, strand=STRAND.POS)
         y = genomic.Gene('1', 5000, 7000, strand=STRAND.NEG)
@@ -92,7 +93,7 @@ class TestDraw(unittest.TestCase):
         breakpoints = [Breakpoint('1', 1100, 1200, orient=ORIENT.RIGHT)]
         g = draw_genes(
             d,
-            self.canvas,
+            canvas,
             [x, y, z],
             500,
             breakpoints,
@@ -100,24 +101,24 @@ class TestDraw(unittest.TestCase):
         )
 
         # test the class structure
-        self.assertEqual(6, len(g.elements))
-        self.assertEqual('scaffold', g.elements[0].attribs.get('class', ''))
+        assert len(g.elements) == 6
+        assert g.elements[0].attribs.get('class', '') == 'scaffold'
         for i in range(1, 4):
-            self.assertEqual('gene', g.elements[i].attribs.get('class', ''))
-        self.assertEqual('mask', g.elements[4].attribs.get('class', ''))
-        self.assertEqual('breakpoint', g.elements[5].attribs.get('class', ''))
-        self.assertEqual(
-            d.track_height * 2 + d.padding + d.breakpoint_bottom_margin + d.breakpoint_top_margin,
-            g.height,
+            assert g.elements[i].attribs.get('class', '') == 'gene'
+        assert g.elements[4].attribs.get('class', '') == 'mask'
+        assert g.elements[5].attribs.get('class', '') == 'breakpoint'
+        assert (
+            g.height
+            == d.track_height * 2 + d.padding + d.breakpoint_bottom_margin + d.breakpoint_top_margin
         )
-        self.canvas.add(g)
-        self.assertEqual(len(g.labels), 4)
-        self.assertEqual(x, g.labels['G1'])
-        self.assertEqual(z, g.labels['G2'])
-        self.assertEqual(y, g.labels['G3'])
-        self.assertEqual(breakpoints[0], g.labels['B1'])
+        canvas.add(g)
+        assert 4 == len(g.labels)
+        assert g.labels['G1'] == x
+        assert g.labels['G2'] == z
+        assert g.labels['G3'] == y
+        assert g.labels['B1'] == breakpoints[0]
 
-    def test_draw_ustranscript(self):
+    def test_draw_ustranscript(self, canvas):
         d = DiagramSettings(domain_name_regex_filter=r'.*')
         # domains = [protein.Domain()]
         d1 = protein.Domain('first', [(55, 61), (71, 73)])
@@ -132,43 +133,38 @@ class TestDraw(unittest.TestCase):
             domains=[d2, d1],
         )
         b = Breakpoint('1', 350, 410, orient=ORIENT.LEFT)
-        g = draw_ustranscript(
-            d, self.canvas, t, 500, colors={t.exons[1]: '#FFFF00'}, breakpoints=[b]
-        )
-        self.canvas.add(g)
-        # self.canvas.saveas('test_draw_ustranscript.svg')
-        self.assertEqual(2, len(self.canvas.elements))
-        self.assertEqual(3, len(g.elements))
+        g = draw_ustranscript(d, canvas, t, 500, colors={t.exons[1]: '#FFFF00'}, breakpoints=[b])
+        canvas.add(g)
+        # canvas.saveas('test_draw_ustranscript.svg')
+        assert len(canvas.elements) == 2
+        assert len(g.elements) == 3
         for el, cls in zip(g.elements[0].elements, ['splicing', 'exon_track', 'protein']):
-            self.assertEqual(cls, el.attribs.get('class', ''))
+            assert el.attribs.get('class', '') == cls
 
         for el, cls in zip(
             g.elements[0].elements[1].elements, ['scaffold', 'exon', 'exon', 'exon']
         ):
-            self.assertEqual(cls, el.attribs.get('class', ''))
+            assert el.attribs.get('class', '') == cls
 
         for el, cls in zip(g.elements[0].elements[2].elements, ['translation', 'domain', 'domain']):
-            self.assertEqual(cls, el.attribs.get('class', ''))
+            assert el.attribs.get('class', '') == cls
 
-        self.assertEqual(
-            sum(
-                [
-                    d.track_height,
-                    d.splice_height,
-                    2 * d.padding,
-                    d.domain_track_height * 2,
-                    d.translation_track_height,
-                    d.padding,
-                    d.breakpoint_top_margin,
-                    d.breakpoint_bottom_margin,
-                ]
-            ),
-            g.height,
+        assert g.height == sum(
+            [
+                d.track_height,
+                d.splice_height,
+                2 * d.padding,
+                d.domain_track_height * 2,
+                d.translation_track_height,
+                d.padding,
+                d.breakpoint_top_margin,
+                d.breakpoint_bottom_margin,
+            ]
         )
-        self.assertEqual(d1.name, g.labels['D1'])
-        self.assertEqual(d2.name, g.labels['D2'])
+        assert g.labels['D1'] == d1.name
+        assert g.labels['D2'] == d2.name
 
-    def test_draw_consec_exons(self):
+    def test_draw_consec_exons(self, canvas):
         d = DiagramSettings(domain_name_regex_filter=r'.*')
         # domains = [protein.Domain()]
         t = build_transcript(
@@ -180,32 +176,30 @@ class TestDraw(unittest.TestCase):
             domains=[],
         )
         b = Breakpoint('1', 350, 410, orient=ORIENT.LEFT)
-        g = draw_ustranscript(
-            d, self.canvas, t, 500, colors={t.exons[1]: '#FFFF00'}, breakpoints=[b]
-        )
-        self.canvas.add(g)
+        g = draw_ustranscript(d, canvas, t, 500, colors={t.exons[1]: '#FFFF00'}, breakpoints=[b])
+        canvas.add(g)
         if OUTPUT_SVG:
-            self.canvas.saveas('test_draw_consec_exons.svg')
+            canvas.saveas('test_draw_consec_exons.svg')
 
-        # self.canvas.saveas('test_draw_ustranscript.svg')
-        self.assertEqual(2, len(self.canvas.elements))
-        self.assertEqual(3, len(g.elements))
+        # canvas.saveas('test_draw_ustranscript.svg')
+        assert len(canvas.elements) == 2
+        assert len(g.elements) == 3
         # check that only 2 splicing marks were created
-        self.assertEqual(2, len(g.elements[0].elements[0].elements))
+        assert len(g.elements[0].elements[0].elements) == 2
         # get the second exon
         ex2 = g.elements[0].elements[1].elements[2].elements[0]
         print(ex2)
-        self.assertAlmostEqual(120.7783426339, ex2.attribs.get('width'))
+        assert pytest.approx(ex2.attribs.get('width')) == 120.7783426339
         # get the third exon
         ex3 = g.elements[0].elements[1].elements[3].elements[0]
         print(ex3)
-        self.assertAlmostEqual(96.52494419642852, ex3.attribs.get('width'))
+        assert pytest.approx(ex3.attribs.get('width')) == 96.52494419642852
 
     def test_dynamic_label_color(self):
-        self.assertEqual(HEX_WHITE, dynamic_label_color(HEX_BLACK))
-        self.assertEqual(HEX_BLACK, dynamic_label_color(HEX_WHITE))
+        assert dynamic_label_color(HEX_BLACK) == HEX_WHITE
+        assert dynamic_label_color(HEX_WHITE) == HEX_BLACK
 
-    def test_draw_legend(self):
+    def test_draw_legend(self, canvas):
         d = DiagramSettings(domain_name_regex_filter=r'.*')
         swatches = [
             ('#000000', 'black'),
@@ -214,19 +208,20 @@ class TestDraw(unittest.TestCase):
             ('#00FF00', 'green'),
             ('#FFFF00', 'yellow'),
         ]
-        g = draw_legend(d, self.canvas, swatches)
-        self.canvas.add(g)
+        g = draw_legend(d, canvas, swatches)
+        canvas.add(g)
 
-        self.assertEqual('legend', g.attribs.get('class', ''))
-        self.assertEqual(
-            d.legend_swatch_size * len(swatches) + d.padding * (len(swatches) - 1 + 2), g.height
+        assert g.attribs.get('class', '') == 'legend'
+        assert g.height == d.legend_swatch_size * len(swatches) + d.padding * (
+            len(swatches) - 1 + 2
         )
-        self.assertEqual(6, len(g.elements))
-        self.assertEqual(
-            6 * d.legend_font_size * d.font_width_height_ratio
+
+        assert len(g.elements) == 6
+        assert (
+            g.width
+            == 6 * d.legend_font_size * d.font_width_height_ratio
             + d.padding * 3
-            + d.legend_swatch_size,
-            g.width,
+            + d.legend_swatch_size
         )
 
     def test_draw_layout_single_transcript(self):
@@ -247,7 +242,7 @@ class TestDraw(unittest.TestCase):
         ft = variant.FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
         canvas, legend = draw_sv_summary_diagram(d, ann)
-        self.assertEqual(4, len(canvas.elements))  # defs counts as element
+        assert len(canvas.elements) == 4  # defs counts as element
         expected_height = (
             d.top_margin
             + d.bottom_margin
@@ -269,7 +264,7 @@ class TestDraw(unittest.TestCase):
         )
         if OUTPUT_SVG:
             canvas.saveas('test_draw_layout_single_transcript.svg')
-        self.assertEqual(expected_height, canvas.attribs['height'])
+        assert canvas.attribs['height'] == expected_height
 
     def test_draw_layout_single_genomic(self):
         d = DiagramSettings(domain_name_regex_filter=r'.*')
@@ -305,12 +300,12 @@ class TestDraw(unittest.TestCase):
 
         ft = variant.FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
-        self.assertEqual(t1.exons[0], ft.exon_mapping[ft.exons[0].position])
-        self.assertEqual(t2.exons[2], ft.exon_mapping[ft.exons[1].position])
-        self.assertEqual(t2.exons[3], ft.exon_mapping[ft.exons[2].position])
+        assert ft.exon_mapping[ft.exons[0].position] == t1.exons[0]
+        assert ft.exon_mapping[ft.exons[1].position] == t2.exons[2]
+        assert ft.exon_mapping[ft.exons[2].position] == t2.exons[3]
 
         canvas, legend = draw_sv_summary_diagram(d, ann)
-        self.assertEqual(5, len(canvas.elements))  # defs counts as element
+        assert len(canvas.elements) == 5  # defs counts as element
 
         expected_height = (
             d.top_margin
@@ -331,7 +326,7 @@ class TestDraw(unittest.TestCase):
             + d.track_height
             + d.splice_height
         )
-        self.assertEqual(expected_height, canvas.attribs['height'])
+        assert canvas.attribs['height'] == expected_height
         if OUTPUT_SVG:
             canvas.saveas('test_draw_layout_single_genomic.svg')
 
@@ -378,7 +373,7 @@ class TestDraw(unittest.TestCase):
         ft = variant.FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
         canvas, legend = draw_sv_summary_diagram(d, ann)
-        self.assertEqual(6, len(canvas.elements))  # defs counts as element
+        assert len(canvas.elements) == 6  # defs counts as element
         expected_height = (
             d.top_margin
             + d.bottom_margin
@@ -399,7 +394,7 @@ class TestDraw(unittest.TestCase):
             + d.track_height
             + d.splice_height
         )
-        self.assertEqual(expected_height, canvas.attribs['height'])
+        assert canvas.attribs['height'] == expected_height
 
     def test_draw_template(self):
         # def draw_template(self, canvas, template, target_width, height, labels=None, colors=None):
@@ -417,12 +412,13 @@ class TestDraw(unittest.TestCase):
         canvas = Drawing(size=(1000, 50))
 
         g = draw_template(d, canvas, TEMPLATE_METADATA['1'], 1000)
-        self.assertEqual(
-            d.breakpoint_top_margin + d.breakpoint_bottom_margin + d.template_track_height, g.height
+        assert (
+            g.height
+            == d.breakpoint_top_margin + d.breakpoint_bottom_margin + d.template_track_height
         )
         canvas.add(g)
         canvas.attribs['height'] = g.height
-        self.assertEqual(2, len(canvas.elements))
+        assert len(canvas.elements) == 2
 
     def test_draw_translocation_with_template(self):
         d = DiagramSettings(domain_name_regex_filter=r'.*')
@@ -473,7 +469,7 @@ class TestDraw(unittest.TestCase):
         )
         if OUTPUT_SVG:
             canvas.saveas('test_draw_translocation_with_template.svg')
-        self.assertEqual(8, len(canvas.elements))  # defs counts as element
+        assert len(canvas.elements) == 8  # defs counts as element
         expected_height = (
             d.top_margin
             + d.bottom_margin
@@ -497,7 +493,7 @@ class TestDraw(unittest.TestCase):
             + d.splice_height
             + d.template_track_height
         )
-        self.assertAlmostEqual(expected_height, canvas.attribs['height'])
+        assert pytest.approx(canvas.attribs['height']) == expected_height
 
     def test_draw_overlay(self):
         gene = genomic.Gene('12', 25357723, 25403870, strand=STRAND.NEG, name='KRAS')
@@ -553,7 +549,7 @@ class TestDraw(unittest.TestCase):
 
         d.gene_min_buffer = 0
         canvas = draw_multi_transcript_overlay(d, gene, vmarkers=[marker], plots=[s, s])
-        self.assertEqual(2, len(canvas.elements))  # defs counts as element
+        assert len(canvas.elements) == 2  # defs counts as element
         if OUTPUT_SVG:
             canvas.saveas('test_draw_overlay.svg')
 

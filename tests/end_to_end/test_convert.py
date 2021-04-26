@@ -1,4 +1,3 @@
-import glob
 import os
 import shutil
 import sys
@@ -23,7 +22,7 @@ def setUpModule():
     print('output dir', TEMP_OUTPUT)
 
 
-class TestConvert(unittest.TestCase):
+class TestConvert:
     def run_main(self, inputfile, file_type, strand_specific=False):
         outputfile = os.path.join(TEMP_OUTPUT, file_type + '.tab')
         args = [
@@ -41,7 +40,7 @@ class TestConvert(unittest.TestCase):
         with patch.object(sys, 'argv', args):
             main()
             print('output', outputfile)
-            self.assertTrue(unique_exists(outputfile))
+            assert unique_exists(outputfile)
         result = {}
         for pair in read_bpp_from_input_file(outputfile):
             result.setdefault(pair.data['tracking_id'], []).append(pair)
@@ -56,44 +55,44 @@ class TestConvert(unittest.TestCase):
     def test_delly(self):
         result = self.run_main(get_data('delly_events.vcf'), SUPPORTED_TOOL.DELLY, False)
         # test the contents were converted successfully
-        self.assertEqual(1, len(result['delly-DUP00000424']))
+        assert len(result['delly-DUP00000424']) == 1
         bpp = result['delly-DUP00000424'][0]
         print(bpp.data)
         print(bpp)
-        self.assertEqual(SVTYPE.DUP, bpp.event_type)
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual('1', bpp.break2.chr)
-        self.assertEqual(224646569, bpp.break1.start)
-        self.assertEqual(224646569, bpp.break1.end)
-        self.assertEqual(224800120, bpp.break2.start)
-        self.assertEqual(224800120, bpp.break2.end)
-        self.assertEqual(1, len(result['delly-TRA00020624']))
+        assert bpp.event_type == SVTYPE.DUP
+        assert bpp.break1.chr == '1'
+        assert bpp.break2.chr == '1'
+        assert bpp.break1.start == 224646569
+        assert bpp.break1.end == 224646569
+        assert bpp.break2.start == 224800120
+        assert bpp.break2.end == 224800120
+        assert len(result['delly-TRA00020624']) == 1
         bpp = result['delly-TRA00020624'][0]
-        self.assertEqual(SVTYPE.TRANS, bpp.event_type)
-        self.assertEqual('10', bpp.break1.chr)
-        self.assertEqual('19', bpp.break2.chr)
-        self.assertEqual(7059510 - 670, bpp.break1.start)
-        self.assertEqual(7059510 + 670, bpp.break1.end)
-        self.assertEqual(17396810 - 670, bpp.break2.start)
-        self.assertEqual(17396810 + 670, bpp.break2.end)
-        self.assertEqual(len(result), 31)
+        assert bpp.event_type == SVTYPE.TRANS
+        assert bpp.break1.chr == '10'
+        assert bpp.break2.chr == '19'
+        assert bpp.break1.start == 7059510 - 670
+        assert bpp.break1.end == 7059510 + 670
+        assert bpp.break2.start == 17396810 - 670
+        assert bpp.break2.end == 17396810 + 670
+        assert 31 == len(result)
 
     def test_manta(self):
         result = self.run_main(get_data('manta_events.vcf'), SUPPORTED_TOOL.MANTA, False)
         # ensure weird bnd type is converted correctly
         bnd_id = 'manta-MantaBND:173633:0:1:0:0:0:0'
-        self.assertEqual(1, len(result[bnd_id]))
+        assert len(result[bnd_id]) == 1
         bpp = result[bnd_id][0]
-        self.assertEqual(SVTYPE.TRANS, bpp.event_type)
-        self.assertEqual('10', bpp.break1.chr)
-        self.assertEqual('19', bpp.break2.chr)
-        self.assertEqual(7059511 - 0, bpp.break1.start)
-        self.assertEqual(7059511 + 1, bpp.break1.end)
-        self.assertEqual(17396810, bpp.break2.start)
-        self.assertEqual(17396810, bpp.break2.end)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
+        assert bpp.event_type == SVTYPE.TRANS
+        assert bpp.break1.chr == '10'
+        assert bpp.break2.chr == '19'
+        assert bpp.break1.start == 7059511 - 0
+        assert bpp.break1.end == 7059511 + 1
+        assert bpp.break2.start == 17396810
+        assert bpp.break2.end == 17396810
+        assert bpp.break2.orient == ORIENT.LEFT
         somatic_event = result['manta-MantaDEL:20644:0:2:0:0:0'][0]
-        self.assertEqual(True, somatic_event.data.get('SOMATIC', False))
+        assert somatic_event.data.get('SOMATIC', False) is True
 
     def test_pindel(self):
         self.run_main(get_data('pindel_events.vcf'), SUPPORTED_TOOL.PINDEL, False)
@@ -107,7 +106,7 @@ class TestConvert(unittest.TestCase):
         print(results.keys())
         record = results['vcf-460818'][0]
         print(record, record.data)
-        self.assertEqual('Pathogenic', record.data['CLNSIG'])
+        assert record.data['CLNSIG'] == 'Pathogenic'
 
     def test_breakseq2(self):
         self.run_main(get_data('breakseq.vcf'), SUPPORTED_TOOL.BREAKSEQ, False)
