@@ -14,7 +14,7 @@ from mavis.interval import Interval
 from mavis.schemas import DEFAULTS
 from mavis.validate.evidence import GenomeEvidence
 
-from ..util import get_data
+from ..util import blat_only, bwa_only, get_data
 from . import MockLongString, MockObject, MockRead
 
 REFERENCE_GENOME = None
@@ -52,7 +52,7 @@ class TestCallReadEvents:
 
 
 class TestAlign:
-    @pytest.mark.skipif(not shutil.which('blat'), reason='missing the blat command')
+    @blat_only
     def test_blat_contigs(self):
         ev = GenomeEvidence(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
@@ -98,7 +98,7 @@ class TestAlign:
         assert alignment.read1.cigar == [(CIGAR.S, 125), (CIGAR.EQ, 120)]
         assert alignment.read2.cigar == [(CIGAR.S, 117), (CIGAR.EQ, 128)]
 
-    @pytest.mark.skipif(not shutil.which('bwa'), reason='missing the command')
+    @bwa_only
     def test_bwa_contigs(self):
         ev = GenomeEvidence(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
@@ -148,7 +148,7 @@ class TestAlign:
         assert alignment.read1.cigar == [(CIGAR.S, 125), (CIGAR.EQ, 120)]
         assert alignment.read2.cigar == [(CIGAR.S, 117), (CIGAR.EQ, 128)]
 
-    @pytest.mark.skipif(not shutil.which('blat'), reason='missing the blat command')
+    @blat_only
     def test_blat_contigs_deletion(self):
         ev = GenomeEvidence(
             Breakpoint('fake', 1714, orient=ORIENT.LEFT),
@@ -192,7 +192,7 @@ class TestAlign:
         assert alignment.read1.reference_start == 1612
         assert alignment.read1.cigar == [(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)]
 
-    @pytest.mark.skipif(not shutil.which('blat'), reason='missing the blat command')
+    @blat_only
     def test_blat_contigs_deletion_revcomp(self):
         ev = GenomeEvidence(
             Breakpoint('fake', 1714, orient=ORIENT.LEFT),
