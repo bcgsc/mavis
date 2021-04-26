@@ -39,14 +39,14 @@ class TestDelly:
         assert bpp.break2.strand == STRAND.NS
         assert bpp.break2.chr == '1'
         assert bpp.event_type == SVTYPE.INS
-        assert bpp.untemplated_seq == None
+        assert bpp.untemplated_seq is None
 
         bpp_list = _convert_tool_row(
             _parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False, assume_no_untemplated=True
         )
         assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        assert bpp.untemplated_seq == None
+        assert bpp.untemplated_seq is None
         assert bpp.untemplated_seq != ''
 
     def test_convert_convert_translocation(self):
@@ -118,8 +118,8 @@ class TestStarFusion:
         assert bpp.break2.chr == 'chr13'
         assert bpp.break1.start == 114529969
         assert bpp.break2.start == 114751269
-        assert bpp.opposing_strands == False
-        assert bpp.stranded == True
+        assert bpp.opposing_strands is False
+        assert bpp.stranded is True
 
     def test_convert_translocation(self):
         row = {
@@ -135,8 +135,8 @@ class TestStarFusion:
         assert bpp.break2.chr == 'chr20'
         assert bpp.break1.start == 59445688
         assert bpp.break2.start == 49411710
-        assert bpp.opposing_strands == False
-        assert bpp.stranded == True
+        assert bpp.opposing_strands is False
+        assert bpp.stranded is True
 
     def test_malformed(self):
         row = {'FusionName': 'BCAS4--BCAS3', 'LeftBreakpoint': '', 'RightBreakpoint': None}
@@ -163,8 +163,8 @@ class TestTransAbyss:
         assert bpp.break1.start == 10015
         assert bpp.break2.start == 10016
         assert bpp.event_type == SVTYPE.INS
-        assert bpp.opposing_strands == False
-        assert bpp.stranded == True
+        assert bpp.opposing_strands is False
+        assert bpp.stranded is True
         assert bpp.untemplated_seq == 'AAT'
 
     def test_convert_indel_deletion(self):
@@ -206,8 +206,8 @@ class TestTransAbyss:
         assert bpp.event_type == SVTYPE.INS
         assert bpp.break1.strand == STRAND.NS
         assert bpp.break2.strand == STRAND.NS
-        assert bpp.stranded == False
-        assert bpp.opposing_strands == False
+        assert bpp.stranded is False
+        assert bpp.opposing_strands is False
         assert bpp.untemplated_seq == 'TT'
 
     def test_convert_indel_duplication(self):
@@ -229,8 +229,8 @@ class TestTransAbyss:
         assert bpp.event_type == SVTYPE.DUP
         assert bpp.break1.strand == STRAND.NS
         assert bpp.break2.strand == STRAND.NS
-        assert bpp.stranded == False
-        assert bpp.opposing_strands == False
+        assert bpp.stranded is False
+        assert bpp.opposing_strands is False
         assert bpp.untemplated_seq == ''
 
     def test_convert_translocation(self):
@@ -379,11 +379,11 @@ class TestDefuse:
         assert bpp.break2.chr == 'X'
         assert bpp.break1.start == 50294136
         assert bpp.break2.start == 153063989
-        assert bpp.event_type == None
-        assert bpp.opposing_strands == False
+        assert bpp.event_type is None
+        assert bpp.opposing_strands is False
         assert bpp.break1.orient == ORIENT.RIGHT
         assert bpp.break2.orient == ORIENT.LEFT
-        assert bpp.stranded == False
+        assert bpp.stranded is False
         assert bpp.data['tracking_id'] == 'defuse-1'
 
     def test_convert_translocation(self):
@@ -403,11 +403,11 @@ class TestDefuse:
         assert bpp.break2.chr == 'X'
         assert bpp.break1.start == 50294136
         assert bpp.break2.start == 153063989
-        assert bpp.event_type == None
-        assert bpp.opposing_strands == True
+        assert bpp.event_type is None
+        assert bpp.opposing_strands is True
         assert bpp.break1.orient == ORIENT.LEFT
         assert bpp.break2.orient == ORIENT.LEFT
-        assert bpp.stranded == False
+        assert bpp.stranded is False
         assert bpp.data['tracking_id'] == 'defuse-1'
 
     def test_convert_indel(self):
@@ -427,11 +427,11 @@ class TestDefuse:
         assert bpp.break2.chr == '1'
         assert bpp.break1.start == 1663681
         assert bpp.break2.start == 151732089
-        assert bpp.event_type == None
-        assert bpp.opposing_strands == False
+        assert bpp.event_type is None
+        assert bpp.opposing_strands is False
         assert bpp.break1.orient == ORIENT.LEFT
         assert bpp.break2.orient == ORIENT.RIGHT
-        assert bpp.stranded == False
+        assert bpp.stranded is False
         assert bpp.data['tracking_id'] == 'defuse-1'
 
     def test_convert_inversion(self):
@@ -451,11 +451,11 @@ class TestDefuse:
         assert bpp.break2.chr == '1'
         assert bpp.break1.start == 144898348
         assert bpp.break2.start == 235294748
-        assert bpp.event_type == None
-        assert bpp.opposing_strands == True
+        assert bpp.event_type is None
+        assert bpp.opposing_strands is True
         assert bpp.break1.orient == ORIENT.LEFT
         assert bpp.break2.orient == ORIENT.LEFT
-        assert bpp.stranded == False
+        assert bpp.stranded is False
         assert bpp.data['tracking_id'] == 'defuse-1'
 
 
@@ -480,10 +480,10 @@ class TestChimerascan:
         print(bpp)
         assert bpp.break1.start == int(row['end5p'])
         assert bpp.break2.start == int(row['start3p'])
-        assert bpp.opposing_strands == False
+        assert bpp.opposing_strands is False
         assert bpp.break1.orient == ORIENT.LEFT
         assert bpp.break2.orient == ORIENT.RIGHT
-        assert bpp.stranded == False
+        assert bpp.stranded is False
 
     def test_convert_pos_neg(self):
         row = {
@@ -505,10 +505,10 @@ class TestChimerascan:
         print(bpp)
         assert bpp.break1.start == int(row['end5p'])
         assert bpp.break2.start == int(row['end3p'])
-        assert bpp.opposing_strands == True
+        assert bpp.opposing_strands is True
         assert bpp.break1.orient == ORIENT.LEFT
         assert bpp.break2.orient == ORIENT.LEFT
-        assert bpp.stranded == False
+        assert bpp.stranded is False
 
     def test_convert_neg_pos(self):
         row = {
@@ -530,10 +530,10 @@ class TestChimerascan:
         print(bpp)
         assert bpp.break1.start == int(row['start5p'])
         assert bpp.break2.start == int(row['start3p'])
-        assert bpp.opposing_strands == True
+        assert bpp.opposing_strands is True
         assert bpp.break1.orient == ORIENT.RIGHT
         assert bpp.break2.orient == ORIENT.RIGHT
-        assert bpp.stranded == False
+        assert bpp.stranded is False
 
     def test_convert_neg_neg(self):
         row = {
@@ -555,10 +555,10 @@ class TestChimerascan:
         print(bpp)
         assert bpp.break1.start == int(row['start5p'])
         assert bpp.break2.start == int(row['end3p'])
-        assert bpp.opposing_strands == False
+        assert bpp.opposing_strands is False
         assert bpp.break1.orient == ORIENT.RIGHT
         assert bpp.break2.orient == ORIENT.LEFT
-        assert bpp.stranded == False
+        assert bpp.stranded is False
 
 
 class TestPindel:
@@ -578,8 +578,8 @@ class TestPindel:
         assert bpp.break1.strand == STRAND.NS
         assert bpp.break2.orient == ORIENT.RIGHT
         assert bpp.break2.strand == STRAND.NS
-        assert bpp.stranded == False
-        assert bpp.opposing_strands == False
+        assert bpp.stranded is False
+        assert bpp.opposing_strands is False
 
     def test_convert_insertion(self):
         row = Mock(chrom='21', pos=9412306, info={'SVTYPE': 'INS'}, stop=9412400, id=None, alts=[])
@@ -597,8 +597,8 @@ class TestPindel:
         assert bpp.break1.strand == STRAND.NS
         assert bpp.break2.orient == ORIENT.RIGHT
         assert bpp.break2.strand == STRAND.NS
-        assert bpp.stranded == False
-        assert bpp.opposing_strands == False
+        assert bpp.stranded is False
+        assert bpp.opposing_strands is False
 
     def test_convert_inversion(self):
         row = Mock(chrom='21', pos=9412306, info={'SVTYPE': 'INV'}, stop=9412400, id=None, alts=[])
@@ -616,8 +616,8 @@ class TestPindel:
         assert bpp.break1.strand == STRAND.NS
         assert bpp.break2.orient == ORIENT.LEFT
         assert bpp.break2.strand == STRAND.NS
-        assert bpp.stranded == False
-        assert bpp.opposing_strands == True
+        assert bpp.stranded is False
+        assert bpp.opposing_strands is True
 
 
 class TestParseBndAlt:
@@ -726,7 +726,7 @@ class TestBreakDancer:
         assert bpps[0].break2.start == 10546
         assert bpps[0].break2.end == 10546
         assert bpps[0].break2.orient == ORIENT.LEFT
-        assert bpps[0].opposing_strands == False
+        assert bpps[0].opposing_strands is False
 
     def test_deletion(self):
         row = {
@@ -750,7 +750,7 @@ class TestBreakDancer:
         assert bpps[0].break2.start == 870225
         assert bpps[0].break2.end == 870225
         assert bpps[0].break2.orient == ORIENT.RIGHT
-        assert bpps[0].opposing_strands == False
+        assert bpps[0].opposing_strands is False
 
     def test_inversion(self):
         row = {
@@ -774,7 +774,7 @@ class TestBreakDancer:
         assert bpps[0].break2.start == 13218683
         assert bpps[0].break2.end == 13218683
         assert bpps[0].break2.orient == ORIENT.LEFT
-        assert bpps[0].opposing_strands == True
+        assert bpps[0].opposing_strands is True
 
         assert bpps[1].event_type == SVTYPE.INV
         assert bpps[1].break1.start == 13143396
@@ -783,7 +783,7 @@ class TestBreakDancer:
         assert bpps[1].break2.start == 13218683
         assert bpps[1].break2.end == 13218683
         assert bpps[1].break2.orient == ORIENT.RIGHT
-        assert bpps[1].opposing_strands == True
+        assert bpps[1].opposing_strands is True
 
     def test_insertion(self):
         row = {
@@ -807,7 +807,7 @@ class TestBreakDancer:
         assert bpps[0].break2.start == 20218060
         assert bpps[0].break2.end == 20218060
         assert bpps[0].break2.orient == ORIENT.RIGHT
-        assert bpps[0].opposing_strands == False
+        assert bpps[0].opposing_strands is False
 
 
 class TestStrelka:

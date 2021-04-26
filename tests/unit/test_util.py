@@ -1,17 +1,9 @@
-import os
-
 import pytest
 from mavis.constants import COLUMNS, ORIENT, STRAND
 from mavis.error import NotSpecifiedError
-from mavis.util import (
-    ENV_VAR_PREFIX,
-    cast,
-    get_connected_components,
-    get_env_variable,
-    read_bpp_from_input_file,
-)
+from mavis.util import cast, get_connected_components, read_bpp_from_input_file
 
-from .mock import Mock
+from ..util import todo
 
 
 class TestGetConnectedComponents:
@@ -39,12 +31,12 @@ class TestGetConnectedComponents:
 
 class TestCast:
     def test_float(self):
-        assert type(cast('1', float)) == type(1.0)
-        assert type(cast('1', int)) != type(1.0)
+        assert type(cast('1', float)) == type(1.0)  # noqa: E721
+        assert type(cast('1', int)) != type(1.0)  # noqa: E721
 
     def test_boolean(self):
-        assert type(cast('f', bool)) == type(False)
-        assert type(cast('false', bool)) == type(False)
+        assert type(cast('f', bool)) == type(False)  # noqa: E721
+        assert type(cast('false', bool)) == type(False)  # noqa: E721
         assert not cast('f', bool)
         assert not cast('false', bool)
         assert not cast('0', bool)
@@ -267,7 +259,7 @@ class TestReadBreakpointPairsFromFile:
         assert len(bpps) == 1
         assert bpps[0].break1.orient == ORIENT.LEFT
 
-    @pytest.mark.skip(reason='TODO')
+    @todo
     def test_break2_orient_ns(self, tmp_path):
         input_file = tmp_path / "inputs.tsv"
         input_file.write_text(
@@ -292,10 +284,6 @@ class TestReadBreakpointPairsFromFile:
         assert len(bpps) == 1
         assert bpps[0].break1.orient == ORIENT.LEFT
 
-    @pytest.mark.skip(reason='TODO')
-    def test_both_break_orient_ns(self, tmp_path):
-        input_file = tmp_path / "inputs.tsv"
-
     def test_base_case(self, tmp_path):
         input_file = tmp_path / "inputs.tsv"
         input_file.write_text(
@@ -319,7 +307,7 @@ class TestReadBreakpointPairsFromFile:
         bpps = read_bpp_from_input_file(input_file, expand_strand=False, expand_orient=False)
         assert len(bpps) == 1
         assert bpps[0].break1.orient == ORIENT.RIGHT
-        assert bpps[0].opposing_strands == True
+        assert bpps[0].opposing_strands is True
 
     def test_unstranded_with_strand_calls(self, tmp_path):
         input_file = tmp_path / "inputs.tsv"

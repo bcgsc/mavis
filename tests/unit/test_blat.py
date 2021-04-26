@@ -1,12 +1,11 @@
-import unittest
-
+import pytest
 from mavis.blat import Blat
 from mavis.constants import CIGAR, reverse_complement
 
 from .mock import Mock, MockFunction, MockLongString
 
 
-class TestConvertPslxToPysam(unittest.TestCase):
+class TestConvertPslxToPysam:
     def test_simple(self):
         row = {
             'match': 142,
@@ -50,10 +49,10 @@ class TestConvertPslxToPysam(unittest.TestCase):
         }
         cache = Mock(reference_id=MockFunction(16))
         read = Blat.pslx_row_to_pysam(row, cache, refseq)
-        self.assertEqual(16, read.reference_id)
-        self.assertEqual('17', read.reference_name)
-        self.assertEqual(row['qseq_full'], reverse_complement(read.query_sequence))
-        self.assertEqual([(CIGAR.S, 62), (CIGAR.EQ, 142)], read.cigar)
+        assert read.reference_id == 16
+        assert read.reference_name == '17'
+        assert reverse_complement(read.query_sequence) == row['qseq_full']
+        assert read.cigar == [(CIGAR.S, 62), (CIGAR.EQ, 142)]
 
     def test_overlapping_blat_blocks_error(self):
         row = {
@@ -72,5 +71,5 @@ class TestConvertPslxToPysam(unittest.TestCase):
             ),
         }
         cache = Mock(reference_id=MockFunction(6))
-        with self.assertRaises(AssertionError):
+        with pytest.raises(AssertionError):
             Blat.pslx_row_to_pysam(row, cache, None)

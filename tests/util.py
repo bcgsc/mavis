@@ -1,7 +1,20 @@
 import glob
 import os
+import shutil
+
+import pytest
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+
+
+long_running_test = pytest.mark.skipif(
+    os.environ.get('RUN_FULL') != '1',
+    reason='Only running FAST tests subset',
+)
+
+bwa_only = pytest.mark.skipif(not shutil.which('bwa'), reason='missing the command')
+blat_only = pytest.mark.skipif(not shutil.which('blat'), reason='missing the command')
+todo = pytest.mark.skip(reason='TODO')
 
 
 def package_relative_file(*paths):

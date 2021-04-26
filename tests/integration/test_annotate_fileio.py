@@ -1,28 +1,24 @@
-import os
-import unittest
-
 from mavis.annotate.file_io import convert_tab_to_json, load_annotations
 
 from ..util import get_data
 
+TAB = get_data('annotations_subsample.tab')
+JSON = get_data('annotations_subsample.json')
 
-class TestAnnotationLoading(unittest.TestCase):
-    def setUp(self):
-        self.tab = get_data('annotations_subsample.tab')
-        self.json = get_data('annotations_subsample.json')
 
+class TestAnnotationLoading:
     def test_convert_tab_to_json(self):
-        json = convert_tab_to_json(self.tab, warn=print)
-        self.assertEqual(32, len(json['genes']))
+        json = convert_tab_to_json(TAB, warn=print)
+        assert len(json['genes']) == 32
 
     def test_tab_equivalent_to_json(self):
-        tab_result = load_annotations(self.tab, warn=print)
-        json_result = load_annotations(self.json, warn=print)
-        self.assertEqual(sorted(tab_result.keys()), sorted(json_result.keys()))
+        tab_result = load_annotations(TAB, warn=print)
+        json_result = load_annotations(JSON, warn=print)
+        assert sorted(json_result.keys()) == sorted(tab_result.keys())
 
     def test_load_tab(self):
-        result = load_annotations(self.tab, warn=print)
-        self.assertEqual(12, len(result.keys()))
+        result = load_annotations(TAB, warn=print)
+        assert len(result.keys()) == 12
         domains = []
         for gene in result['12']:
             for t in gene.spliced_transcripts:
@@ -35,10 +31,10 @@ class TestAnnotationLoading(unittest.TestCase):
                 break
         for d in domains:
             print(d.name, d.regions)
-        self.assertEqual(2, len(domains))
+        assert len(domains) == 2
         result = load_annotations(get_data('mock_reference_annotations.tsv'), warn=print)
-        self.assertEqual(1, len(result.keys()))
+        assert len(result.keys()) == 1
 
     def test_load_json(self):
-        result = load_annotations(self.json, warn=print)
-        self.assertEqual(12, len(result.keys()))
+        result = load_annotations(JSON, warn=print)
+        assert len(result.keys()) == 12

@@ -1,21 +1,21 @@
 import shutil
-import unittest
 from unittest import mock
 
 import mavis.bam.cigar as _cigar
+import pytest
 from mavis import align
 from mavis.annotate.file_io import load_reference_genome
 from mavis.assemble import Contig
 from mavis.bam.cache import BamCache
 from mavis.bam.read import SamRead
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import CIGAR, ORIENT, STRAND, SVTYPE, reverse_complement
+from mavis.constants import CIGAR, ORIENT, STRAND, reverse_complement
 from mavis.interval import Interval
 from mavis.schemas import DEFAULTS
 from mavis.validate.evidence import GenomeEvidence
 
-from ..util import get_data
-from . import MockBamFileHandle, MockLongString, MockObject, MockRead
+from ..util import blat_only, bwa_only, get_data
+from . import MockLongString, MockObject, MockRead
 
 REFERENCE_GENOME = None
 
@@ -32,7 +32,7 @@ def setUpModule():
     BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
 
 
-class TestCallReadEvents(unittest.TestCase):
+class TestCallReadEvents:
     def test_hardclipping(self):
         read = SamRead(reference_name='15')
         read.reference_start = 71491944
@@ -46,16 +46,13 @@ class TestCallReadEvents(unittest.TestCase):
             untemplated_seq='',
         )
         events = align.call_read_events(read, is_stranded=True)
-        self.assertEqual(1, len(events))
-        self.assertEqual(expected_bpp.break1, events[0].break1)
-        self.assertEqual(expected_bpp.break2, events[0].break2)
+        assert len(events) == 1
+        assert events[0].break1 == expected_bpp.break1
+        assert events[0].break2 == expected_bpp.break2
 
 
-class TestAlign(unittest.TestCase):
-    def setUp(self):
-        self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0, 'reference3': 3}))
-
-    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
+class TestAlign:
+    @blat_only
     def test_blat_contigs(self):
         ev = GenomeEvidence(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
@@ -92,16 +89,16 @@ class TestAlign(unittest.TestCase):
         align.select_contig_alignments(ev, seq)
         print(ev.contigs[0].alignments)
         alignment = list(ev.contigs[0].alignments)[0]
-        self.assertEqual(1, alignment.read1.reference_id)
-        self.assertEqual(1, alignment.read2.reference_id)
-        self.assertEqual(Interval(125, 244), align.query_coverage_interval(alignment.read1))
-        self.assertEqual(Interval(117, 244), align.query_coverage_interval(alignment.read2))
-        self.assertEqual(1114, alignment.read1.reference_start)
-        self.assertEqual(2187, alignment.read2.reference_start)
-        self.assertEqual([(CIGAR.S, 125), (CIGAR.EQ, 120)], alignment.read1.cigar)
-        self.assertEqual([(CIGAR.S, 117), (CIGAR.EQ, 128)], alignment.read2.cigar)
+        assert alignment.read1.reference_id == 1
+        assert alignment.read2.reference_id == 1
+        assert align.query_coverage_interval(alignment.read1) == Interval(125, 244)
+        assert align.query_coverage_interval(alignment.read2) == Interval(117, 244)
+        assert alignment.read1.reference_start == 1114
+        assert alignment.read2.reference_start == 2187
+        assert alignment.read1.cigar == [(CIGAR.S, 125), (CIGAR.EQ, 120)]
+        assert alignment.read2.cigar == [(CIGAR.S, 117), (CIGAR.EQ, 128)]
 
-    @unittest.skipIf(not shutil.which('bwa'), 'missing the command')
+    @bwa_only
     def test_bwa_contigs(self):
         ev = GenomeEvidence(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
@@ -139,21 +136,19 @@ class TestAlign(unittest.TestCase):
         align.select_contig_alignments(ev, seq)
         print(ev.contigs[0].alignments)
         alignment = list(ev.contigs[0].alignments)[0]
-        self.assertEqual(
-            reverse_complement(alignment.read1.query_sequence), alignment.read2.query_sequence
-        )
-        self.assertEqual('reference3', alignment.read1.reference_name)
-        self.assertEqual('reference3', alignment.read2.reference_name)
-        self.assertEqual(1, alignment.read1.reference_id)
-        self.assertEqual(1, alignment.read2.reference_id)
-        self.assertEqual(Interval(125, 244), align.query_coverage_interval(alignment.read1))
-        self.assertEqual(Interval(117, 244), align.query_coverage_interval(alignment.read2))
-        self.assertEqual(1114, alignment.read1.reference_start)
-        self.assertEqual(2187, alignment.read2.reference_start)
-        self.assertEqual([(CIGAR.S, 125), (CIGAR.EQ, 120)], alignment.read1.cigar)
-        self.assertEqual([(CIGAR.S, 117), (CIGAR.EQ, 128)], alignment.read2.cigar)
+        assert alignment.read2.query_sequence == reverse_complement(alignment.read1.query_sequence)
+        assert alignment.read1.reference_name == 'reference3'
+        assert alignment.read2.reference_name == 'reference3'
+        assert alignment.read1.reference_id == 1
+        assert alignment.read2.reference_id == 1
+        assert align.query_coverage_interval(alignment.read1) == Interval(125, 244)
+        assert align.query_coverage_interval(alignment.read2) == Interval(117, 244)
+        assert alignment.read1.reference_start == 1114
+        assert alignment.read2.reference_start == 2187
+        assert alignment.read1.cigar == [(CIGAR.S, 125), (CIGAR.EQ, 120)]
+        assert alignment.read2.cigar == [(CIGAR.S, 117), (CIGAR.EQ, 128)]
 
-    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
+    @blat_only
     def test_blat_contigs_deletion(self):
         ev = GenomeEvidence(
             Breakpoint('fake', 1714, orient=ORIENT.LEFT),
@@ -188,20 +183,16 @@ class TestAlign(unittest.TestCase):
         print('alignments:')
         for aln in alignments:
             print(aln, repr(aln.read1), repr(aln.read2))
-        self.assertEqual(1, len(alignments))
+        assert len(alignments) == 1
         alignment = alignments[0]
-        self.assertTrue(alignment.read2 is None)
-        self.assertEqual(0, alignment.read1.reference_id)
-        self.assertTrue(not alignment.read1.is_reverse)
-        self.assertEqual(Interval(0, 175), align.query_coverage_interval(alignment.read1))
-        self.assertEqual(1612, alignment.read1.reference_start)
-        self.assertEqual([(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)], alignment.read1.cigar)
+        assert alignment.read2 is None
+        assert alignment.read1.reference_id == 0
+        assert not alignment.read1.is_reverse
+        assert align.query_coverage_interval(alignment.read1) == Interval(0, 175)
+        assert alignment.read1.reference_start == 1612
+        assert alignment.read1.cigar == [(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)]
 
-    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
-    def test_blat_contigs_inversion(self):
-        raise unittest.SkipTest('TODO')
-
-    @unittest.skipIf(not shutil.which('blat'), 'missing the blat command')
+    @blat_only
     def test_blat_contigs_deletion_revcomp(self):
         ev = GenomeEvidence(
             Breakpoint('fake', 1714, orient=ORIENT.LEFT),
@@ -231,33 +222,32 @@ class TestAlign(unittest.TestCase):
         print('alignments:', ev.contigs[0].alignments)
         alignment = list(ev.contigs[0].alignments)[0]
         print(alignment)
-        self.assertTrue(alignment.read2 is None)
-        self.assertEqual(0, alignment.read1.reference_id)
-        self.assertTrue(alignment.read1.is_reverse)
-        self.assertEqual(seq, alignment.read1.query_sequence)
-        self.assertEqual(Interval(0, 175), align.query_coverage_interval(alignment.read1))
-        self.assertEqual(1612, alignment.read1.reference_start)
-        self.assertEqual([(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)], alignment.read1.cigar)
+        assert alignment.read2 is None
+        assert alignment.read1.reference_id == 0
+        assert alignment.read1.is_reverse
+        assert alignment.read1.query_sequence == seq
+        assert align.query_coverage_interval(alignment.read1) == Interval(0, 175)
+        assert alignment.read1.reference_start == 1612
+        assert alignment.read1.cigar == [(CIGAR.EQ, 102), (CIGAR.D, 1253), (CIGAR.EQ, 74)]
 
 
-class TestBreakpointContigRemappedDepth(unittest.TestCase):
-    def setUp(self):
-        self.contig = Contig(' ' * 60, None)
-        self.contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=10))
-        self.contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=20))
-        self.contig.add_mapped_sequence(MockObject(reference_start=50, reference_end=60))
-
+class TestBreakpointContigRemappedDepth:
     def test_break_left_deletion(self):
+        contig = Contig(' ' * 60, None)
+        contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=10))
+        contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=20))
+        contig.add_mapped_sequence(MockObject(reference_start=50, reference_end=60))
+
         b = Breakpoint('10', 1030, 1030, orient=ORIENT.LEFT)
         read = MockRead(
             cigar=_cigar.convert_string_to_cigar('35M10D5I20M'),
             reference_start=999,
             reference_name='10',
         )
-        align.SplitAlignment.breakpoint_contig_remapped_depth(b, self.contig, read)
+        align.SplitAlignment.breakpoint_contig_remapped_depth(b, contig, read)
 
 
-class TestSplitEvents(unittest.TestCase):
+class TestSplitEvents:
     def test_read_with_exons(self):
         contig = MockRead(
             query_sequence='CTTGAAGGAAACTGAATTCAAAAAGATCAAAGTGCTGGGCTCCGGTGCGTTCGGCACGGTGTATAAGGGACTCTGGATCCCAGAAGGTGAGAAAGTTAAAATTCCCGTCGCTATCAAGACATCTCCGAAAGCCAACAAGGAAATCCTCGATGAAGCCTACGTGATGGCCAGCGTGGACAACCCCCACGTGTGCCGCCTGCTGGGCATCTGCCTCACCTCCACCGTGCAGCTCATCATGCAGCTCATGCCCTTCGGCTGCCTCCTGGACTATGTCCGGGAACACAAAGACAATATTGGCTCCCAGTACCTGCTCAACTGGTGTGTGCAGATCGCAAAGGGCATGAACTACTTGGAGGACCGTCGCTTGGTGCACCGCGACCTGGCAGCCAGGAACGTACTGGTGAAAACACCGCAGCATGTCAAGATCACAGATTTTGGGCTGGCCAAACTGCTGGGTGCGGAAGAGAAAGAATACCATGCAGAAGGAGGCAAAGTGCCTATCAAGTGGATGGCATTGGAATCAATTTTACACAGAATCTATACCCACCAGAGTGATGTCTGGAGCTACGGGGTGACCGTTTGGGAGTTGATGACCTTTGGATCCAA',
@@ -268,10 +258,10 @@ class TestSplitEvents(unittest.TestCase):
             reference_id=6,
             reference_start=55241669,
         )
-        self.assertEqual(6, len(align.call_read_events(contig)))
+        assert len(align.call_read_events(contig)) == 6
 
 
-class TestCallBreakpointPair(unittest.TestCase):
+class TestCallBreakpointPair:
     def test_single_one_event(self):
         r = MockRead(
             reference_id=0,
@@ -281,14 +271,14 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence='ACTGAATCGTGGGTAGCTGCTAG',
         )
         bpps = align.call_read_events(r)
-        self.assertEqual(1, len(bpps))
+        assert len(bpps) == 1
         bpp = bpps[0]
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(10, bpp.break1.start)
-        self.assertEqual(10, bpp.break1.end)
-        self.assertEqual(18, bpp.break2.start)
-        self.assertEqual(18, bpp.break2.end)
-        self.assertEqual('GGG', bpp.untemplated_seq)
+        assert bpp.opposing_strands is False
+        assert bpp.break1.start == 10
+        assert bpp.break1.end == 10
+        assert bpp.break2.start == 18
+        assert bpp.break2.end == 18
+        assert bpp.untemplated_seq == 'GGG'
 
     def test_ins_and_del(self):
         r = MockRead(
@@ -300,20 +290,20 @@ class TestCallBreakpointPair(unittest.TestCase):
         )
         # only report the major del event for now
         bpps = align.call_read_events(r)
-        self.assertEqual(2, len(bpps))
+        assert len(bpps) == 2
         bpp = bpps[0]
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(10, bpp.break1.start)
-        self.assertEqual(10, bpp.break1.end)
-        self.assertEqual(11, bpp.break2.start)
-        self.assertEqual(11, bpp.break2.end)
-        self.assertEqual('GGG', bpp.untemplated_seq)
+        assert bpp.opposing_strands is False
+        assert bpp.break1.start == 10
+        assert bpp.break1.end == 10
+        assert bpp.break2.start == 11
+        assert bpp.break2.end == 11
+        assert bpp.untemplated_seq == 'GGG'
         bpp = bpps[1]
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(15, bpp.break1.start)
-        self.assertEqual(15, bpp.break1.end)
-        self.assertEqual(23, bpp.break2.start)
-        self.assertEqual(23, bpp.break2.end)
+        assert bpp.opposing_strands is False
+        assert bpp.break1.start == 15
+        assert bpp.break1.end == 15
+        assert bpp.break2.start == 23
+        assert bpp.break2.end == 23
 
     def test_single_insertion(self):
         r = MockRead(
@@ -324,12 +314,12 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence='ACTGAATCGTGGGTAGCTGCTAG',
         )
         bpp = align.call_read_events(r)[0]
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(10, bpp.break1.start)
-        self.assertEqual(10, bpp.break1.end)
-        self.assertEqual(11, bpp.break2.start)
-        self.assertEqual(11, bpp.break2.end)
-        self.assertEqual('GGGTAGCT', bpp.untemplated_seq)
+        assert bpp.opposing_strands is False
+        assert bpp.break1.start == 10
+        assert bpp.break1.end == 10
+        assert bpp.break2.start == 11
+        assert bpp.break2.end == 11
+        assert bpp.untemplated_seq == 'GGGTAGCT'
 
     def test_single_duplication(self):
         r = MockRead(
@@ -341,9 +331,9 @@ class TestCallBreakpointPair(unittest.TestCase):
             'GACAGACTCTAGTAGTGTC',
         )
         bpp = align.call_read_events(r)[0]
-        self.assertEqual(27220, bpp.break1.start)
-        self.assertEqual(27316, bpp.break2.start)
-        self.assertEqual('AGACTT', bpp.untemplated_seq)
+        assert bpp.break1.start == 27220
+        assert bpp.break2.start == 27316
+        assert bpp.untemplated_seq == 'AGACTT'
 
     def test_single_duplication_with_leading_untemp(self):
         r = MockRead(
@@ -360,11 +350,9 @@ class TestCallBreakpointPair(unittest.TestCase):
             is_reverse=False,
         )
         bpp = align.call_read_events(r)[0]
-        self.assertEqual(
-            'AGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGT', bpp.untemplated_seq
-        )
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
+        assert bpp.untemplated_seq == 'AGGTTCCATGGGCTCCGTAGGTTCCATGGGCTCCGTAGGTTCCATCGGCTCCGT'
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.RIGHT
 
     def test_single_duplication_with_no_untemp(self):
         r = MockRead(
@@ -381,11 +369,11 @@ class TestCallBreakpointPair(unittest.TestCase):
         )
         # repeat: GATTTTGCTGTTGTTTTTGTTC
         bpp = align.convert_to_duplication(align.call_read_events(r)[0], REFERENCE_GENOME)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual(bpp.break2.start, 1548)
-        self.assertEqual(bpp.break1.start, 1527)
+        assert bpp.untemplated_seq == ''
+        assert bpp.break1.orient == ORIENT.RIGHT
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert 1548 == bpp.break2.start
+        assert 1527 == bpp.break1.start
 
     def test_single_duplication_with_trailing_untemp(self):
         r = MockRead(
@@ -411,11 +399,11 @@ class TestCallBreakpointPair(unittest.TestCase):
         print(bpp)
         bpp = align.convert_to_duplication(bpp, REFERENCE_GENOME)
         print(bpp)
-        self.assertEqual('GTCAA', bpp.untemplated_seq)
-        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual(bpp.break2.start, 1548)
-        self.assertEqual(bpp.break1.start, 1527)
+        assert bpp.untemplated_seq == 'GTCAA'
+        assert bpp.break1.orient == ORIENT.RIGHT
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert 1548 == bpp.break2.start
+        assert 1527 == bpp.break1.start
 
     def test_read_pair_indel(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT 1-30     1-?
@@ -441,15 +429,15 @@ class TestCallBreakpointPair(unittest.TestCase):
             is_reverse=False,
         )
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.POS, bpp.break2.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('GGGAATTCCGGA', bpp.untemplated_seq)
-        self.assertEqual(9, bpp.break1.start)
-        self.assertEqual(100, bpp.break2.start)
-        self.assertEqual('AAATTTCCC', bpp.break1.seq)
-        self.assertEqual('TCGATCGAT', bpp.break2.seq)
+        assert bpp.break1.strand == STRAND.POS
+        assert bpp.break2.strand == STRAND.POS
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert bpp.untemplated_seq == 'GGGAATTCCGGA'
+        assert bpp.break1.start == 9
+        assert bpp.break2.start == 100
+        assert bpp.break1.seq == 'AAATTTCCC'
+        assert bpp.break2.seq == 'TCGATCGAT'
 
     def test_read_pair_deletion(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
@@ -474,13 +462,13 @@ class TestCallBreakpointPair(unittest.TestCase):
             is_reverse=False,
         )
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.POS, bpp.break2.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual(21, bpp.break1.start)
-        self.assertEqual(100, bpp.break2.start)
+        assert bpp.break1.strand == STRAND.POS
+        assert bpp.break2.strand == STRAND.POS
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert bpp.untemplated_seq == ''
+        assert bpp.break1.start == 21
+        assert bpp.break2.start == 100
 
     def test_read_pair_translocation(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
@@ -505,13 +493,13 @@ class TestCallBreakpointPair(unittest.TestCase):
             is_reverse=False,
         )
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.POS, bpp.break2.strand)
-        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual('2', bpp.break2.chr)
-        self.assertEqual('', bpp.untemplated_seq)
+        assert bpp.break1.strand == STRAND.POS
+        assert bpp.break2.strand == STRAND.POS
+        assert bpp.break1.orient == ORIENT.RIGHT
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert bpp.break1.chr == '1'
+        assert bpp.break2.chr == '2'
+        assert bpp.untemplated_seq == ''
 
     def test_read_pair_deletion_overlapping_query_coverage(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
@@ -536,17 +524,17 @@ class TestCallBreakpointPair(unittest.TestCase):
             query_sequence=seq,
             is_reverse=False,
         )
-        self.assertEqual(21, r1.reference_end)
+        assert r1.reference_end == 21
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.POS, bpp.break2.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual(21, bpp.break1.start)
-        self.assertEqual(103, bpp.break2.start)
-        self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
-        self.assertEqual('TCGATCGAT', bpp.break2.seq)
+        assert bpp.break1.strand == STRAND.POS
+        assert bpp.break2.strand == STRAND.POS
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert bpp.untemplated_seq == ''
+        assert bpp.break1.start == 21
+        assert bpp.break2.start == 103
+        assert bpp.break1.seq == 'AAATTTCCCGGGAATTCCGGA'
+        assert bpp.break2.seq == 'TCGATCGAT'
 
     def test_read_pair_inversion_overlapping_query_coverage(self):
         # seq AAATTTCCCGGGAATTCCGGATCGATCGAT
@@ -573,15 +561,15 @@ class TestCallBreakpointPair(unittest.TestCase):
             is_reverse=True,
         )
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.NEG, bpp.break2.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual(21, bpp.break1.start)
-        self.assertEqual(108, bpp.break2.start)
-        self.assertEqual('AAATTTCCCGGGAATTCCGGA', bpp.break1.seq)
-        self.assertEqual(reverse_complement('TCGATCGAT'), bpp.break2.seq)
+        assert bpp.break1.strand == STRAND.POS
+        assert bpp.break2.strand == STRAND.NEG
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert bpp.untemplated_seq == ''
+        assert bpp.break1.start == 21
+        assert bpp.break2.start == 108
+        assert bpp.break1.seq == 'AAATTTCCCGGGAATTCCGGA'
+        assert bpp.break2.seq == reverse_complement('TCGATCGAT')
 
     def test_read_pair_large_inversion_overlapping_query_coverage(self):
         s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
@@ -601,24 +589,22 @@ class TestCallBreakpointPair(unittest.TestCase):
             is_reverse=True,
         )
         bpp = align.call_paired_read_event(read1, read2, is_stranded=True)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.NEG, bpp.break2.strand)
-        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual('', bpp.untemplated_seq)
-        self.assertEqual(1115, bpp.break1.start)
-        self.assertEqual(2188 + 3, bpp.break2.start)
+        assert bpp.break1.strand == STRAND.POS
+        assert bpp.break2.strand == STRAND.NEG
+        assert bpp.break1.orient == ORIENT.RIGHT
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert bpp.untemplated_seq == ''
+        assert bpp.break1.start == 1115
+        assert bpp.break2.start == 2188 + 3
         print(bpp.break1.seq)
         print(bpp.break2.seq)
-        self.assertEqual(
-            'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAG'
-            'GGTTTTCATTTCTGTATGTTAAT',
-            bpp.break1.seq,
+        assert (
+            bpp.break1.seq
+            == 'TCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
         )
-        self.assertEqual(
-            'GCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCA'
-            'AATTCTGTGTTTACAGGGCTTTCATGCTCAG',
-            bpp.break2.seq,
+        assert (
+            bpp.break2.seq
+            == 'GCAGAGCTATATATTTAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCACGACCAGGAACCAAACAGGAAAGAATCCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'
         )
 
     def test_read_pair_inversion_gap_in_query_coverage(self):
@@ -646,18 +632,18 @@ class TestCallBreakpointPair(unittest.TestCase):
             is_reverse=True,
         )
         bpp = align.call_paired_read_event(r1, r2, is_stranded=True)
-        self.assertEqual(STRAND.POS, bpp.break1.strand)
-        self.assertEqual(STRAND.NEG, bpp.break2.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual('CC', bpp.untemplated_seq)
-        self.assertEqual(16, bpp.break1.start)
-        self.assertEqual(111, bpp.break2.start)
-        self.assertEqual('AAATTTCCCGGGAATT', bpp.break1.seq)
-        self.assertEqual(reverse_complement('GGATCGATCGAT'), bpp.break2.seq)
+        assert bpp.break1.strand == STRAND.POS
+        assert bpp.break2.strand == STRAND.NEG
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert bpp.untemplated_seq == 'CC'
+        assert bpp.break1.start == 16
+        assert bpp.break2.start == 111
+        assert bpp.break1.seq == 'AAATTTCCCGGGAATT'
+        assert bpp.break2.seq == reverse_complement('GGATCGATCGAT')
 
 
-class TestConvertToDuplication(unittest.TestCase):
+class TestConvertToDuplication:
     def test_insertion_to_duplication(self):
         # BPP(Breakpoint(3:60204611L), Breakpoint(3:60204612R), opposing=False, seq='CATACATACATACATACATACATACATACATA')
         # insertion contig [seq2] contig_alignment_score: 0.99, contig_alignment_mq: Interval(255, 255)
@@ -681,13 +667,13 @@ class TestConvertToDuplication(unittest.TestCase):
         setattr(bpp, 'read2', None)
         event = align.convert_to_duplication(bpp, reference_genome)
         print(event)
-        self.assertEqual(ORIENT.RIGHT, event.break1.orient)
-        self.assertEqual(60204588, event.break1.start)
-        self.assertEqual(ORIENT.LEFT, event.break2.orient)
-        self.assertEqual(60204611, event.break2.start)
+        assert event.break1.orient == ORIENT.RIGHT
+        assert event.break1.start == 60204588
+        assert event.break2.orient == ORIENT.LEFT
+        assert event.break2.start == 60204611
         # CATACATACATACATACATACATACATACATA
         # ........................********
-        self.assertEqual('CATACATA', event.untemplated_seq)
+        assert event.untemplated_seq == 'CATACATA'
 
     def test_single_bp_insertion(self):
         bpp = BreakpointPair(
@@ -704,14 +690,14 @@ class TestConvertToDuplication(unittest.TestCase):
         setattr(bpp, 'read2', None)
         event = align.convert_to_duplication(bpp, reference_genome)
         print(event)
-        self.assertEqual(ORIENT.RIGHT, event.break1.orient)
-        self.assertEqual(121, event.break1.start)
-        self.assertEqual(ORIENT.LEFT, event.break2.orient)
-        self.assertEqual(121, event.break2.start)
-        self.assertEqual('', event.untemplated_seq)
+        assert event.break1.orient == ORIENT.RIGHT
+        assert event.break1.start == 121
+        assert event.break2.orient == ORIENT.LEFT
+        assert event.break2.start == 121
+        assert event.untemplated_seq == ''
 
 
-class TestSelectContigAlignments(unittest.TestCase):
+class TestSelectContigAlignments:
     def test_inversion_and_deletion(self):
         s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
         evidence = MockObject(
@@ -756,34 +742,30 @@ class TestSelectContigAlignments(unittest.TestCase):
         raw_alignments = {s: [read1, read2]}
         align.select_contig_alignments(evidence, raw_alignments)
         alignments = list(evidence.contigs[0].alignments)
-        self.assertEqual(2, len(alignments))
+        assert len(alignments) == 2
 
 
-class TestGetAlignerVersion(unittest.TestCase):
+class TestGetAlignerVersion:
     def test_get_blat_36x2(self):
         content = 'blat - Standalone BLAT v. 36x2 fast sequence search command line tool\n'
         with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
-            self.assertEqual('36x2', align.get_aligner_version(align.SUPPORTED_ALIGNER.BLAT))
+            assert align.get_aligner_version(align.SUPPORTED_ALIGNER.BLAT) == '36x2'
 
     def test_get_blat_36(self):
         content = "blat - Standalone BLAT v. 36 fast sequence search command line tool"
         with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
-            self.assertEqual('36', align.get_aligner_version(align.SUPPORTED_ALIGNER.BLAT))
+            assert align.get_aligner_version(align.SUPPORTED_ALIGNER.BLAT) == '36'
 
     def test_get_bwa_0_7_15(self):
         content = (
             "\nProgram: bwa (alignment via Burrows-Wheeler transformation)\nVersion: 0.7.15-r1140"
         )
         with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
-            self.assertEqual(
-                '0.7.15-r1140', align.get_aligner_version(align.SUPPORTED_ALIGNER.BWA_MEM)
-            )
+            assert align.get_aligner_version(align.SUPPORTED_ALIGNER.BWA_MEM) == '0.7.15-r1140'
 
     def test_get_bwa_0_7_12(self):
         content = (
             "\nProgram: bwa (alignment via Burrows-Wheeler transformation)\nVersion: 0.7.12-r1039"
         )
         with mock.patch('subprocess.getoutput', mock.Mock(return_value=content)):
-            self.assertEqual(
-                '0.7.12-r1039', align.get_aligner_version(align.SUPPORTED_ALIGNER.BWA_MEM)
-            )
+            assert align.get_aligner_version(align.SUPPORTED_ALIGNER.BWA_MEM) == '0.7.12-r1039'

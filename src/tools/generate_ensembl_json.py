@@ -438,10 +438,10 @@ class EnsemblAnnotation(object):
         """
         Select a canonical transcript for each human gene using Ensembl rules.
 
-        For human, the canonical transcript for a gene is set according to the following hierarchy: 
-        - 1. Longest CCDS translation with no stop codons. 
-        - 2. If no (1), choose the longest Ensembl/Havana merged translation with no stop codons. 
-        - 3. If no (2), choose the longest translation with no stop codons. 
+        For human, the canonical transcript for a gene is set according to the following hierarchy:
+        - 1. Longest CCDS translation with no stop codons.
+        - 2. If no (1), choose the longest Ensembl/Havana merged translation with no stop codons.
+        - 3. If no (2), choose the longest translation with no stop codons.
         - 4. If no translation, choose the longest non-protein-coding transcript.
 
         See: http://uswest.ensembl.org/Help/Glossary?id=346
