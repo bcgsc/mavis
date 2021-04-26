@@ -15,17 +15,29 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-o', '--output',
-        help='path to the output file', required=True, metavar='FILEPATH'
+        '-o', '--output', help='path to the output file', required=True, metavar='FILEPATH'
     )
     parser.add_argument(
-        '-n', '--input', required=True, metavar='FILEPATH',
-        help='Path to the Input reference genome fasta file'
+        '-n',
+        '--input',
+        required=True,
+        metavar='FILEPATH',
+        help='Path to the Input reference genome fasta file',
     )
     parser.add_argument(
-        '--min_length', default=20, type=int, help='Minimum total length of the repeat region to find', metavar='INT')
+        '--min_length',
+        default=20,
+        type=int,
+        help='Minimum total length of the repeat region to find',
+        metavar='INT',
+    )
     parser.add_argument(
-        '--repeat_seq', default='N', type=str, help='Repeat sequence to look for. Case insensitive', nargs='+')
+        '--repeat_seq',
+        default='N',
+        type=str,
+        help='Repeat sequence to look for. Case insensitive',
+        nargs='+',
+    )
     args = parser.parse_args()
     if args.min_length < 2:
         parser.error('argument --min_length: cannot specify a shorter repeat than 2 bases')
@@ -43,7 +55,7 @@ def main():
         os.path.basename(__file__),
         'input: {}'.format(args.input),
         'min_length: {}'.format(args.min_length),
-        'repeat_seq: {}'.format(', '.join(args.repeat_seq))
+        'repeat_seq: {}'.format(', '.join(args.repeat_seq)),
     ]
     log('writing:', args.output)
     with open(args.output, 'w') as fh:
@@ -61,21 +73,33 @@ def main():
                 visited.add(seq)
             spans = []
             for repseq in repeat_sequences:
-                log('finding {}_repeat (min_length: {}), for chr{} (length: {})'.format(repseq, args.min_length, chrom, len(seq)))
+                log(
+                    'finding {}_repeat (min_length: {}), for chr{} (length: {})'.format(
+                        repseq, args.min_length, chrom, len(seq)
+                    )
+                )
                 index = 0
                 while index < len(seq):
                     next_n = seq.find(repseq, index)
                     if next_n < 0:
                         break
                     index = next_n
-                    while index + len(repseq) <= len(seq) and seq[index:index + len(repseq)] == repseq:
+                    while (
+                        index + len(repseq) <= len(seq)
+                        and seq[index : index + len(repseq)] == repseq
+                    ):
                         index += len(repseq)
                     span = BioInterval(chrom, next_n + 1, index, name='repeat_{}'.format(repseq))
                     if len(span) >= args.min_length and len(span) >= 2 * len(repseq):
                         spans.append(span)
             log('found', len(spans), 'spans', time_stamp=False)
             for span in spans:
-                fh.write('{}\t{}\t{}\t{}\n'.format(span.reference_object, span.start, span.end, span.name))
+                fh.write(
+                    '{}\t{}\t{}\t{}\n'.format(
+                        span.reference_object, span.start, span.end, span.name
+                    )
+                )
+
 
 if __name__ == '__main__':
     main()
