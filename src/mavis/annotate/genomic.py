@@ -64,7 +64,7 @@ class IntergenicRegion(BioInterval):
 
 
 class Gene(BioInterval):
-    """"""
+    """ """
 
     def __init__(self, chr, start, end, name=None, strand=STRAND.NS, aliases=None, seq=None):
         """
@@ -161,7 +161,7 @@ class Gene(BioInterval):
 
 
 class Exon(BioInterval):
-    """"""
+    """ """
 
     def __init__(
         self,
@@ -275,7 +275,7 @@ class Exon(BioInterval):
 
 
 class PreTranscript(BioInterval):
-    """"""
+    """ """
 
     def __init__(
         self,

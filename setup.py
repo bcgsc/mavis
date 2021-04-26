@@ -109,7 +109,7 @@ setup(
     extras_require={
         'docs': DOC_REQS,
         'test': TEST_REQS,
-        'dev': ['black', 'flake8'] + DOC_REQS + TEST_REQS + DEPLOY_REQS,
+        'dev': ['black==20.8b1', 'flake8'] + DOC_REQS + TEST_REQS + DEPLOY_REQS,
         'deploy': DEPLOY_REQS,
         'tools': ['pyensembl', 'simplejson'],
     },
