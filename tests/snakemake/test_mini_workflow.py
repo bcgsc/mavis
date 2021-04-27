@@ -9,7 +9,7 @@ import pytest
 
 from snakemake import main as snakemake_main
 
-from ..util import glob_exists, package_relative_file
+from ..util import glob_exists, long_running_test, package_relative_file
 
 
 @pytest.fixture
@@ -27,6 +27,7 @@ def output_dir():
     shutil.rmtree(temp_output)
 
 
+@long_running_test
 def test_workflow(output_dir):
     argv = [
         'snakemake',

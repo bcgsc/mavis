@@ -17,6 +17,10 @@ RUN git clone https://github.com/lh3/bwa.git && \
     cd .. && \
     mv bwa/bwa /usr/local/bin
 
+
+# install blat dependencies
+RUN apt-get install -y libcurl4
+
 # install blat
 RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat && \
     chmod a+x blat && \

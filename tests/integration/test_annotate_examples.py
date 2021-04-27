@@ -9,6 +9,7 @@ from mavis.annotate.variant import (
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import ORIENT, PROTOCOL, SPLICE_TYPE, STRAND, SVTYPE
 
+from ..util import long_running_test
 from . import MockLongString, MockObject, get_example_genes
 
 
@@ -99,6 +100,7 @@ class TestARID1B:
 
 
 class TestSVEP1:
+    @long_running_test
     def test_annotate_small_intronic_inversion(self):
         gene = get_example_genes()['SVEP1']
         reference_annotations = {gene.chr: [gene]}
@@ -129,6 +131,7 @@ class TestSVEP1:
         assert len(ann.fusion.transcripts) == 1
         assert ann.fusion.transcripts[0].get_seq() == refseq
 
+    @long_running_test
     def test_build_single_transcript_inversion(self):
         gene = get_example_genes()['SVEP1']
         reference_genome = {

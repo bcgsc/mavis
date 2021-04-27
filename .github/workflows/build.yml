@@ -72,3 +72,34 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: true
       if: matrix.python-version == 3.8
+  docker:
+    runs-on: ubuntu-latest
+    name: docker build
+    steps:
+      - uses: actions/checkout@v2
+      - name: build the docker container
+        run: |
+          docker build --file Dockerfile --tag bcgsc/mavis:latest .
+      - name: test the help menu
+        run: |
+          docker run bcgsc/mavis -h
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Install workflow dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install mavis_config pandas
+      - uses: eWaterCycle/setup-singularity@v6
+        with:
+          singularity-version: 3.6.4
+      - name: docker2singularity
+        run:
+          docker run --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock --mount type=bind,source="$(pwd)",target=/output --privileged -t --rm singularityware/docker2singularity bcgsc/mavis:latest
+      - name: Run analysis with snakemake & singularity
+        run: |
+          # get the SIMG filename
+          export SNAKEMAKE_CONTAINER=$(ls *mavis*.simg)
+          snakemake -j 2 --configfile tests/mini-tutorial.config.json --use-singularity
+        if: always()
