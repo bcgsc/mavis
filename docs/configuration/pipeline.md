@@ -23,3 +23,11 @@ snakemake -j <MAX JOBS> --configfile <YOUR CONFIG> --profile <YOUR PROFILE NAME>
 ```
 
 This will submit a series of jobs with dependencies.
+
+To use the mavis docker container through singularity, instead of installing mavis via pip, add the
+[`--use-singularity`](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html#running-jobs-in-containers)
+flag.
+
+```bash
+snakemake -j <MAX JOBS> --configfile <YOUR CONFIG> --profile <YOUR PROFILE NAME> --use-singularity`
+```
