@@ -90,7 +90,7 @@ INSTALL_REQS = [
     'pyvcf==0.6.8',
     'shortuuid>=0.5.0',
     'svgwrite',
-    'snakemake>=6.1.1, <7',
+    'mavis_config==1.0.0',
 ]
 
 DEPLOY_REQS = ['twine', 'm2r', 'wheel']

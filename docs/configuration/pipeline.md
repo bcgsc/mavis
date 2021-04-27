@@ -13,13 +13,13 @@ far-left.
 The most common use case is running the pipeline through snakemake
 
 ```bash
-snakemake -j <MAX JOBS> --configfile <YOUR CONFIG>
+snakemake -j <MAX JOBS> --configfile <YOUR CONFIG> -s Snakefile
 ```
 
 If you are submitting to a cluster, use the [snakemake profiles](https://snakemake.readthedocs.io/en/stable/executing/cli.html#profiles)
 
 ```bash
-snakemake -j <MAX JOBS> --configfile <YOUR CONFIG> --profile <YOUR PROFILE NAME>
+snakemake -j <MAX JOBS> --configfile <YOUR CONFIG> --profile <YOUR PROFILE NAME> -s Snakefile
 ```
 
 This will submit a series of jobs with dependencies.
@@ -29,5 +29,5 @@ To use the mavis docker container through singularity, instead of installing mav
 flag.
 
 ```bash
-snakemake -j <MAX JOBS> --configfile <YOUR CONFIG> --profile <YOUR PROFILE NAME> --use-singularity`
+snakemake -j <MAX JOBS> --configfile <YOUR CONFIG> --profile <YOUR PROFILE NAME> --use-singularity -s Snakefile`
 ```

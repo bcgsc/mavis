@@ -110,91 +110,21 @@ class RangeAppendAction(argparse.Action):
         setattr(namespace, self.dest, items)
 
 
-def validate_config(config: Dict, bam_stats: Optional[bool] = False, stage: str = '') -> None:
+def add_bamstats_to_config(config: Dict):
     """
     Check that the input JSON config conforms to the expected schema as well
     as the other relevant checks such as file exsts
     """
-    schema = 'config' if stage != SUBCOMMAND.OVERLAY else 'overlay'
-
-    try:
-        snakemake_validate(
-            config,
-            os.path.join(os.path.dirname(__file__), f'schemas/{schema}.json'),
-            set_default=True,
-        )
-    except Exception as err:
-        short_msg = '. '.join(
-            [line for line in str(err).split('\n') if line.strip()][:3]
-        )  # these can get super long
-        raise WorkflowError(short_msg)
-
-    required = []
-    if (
-        stage not in {SUBCOMMAND.CONVERT}
-        or stage == SUBCOMMAND.CLUSTER
-        and not config['cluster.uninformative_filter']
-    ):
-        required.append('reference.annotations')
-
-    if stage == SUBCOMMAND.VALIDATE:
-        required.extend(['reference.aligner_reference', 'reference.reference_genome'])
-
-    for req in required:
-        if req not in config:
-            raise WorkflowError(f'missing required property: {req}')
-
-    if schema == 'config':
-        conversion_dir = os.path.join(config['output_dir'], 'converted_outputs')
-        # check all assignments are conversions aliases or existing files
-        for libname, library in config['libraries'].items():
-            assignments = []
-            for i, assignment in enumerate(library['assign']):
-                if assignment in config.get('convert', {}):
-                    # replace the alias with the expected output path
-                    converted_output = os.path.join(conversion_dir, f'{assignment}.tab')
-                    assignments.append(converted_output)
-                elif (
-                    not os.path.exists(assignment) and os.path.dirname(assignment) != conversion_dir
-                ):
-                    raise FileNotFoundError(f'cannot find the expected input file {assignment}')
-                else:
-                    assignments.append(assignment)
-            library['assign'] = assignments
-
-            if not config['skip_stage.validate'] and stage in {
-                SUBCOMMAND.VALIDATE,
-                SUBCOMMAND.SETUP,
-            }:
-                if not library.get('bam_file', None) or not os.path.exists(library['bam_file']):
-                    raise FileNotFoundError(
-                        f'missing bam file for library ({libname}), it is a required input when the validate stage is not skipped'
-                    )
-                # calculate the bam_stats if the have not been given
-                missing_stats = any(
-                    [
-                        col not in library
-                        for col in ['median_fragment_size', 'read_length', 'stdev_fragment_size']
-                    ]
-                )
-                if missing_stats and bam_stats:
-                    library.update(calculate_bam_stats(config, libname))
-
-        # expand and check the input files exist for any conversions
-        for conversion in config.get('convert', {}).values():
-            expanded = []
-            for input_file in conversion['inputs']:
-                expanded.extend(bash_expands(input_file))
-            conversion['inputs'] = expanded
-
-    # make sure all the reference files specified exist and overload with environment variables where applicable
-    for ref_type in list(config.keys()):
-        if not ref_type.startswith('reference.'):
-            continue
-        expanded = []
-        for input_file in config[ref_type]:
-            expanded.extend(bash_expands(input_file))
-        config[ref_type] = expanded
+    # check all assignments are conversions aliases or existing files
+    for libname, library in config['libraries'].items():
+        # calculate the bam_stats if the have not been given
+        if any(
+            [
+                col not in library
+                for col in ['median_fragment_size', 'read_length', 'stdev_fragment_size']
+            ]
+        ):
+            library.update(calculate_bam_stats(config, libname))
 
 
 def get_metavar(arg_type):
