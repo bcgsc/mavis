@@ -36,13 +36,11 @@ The expected contents are
 
 ## Downloading the Reference Inputs
 
-Run the following to download the hg19 reference files and set up the
-environment variables for configuring MAVIS
+Run the following to download the hg19 reference files
 
 ```bash
 wget https://raw.githubusercontent.com/bcgsc/mavis/master/tools/get_hg19_reference_files.sh
 bash get_hg19_reference_files.sh
-source reference_inputs/hg19_env.sh
 ```
 
 ## Creating the Config File
@@ -172,6 +170,13 @@ Finally you will need to set output directory and the reference files
 ```
 
 ## Running the Workflow
+
+In order to run the snakemake file you will need to have the config validation module
+`mavis_config` installed which has minimal dependencies.
+
+```bash
+pip install mavis_config
+```
 
 You are now ready to run the workflow
 

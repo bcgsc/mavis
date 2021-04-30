@@ -1,10 +1,11 @@
-from snakemake.utils import validate
 from snakemake.exceptions import WorkflowError
 import os
 from typing import List, Dict
 import re
 import json
 import pandas as pd
+from mavis_config import validate_config
+from mavis_config.constants import SUBCOMMAND
 
 CONTAINER = 'bcgsc/mavis:latest'
 
@@ -15,18 +16,7 @@ INITIALIZED_CONFIG = output_dir('config.json')
 
 
 try:
-    # TODO: replace with URL so that the user does not need a copy of the config schema
-    validate(
-        config,
-        os.path.join(os.getcwd(), 'src/mavis/schemas/config.json')
-    )
-    for key in [
-        "libraries",
-        "reference.annotations",
-        "output_dir"
-    ]:
-        if key not in config:
-            raise ValueError(f'missing required property: {key}')
+    validate_config(config, stage=SUBCOMMAND.SETUP)
 except Exception as err:
     short_msg = ' '.join(str(err).split('\n')[:2]) # these can get super long
     raise WorkflowError(short_msg)
@@ -85,7 +75,7 @@ rule copy_config:
         with open(output_dir('config.raw.json'), 'w') as fh:
             fh.write(json.dumps(config, sort_keys=True, indent='  '))
 
-
+# adds the bam stats and default settings
 rule init_config:
     input: rules.copy_config.output
     output: INITIALIZED_CONFIG

@@ -16,21 +16,22 @@ installed
 git clone https://github.com/bcgsc/mavis.git
 git checkout <VERSION_TAG>
 mv mavis/tests .
+mv mavis/Snakefile .
 rm -r mavis
 ```
 
 Now you should have a folder called `tests` in your current directory. Since this is a trivial
 example, it can easily be run locally. However in order to run the snakemake file you will need
-to have a copy of the config schema definition file which is included in MAVIS by default.
+to have the config validation module `mavis_config` installed which has minimal dependencies.
 
-```text
-mavis/schemas/config.json
+```bash
+pip install mavis_config
 ```
 
 Now you are ready to run MAVIS. This can be done in a single command using snakemake.
 
 ```bash
-snakemake -j 1 --configfile=tests/mini-tutorial.config.json
+snakemake -j 1 --configfile=tests/mini-tutorial.config.json -s Snakefile
 ```
 
 Which will run the mini tutorial version and output files into a folder called `output_dir` in the

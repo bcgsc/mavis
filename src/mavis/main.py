@@ -8,6 +8,8 @@ import sys
 import time
 from typing import Dict
 
+from mavis_config import validate_config
+
 from . import __version__
 from . import config as _config
 from . import util as _util
@@ -194,9 +196,8 @@ def main(argv=None):
         if args.command != SUBCOMMAND.CONVERT:
             with open(args.config, 'r') as fh:
                 config = json.load(fh)
-                _config.validate_config(
+                validate_config(
                     config,
-                    args.command in {SUBCOMMAND.SETUP, SUBCOMMAND.VALIDATE},
                     args.command,
                 )
     except AttributeError as err:
@@ -263,6 +264,8 @@ def main(argv=None):
                 args.assume_no_untemplated,
             )
         elif command == SUBCOMMAND.SETUP:
+            # add bam stats to the config if missing
+            _config.add_bamstats_to_config(config)
             _util.LOG(f'writing: {args.outputfile}')
             with open(args.outputfile, 'w') as fh:
                 fh.write(json.dumps(config, sort_keys=True, indent='  '))

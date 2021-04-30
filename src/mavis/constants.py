@@ -10,94 +10,12 @@ from Bio.Alphabet import Gapped
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Seq import Seq
+from mavis_config.constants import SUBCOMMAND, MavisNamespace
 
 PROGNAME: str = 'mavis'
 EXIT_OK: int = 0
 EXIT_ERROR: int = 1
 EXIT_INCOMPLETE: int = 2
-
-
-class EnumType(type):
-    def __contains__(cls, member):
-        return member in cls.values()
-
-    def __getitem__(cls, item):
-        for k, v in cls.items():
-            if k == item:
-                return v
-        raise KeyError(item)
-
-    def __iter__(cls):
-        """
-        Returns members in definition order.
-        """
-        return cls.values()
-
-
-class MavisNamespace(metaclass=EnumType):
-    @classmethod
-    def items(cls):
-        return [(k, v) for k, v in cls.__dict__.items() if not k.startswith('_')]
-
-    @classmethod
-    def to_dict(cls):
-        return dict(cls.items())
-
-    @classmethod
-    def keys(cls):
-        return [k for k, v in cls.items()]
-
-    @classmethod
-    def values(cls):
-        return [v for k, v in cls.items()]
-
-    @classmethod
-    def enforce(cls, value):
-        """
-        checks that the current namespace has a given value
-
-        Returns:
-            the input value
-
-        Raises:
-            KeyError: the value did not exist
-
-        Example:
-            >>> nspace.enforce(1)
-            1
-            >>> nspace.enforce(3)
-            Traceback (most recent call last):
-            ....
-        """
-        if value not in cls.values():
-            raise KeyError('value {0} is not a valid member of '.format(repr(value)), cls.values())
-        return value
-
-    @classmethod
-    def reverse(cls, value):
-        """
-        for a given value, return the associated key
-
-        Args:
-            value: the value to get the key/attribute name for
-
-        Raises:
-            KeyError: the value is not unique
-            KeyError: the value is not assigned
-
-        Example:
-            >>> nspace.reverse(1)
-            'thing'
-        """
-        result = []
-        for key in cls.keys():
-            if cls[key] == value:
-                result.append(key)
-        if len(result) > 1:
-            raise KeyError('could not reverse, the mapping is not unique', value, result)
-        elif not result:
-            raise KeyError('input value is not assigned to a key', value)
-        return result[0]
 
 
 def float_fraction(num):
@@ -145,21 +63,6 @@ class SPLICE_TYPE(MavisNamespace):
 
 COMPLETE_STAMP: str = 'MAVIS.COMPLETE'
 """Filename for all complete stamp files"""
-
-
-class SUBCOMMAND(MavisNamespace):
-    """
-    holds controlled vocabulary for allowed pipeline stage values
-    """
-
-    ANNOTATE: str = 'annotate'
-    VALIDATE: str = 'validate'
-    CLUSTER: str = 'cluster'
-    PAIR: str = 'pairing'
-    SUMMARY: str = 'summary'
-    CONVERT: str = 'convert'
-    OVERLAY: str = 'overlay'
-    SETUP: str = 'setup'
 
 
 CODON_SIZE: int = 3
