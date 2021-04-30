@@ -1,9 +1,13 @@
 from snakemake.exceptions import WorkflowError
 import os
-from typing import List, Dict
-import re
 import json
-from mavis_config import validate_config
+from mavis_config import (
+    count_total_rows,
+    get_library_inputs,
+    get_singularity_bindings,
+    guess_total_batches,
+    validate_config,
+)
 from mavis_config.constants import SUBCOMMAND
 
 # env variable mainly for CI/CD
@@ -11,12 +15,21 @@ CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://bcgsc/mavis:latest')
 MAX_TIME = 57600
 DEFAULT_MEMORY_MB = 16000
 
+
+if 'output_dir' not in config:
+    raise WorkflowError('output_dir is a required property of the configfile')
+
+
 def output_dir(*paths):
     return os.path.join(config['output_dir'], *paths)
+
 
 INITIALIZED_CONFIG = output_dir('config.json')
 LOG_DIR = output_dir('logs')
 
+# external schedulers will not create the log dir if it does not already exist
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR, exist_ok=True)
 
 try:
     validate_config(config, stage=SUBCOMMAND.SETUP)
@@ -24,42 +37,23 @@ except Exception as err:
     short_msg = ' '.join(str(err).split('\n')[:2]) # these can get super long
     raise WorkflowError(short_msg)
 
+# ADD bindings for singularity
+print(workflow.singularity_args)
+workflow.singularity_args = f'-B {",".join(get_singularity_bindings(config))}'
+
 libraries = sorted(list(config['libraries']))
 VALIDATE_OUTPUT = output_dir('{library}/validate/batch-{job_id}/validation-passed.tab')
 CLUSTER_OUTPUT = output_dir('{library}/cluster/batch-{job_id}.tab')
 
-# create the cluster inputs and guess the cluster sizes
-def count_total_rows(filenames):
-    import pandas as pd
-
-    row_count = 0
-    for filename in filenames:
-        df = pd.read_csv(filename, sep='\t').drop_duplicates()
-        row_count += df.shape[0]
-    return row_count
-
 
 for library in libraries:
-    lib_config = config['libraries'][library]
-    if 'total_batches' in lib_config:
+    if 'total_batches' in config['libraries'][library]:
         continue
-    inputs = []
-    for assignment in lib_config['assign']:
-        if assignment in config['convert']:
-            inputs.extend(config['convert'][assignment]['inputs'])
-        else:
-            inputs.append(assignment)
 
     # if not input by user, estimate the clusters based on the input files
-    max_files = config['cluster.max_files']
-    min_rows = config['cluster.min_clusters_per_file']
-    total_rows = count_total_rows(inputs)
-
-    if round(total_rows / max_files) >= min_rows:
-        # use max number of jobs
-        lib_config['total_batches'] = max_files
-    else:
-        lib_config['total_batches'] = total_rows // min_rows
+    config['libraries'][library]['total_batches'] = guess_total_batches(
+        config, get_library_inputs(config, library)
+    )
 
 
 libs_args = []
@@ -81,6 +75,7 @@ rule copy_config:
         mem_mb=4000,
         cpus=1,
         log_dir=LOG_DIR
+    log: os.path.join(LOG_DIR, 'copy_config.snakemake.log.txt')
     run:
         with open(output_dir('config.raw.json'), 'w') as fh:
             fh.write(json.dumps(config, sort_keys=True, indent='  '))
@@ -90,6 +85,7 @@ rule init_config:
     input: rules.copy_config.output
     output: INITIALIZED_CONFIG
     container: CONTAINER
+    log: os.path.join(LOG_DIR, 'init_config.snakemake.log.txt')
     resources:
         time_limit=MAX_TIME,
         mem_mb=DEFAULT_MEMORY_MB,

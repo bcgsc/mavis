@@ -282,7 +282,7 @@ def output_tabbed_file(bpps: List[BreakpointPair], filename: str, header=None):
             row = row.flatten()
         rows.append(row)
         if not custom_header:
-            header.update(row.keys())
+            header.update(row.keys())  # type: ignore
     header = sort_columns(header)
     LOG('writing:', filename)
     df = pd.DataFrame.from_records(rows, columns=header)
@@ -449,7 +449,7 @@ def read_bpp_from_input_file(
         return []
 
     for col in required_columns:
-        if col not in df:
+        if col not in df and col not in add_default:
             raise KeyError(f'missing required column: {col}')
 
     # run the custom functions
@@ -500,7 +500,7 @@ def read_bpp_from_input_file(
     ]:
         for col in cols:
             if col in df:
-                df[col].apply(lambda c: vocab.enforce(c))
+                df[col].apply(lambda c: vocab.enforce(c))  # type: ignore
             elif hasattr(vocab, 'NS'):
                 df[col] = vocab.NS  # type: ignore
 
