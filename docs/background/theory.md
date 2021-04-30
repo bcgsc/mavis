@@ -6,26 +6,20 @@ In MAVIS structural variants (SVs) are defined by a pair of breakpoints
 
 And a breakpoint is defined by
 
-1.  chromosome
-2.  base-pair range (start, end). This has a length of 1 for exact calls
-    and more for uncertain/non-specific calls
-3.  [orientation](../../glossary/#orientation). This is Left or Right
-    with respect to the positive/forward strand. This defines which
-    portion of the genome is 'retained'
-4.  [strand](../../glossary/#strand). (only applicable to
-    stranded transcriptome libraries)
+1. chromosome
+2. base-pair range (start, end). This has a length of 1 for exact calls and more for uncertain/non-specific calls
+3. [orientation](../../glossary/#orientation). This is Left or Right with respect to the positive/forward strand. This defines which portion of the genome is 'retained'
+4. [strand](../../glossary/#strand). (only applicable to stranded transcriptome libraries)
 
 So then a breakpoint pair is any two intervals on the reference genome
 which are adjacent in the mutant genome
-
-
 
 ## Evidence
 
 There are many ways that single reads or paired-end reads can act as
 support for an SV call.
 
-![](../images/read_evidence.svg)
+![read evidence](../images/read_evidence.svg)
 
 In the figure above the red rectangle represents a deletion structural
 variant. The arrows are types of single or paired-end reads supporting
@@ -58,7 +52,7 @@ For a deletion, we expect the flanking reads to be in the normal
 orientation but that the fragment size should be abnormal (for large
 deletions).
 
-![](../images/read_pairs_deletion.svg)
+![deletion supporting read pairs](../images/read_pairs_deletion.svg)
 
 Flanking read pair evidence for a deletion event. the read pairs will
 have a larger than expected fragment size when mapped to the reference
@@ -71,10 +65,9 @@ on the positive strand and the second read in the pair would be on the
 negative/reverse
 strand.
 
-
 #### Insertion
 
-![](../images/read_pairs_insertion.svg)
+![insertion supporting read pairs](../images/read_pairs_insertion.svg)
 
 Flanking read pair evidence for an insertion event. The read pairs
 will have a smaller than expected fragment size when mapped to the
@@ -87,10 +80,9 @@ on the positive strand and the second read in the pair would be on the
 negative/reverse
 strand.
 
-
 #### Duplication
 
-![](../images/read_pairs_duplication.svg)
+![duplication support read pairs](../images/read_pairs_duplication.svg)
 
 Flanking read pair evidence for a tandem duplication event. The read
 pairs will have an abnormal orientation but still the same strands as
@@ -99,56 +91,47 @@ strand and have a right orientation. (B2) The second breakpoint will be
 on the positive strand and have a left
 orientation.
 
-
 #### Inversion
 
-![](../images/read_pairs_inversion_LL.svg)
+![inversion supporting read pairs](../images/read_pairs_inversion_LL.svg)
 
 Flanking read pair evidence for an inversion. Both breakpoints have
 left orientation.
 
-
-![](../images/read_pairs_inversion_RR.svg)
+![inversion supporting read pairs](../images/read_pairs_inversion_RR.svg)
 
 Flanking read pair evidence for an inversion. Both breakpoints have
 right orientation.
 
-
 #### Translocation
 
-![](../images/read_pairs_translocation_LR.svg)
+![translocation supporting read pairs](../images/read_pairs_translocation_LR.svg)
 
 Flanking read pair evidence for a translocation. (B1) the first
 breakpoint with a left orientation. (B2) the second breakpoint with a
 right
 orientation.
 
-
-![](../images/read_pairs_translocation_RL.svg)
+![translocation supporting read pairs](../images/read_pairs_translocation_RL.svg)
 
 Flanking read pair evidence for a translocation. (B1) the first
 breakpoint with a right orientation. (B2) the second breakpoint with a
 left
 orientation.
 
-
 #### Inverted Translocation
 
-![](../images/read_pairs_translocated_inversion_LL.svg)
+![translocation supporting read pairs](../images/read_pairs_translocated_inversion_LL.svg)
 
 Flanking read pair evidence for an inverted translocation. Both
 breakpoints have left
 orientation.
 
-
-![](../images/read_pairs_translocated_inversion_RR.svg)
+![translocation supporting read pairs](../images/read_pairs_translocated_inversion_RR.svg)
 
 Flanking read pair evidence for an inverted translocation. Both
 breakpoints have right
 orientation.
-
-
-
 
 ### Compatible Flanking Pairs
 
@@ -158,7 +141,7 @@ be used as compatible flanking evidence for an insertion (in the same
 region) and similarly flanking pairs which support an insertion may be
 compatible flanking evidence for a duplication
 
-![](../images/compatible_flanking_pairs.svg)
+![compatible flanking pairs](../images/compatible_flanking_pairs.svg)
 
 The event depicted above may be called as either a duplication or an
 insertion (depending on the input call). If the even were called as a
@@ -167,18 +150,14 @@ reads in blue would be given as compatible flanking support. If the
 event were called as an insertion the reverse would
 apply.
 
-
-
-
 ### Calculating the Evidence Window
 
-![](../images/read_pair_definitions.svg)
+![read pair defn terms](../images/read_pair_definitions.svg)
 
 Basic Terms used in describing read pairs are shown above: fragment
 size: the distance between the pair; read length: the length of the
 read; fragment size: the combined length of both reads and the fragment
 size
-
 
 We make some base assumptions with regards to paired-end read data:
 
@@ -186,10 +165,8 @@ We make some base assumptions with regards to paired-end read data:
     the distribution of fragment sizes approximately follows a normal
     distribution
 
-
 !!! note
     the most common fragment size is the unmutated 'normal' fragment
-
 
 With the above assumptions we take the median fragment size to be the
 expected normal.
@@ -217,7 +194,7 @@ stdev = math.sqrt(sum(X) / len(X))
 This gives us an idea of when to judge an fragment size as abnormal and
 where we expect our normal read pairs fragment sizes to fall.
 
-![](../images/fragment_sizes_histogram.svg)
+![read pair fragment size histogram](../images/fragment_sizes_histogram.svg)
 
 Distribution of fragment sizes (absolute values) of proper read pairs.
 The black curve representings the fit for a normal distribution using
@@ -227,14 +204,13 @@ thick vertical black line is the median and the thin black lines are
 standard deviations away from the
 median.
 
-
 As we can see from the diagram above, removing the outliers reproduces
 the observed distribution better than using all data points
 
 We use this in two ways
 
-1.  to find flanking evidence supporting deletions and insertions
-2.  to estimate the window size for where we will need to read from the
+1. to find flanking evidence supporting deletions and insertions
+2. to estimate the window size for where we will need to read from the
     bam when looking for evidence for a given event
 
 The
@@ -249,8 +225,6 @@ If the library has a transcriptome protocol this becomes a bit more
 complicated and we must take into account the possible annotations when
 calculating the evidence window. see
 `mavis.validate.evidence.TranscriptomeEvidence._generate_window` for more
-
-
 
 ### Calling Breakpoints by Flanking Evidence
 
@@ -273,8 +247,6 @@ outline, no fill) demonstrates the read length used to narrow the right
 side bound of the [estimated breakpoint
 interval.
 
-
-
 ### Determining Flanking support
 
 ![flanking support](../images/flanking_pairs_fragment_sizes_deletion.svg)
@@ -289,7 +261,6 @@ normal genome but the median will be shifted by the size of the event.
 The shaded portion of the graph represents the range in fragment sizes
 we expect for flanking pairs supporting the deletion
 event.
-
 
 ## Classifying Events
 
@@ -317,8 +288,6 @@ reverse complement are assembled into contigs using a
 [DeBruijn graph](../../glossary/#debruijn-graph). For strand specific
 events, we then attempt to resolve the sequence strand of the contig.
 
-
-
 ## Annotating Events
 
 We make the following assumptions when determining the annotations for
@@ -328,14 +297,11 @@ each event
     If both breakpoints are in the same gene, they must also be in the same
     transcript
 
-
 !!! note
     If the breakpoint intervals overlap we do not annotate encompassed genes
 
-
 !!! note
     Encompassed and 'nearest' genes are reported without respect to strand
-
 
 There are specific questions we want annotation to answer. We collect
 gene level annotations which describes things like what gene is near the
@@ -356,8 +322,6 @@ in a fusion transcript, the sequence of the fusion transcript is
 computed. This is translated to a putative amino acid sequence from
 which protein metrics such as the possible ORFs and domain sequences can
 be computed.
-
-
 
 ## Predicting Splicing Patterns
 
@@ -392,27 +356,16 @@ is paired with the 2nd donor
 site
 
 More complex examples are drawn below. There are five classifications
-(`mavis.constants.SPLICE_TYPE`) for the
+([`mavis.constants.SPLICE_TYPE`](../../package/mavis/constants/#class-mavisconstantssplice_type)) for the
 different splicing patterns:
 
-1.  Retained intron
-    (`mavis.constants.SPLICE_TYPE.RETAIN`{.interpreted-text
-    role="class"})
-2.  Skipped exon (`mavis.constants.SPLICE_TYPE.SKIP`{.interpreted-text
-    role="attr"})
-3.  Multiple retained introns
-    (`mavis.constants.SPLICE_TYPE.MULTI_RETAIN`{.interpreted-text
-    role="attr"})
-4.  Multiple skipped exons
-    (`mavis.constants.SPLICE_TYPE.MULTI_SKIP`{.interpreted-text
-    role="attr"})
-5.  Some combination of retained introns and skipped exons
-    (`mavis.constants.SPLICE_TYPE.COMPLEX`{.interpreted-text
-    role="attr"})
+1. Retained intron
+2. Skipped exon
+3. Multiple retained introns
+4. Multiple skipped exons
+5. Some combination of retained introns and skipped exons
 
 ![Splicing scenarios](../images/splicing_model.svg)
-
-
 
 ## Pairing Similar Events
 
@@ -429,7 +382,6 @@ rise to the following basic cases.
     In all cases the predicted breakpoint is either the same as the genomic
     breakpoint, or it is the same as the nearest retained donor/acceptor to
     the breakpoint.
-
 
 ![exonic splicing](../images/breakpoint_prediction_exonic.svg)
 
