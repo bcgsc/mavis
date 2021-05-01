@@ -290,7 +290,7 @@ def filter_by_evidence(
                 removed.append(bpp)
                 continue
         elif bpp.column('call_method') == CALL_METHOD.SPAN:
-            if bpp.spanning_reads < filter_min_spanning_reads:
+            if bpp.column('spanning_reads') < filter_min_spanning_reads:
                 removed.append(bpp)
                 continue
         elif bpp.column('call_method') == CALL_METHOD.SPLIT:
