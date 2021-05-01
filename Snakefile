@@ -38,7 +38,6 @@ except Exception as err:
     raise WorkflowError(short_msg)
 
 # ADD bindings for singularity
-print(workflow.singularity_args)
 workflow.singularity_args = f'-B {",".join(get_singularity_bindings(config))}'
 
 libraries = sorted(list(config['libraries']))
