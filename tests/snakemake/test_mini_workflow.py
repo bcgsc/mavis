@@ -13,7 +13,7 @@ from ..util import glob_exists, long_running_test, package_relative_file
 
 
 @pytest.fixture
-def output_dir():
+def blat_output_dir():
     temp_output = tempfile.mkdtemp()
 
     os.makedirs(os.path.join(temp_output, 'mavis/schemas'))
@@ -21,13 +21,37 @@ def output_dir():
     with open(package_relative_file('tests/mini-tutorial.config.json'), 'r') as fh:
         config = json.load(fh)
     config['output_dir'] = os.path.join(temp_output, 'output_dir')
+    config['validate.aligner'] = 'blat'
     with open(os.path.join(temp_output, 'mini-tutorial.config.json'), 'w') as fh:
         fh.write(json.dumps(config))
     yield temp_output
     shutil.rmtree(temp_output)
 
 
+@pytest.fixture
+def bwa_output_dir():
+    temp_output = tempfile.mkdtemp()
+
+    os.makedirs(os.path.join(temp_output, 'mavis/schemas'))
+
+    with open(package_relative_file('tests/mini-tutorial.config.json'), 'r') as fh:
+        config = json.load(fh)
+    config['output_dir'] = os.path.join(temp_output, 'output_dir')
+    config['validate.aligner'] = 'bwa mem'
+    config['reference.aligner_reference'] = config['reference.reference_genome']
+    with open(os.path.join(temp_output, 'mini-tutorial.config.json'), 'w') as fh:
+        fh.write(json.dumps(config))
+    yield temp_output
+    shutil.rmtree(temp_output)
+
+
+@pytest.fixture
+def output_dir(request):
+    return request.getfixturevalue(request.param)
+
+
 @long_running_test
+@pytest.mark.parametrize('output_dir', ['blat_output_dir', 'bwa_output_dir'], indirect=True)
 def test_workflow(output_dir):
     argv = [
         'snakemake',
