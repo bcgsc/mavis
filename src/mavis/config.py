@@ -4,6 +4,7 @@ from copy import copy as _copy
 from typing import Dict, Optional
 
 import snakemake
+from mavis_config import bash_expands
 from snakemake.exceptions import WorkflowError
 from snakemake.utils import validate as snakemake_validate
 
@@ -11,7 +12,7 @@ from .annotate.file_io import ReferenceFile
 from .bam import stats
 from .bam.cache import BamCache
 from .constants import INTEGER_COLUMNS, PROTOCOL, SUBCOMMAND, float_fraction
-from .util import bash_expands, cast_boolean, filepath
+from .util import cast_boolean, filepath
 
 
 def calculate_bam_stats(config: Dict, library_name: str) -> Dict:
