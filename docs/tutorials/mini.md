@@ -25,7 +25,7 @@ example, it can easily be run locally. However in order to run the snakemake fil
 to have the config validation module `mavis_config` installed which has minimal dependencies.
 
 ```bash
-pip install mavis_config pandas
+pip install mavis_config
 ```
 
 Now you are ready to run MAVIS. This can be done in a single command using snakemake.

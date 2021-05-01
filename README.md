@@ -44,7 +44,7 @@ by singularity will take care of installing the aligner as well.
 
 ```bash
 pip install -U setuptools pip
-pip install mavis_config pandas  # also installs snakemake
+pip install mavis_config  # also installs snakemake
 ```
 
 Now you will run mavis via Snakemake as follows
