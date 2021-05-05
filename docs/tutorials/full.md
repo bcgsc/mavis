@@ -39,8 +39,11 @@ The expected contents are
 Run the following to download the hg19 reference files
 
 ```bash
-wget https://raw.githubusercontent.com/bcgsc/mavis/master/tools/get_hg19_reference_files.sh
+wget https://raw.githubusercontent.com/bcgsc/mavis/master/src/tools/get_hg19_reference_files.sh
+mkdir reference_inputs
+cd reference_inputs
 bash get_hg19_reference_files.sh
+cd ..
 ```
 
 ## Creating the Config File

@@ -8,9 +8,9 @@ from unittest.mock import patch
 from mavis.constants import ORIENT, SUBCOMMAND, SVTYPE
 from mavis.main import main
 from mavis.tools import SUPPORTED_TOOL
-from mavis.util import read_bpp_from_input_file, unique_exists
+from mavis.util import read_bpp_from_input_file
 
-from ..util import get_data
+from ..util import get_data, glob_exists
 
 TEMP_OUTPUT = None
 
@@ -40,7 +40,7 @@ class TestConvert:
         with patch.object(sys, 'argv', args):
             main()
             print('output', outputfile)
-            assert unique_exists(outputfile)
+            assert glob_exists(outputfile, n=1)
         result = {}
         for pair in read_bpp_from_input_file(outputfile):
             result.setdefault(pair.data['tracking_id'], []).append(pair)

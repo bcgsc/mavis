@@ -12,7 +12,7 @@ from glob import glob
 from typing import Any, Callable, Dict, List, Optional, Set
 
 import pandas as pd
-from braceexpand import braceexpand
+from mavis_config import bash_expands
 from shortuuid import uuid
 
 from .breakpoint import Breakpoint, BreakpointPair
@@ -144,45 +144,6 @@ def soft_cast(value, cast_type):
     return cast_null(value)
 
 
-def get_env_variable(arg, default, cast_type=None):
-    """
-    Args:
-        arg (str): the argument/variable name
-    Returns:
-        the setting from the environment variable if given, otherwise the default value
-    """
-    if cast_type is None:
-        cast_type = type(default)
-    name = ENV_VAR_PREFIX + str(arg).upper()
-    result = os.environ.get(name, None)
-    if result is not None:
-        return cast(result, cast_type)
-    return default
-
-
-def bash_expands(*expressions):
-    """
-    expand a file glob expression, allowing bash-style brackets.
-
-    Returns:
-        list: a list of files
-
-    Example:
-        >>> bash_expands('./{test,doc}/*py')
-        [...]
-    """
-    result = []
-    for expression in expressions:
-        eresult = []
-        for name in braceexpand(expression):
-            for fname in glob(name):
-                eresult.append(fname)
-        if not eresult:
-            raise FileNotFoundError('The expression does not match any files', expression)
-        result.extend(eresult)
-    return [os.path.abspath(f) for f in result]
-
-
 def log_arguments(args):
     """
     output the arguments to the console
@@ -282,7 +243,7 @@ def output_tabbed_file(bpps: List[BreakpointPair], filename: str, header=None):
             row = row.flatten()
         rows.append(row)
         if not custom_header:
-            header.update(row.keys())
+            header.update(row.keys())  # type: ignore
     header = sort_columns(header)
     LOG('writing:', filename)
     df = pd.DataFrame.from_records(rows, columns=header)
@@ -375,22 +336,6 @@ def filter_uninformative(annotations_by_chr, breakpoint_pairs, max_proximity=500
     return result, filtered
 
 
-def unique_exists(
-    pattern: str, allow_none: bool = False, get_newest: bool = False
-) -> Optional[str]:
-    result = bash_expands(pattern)
-    if len(result) == 1:
-        return result[0]
-    elif result:
-        if get_newest:
-            return max(result, key=lambda x: os.stat(x).st_mtime)
-        raise OSError('duplicate results:', result)
-    elif allow_none:
-        return None
-    else:
-        raise OSError('no result found', pattern)
-
-
 def read_bpp_from_input_file(
     filename: str,
     expand_orient: bool = False,
@@ -449,7 +394,7 @@ def read_bpp_from_input_file(
         return []
 
     for col in required_columns:
-        if col not in df:
+        if col not in df and col not in add_default:
             raise KeyError(f'missing required column: {col}')
 
     # run the custom functions
@@ -500,7 +445,7 @@ def read_bpp_from_input_file(
     ]:
         for col in cols:
             if col in df:
-                df[col].apply(lambda c: vocab.enforce(c))
+                df[col].apply(lambda c: vocab.enforce(c))  # type: ignore
             elif hasattr(vocab, 'NS'):
                 df[col] = vocab.NS  # type: ignore
 
