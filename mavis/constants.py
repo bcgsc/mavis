@@ -258,7 +258,7 @@ class MavisNamespace:
             ....
         """
         if value not in self.values():
-            raise KeyError('value {0} is not a valid member of '.format(repr(value)), self.values())
+            raise KeyError('value {0} is not a valid member of {1}'.format(repr(value), self.values()))
         return value
 
     def reverse(self, value):
