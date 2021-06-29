@@ -859,6 +859,53 @@ class TestStrelka(unittest.TestCase):
             _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
 
 
+class TestMutect(unittest.TestCase):
+    def testInsertion(self):
+        event = Mock(
+            chrom='1', pos=724986, id=None, info={}, ref='G', stop=724986, alts=('GGAATT',)
+        )
+        bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.MUTECT, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual(724986, bpp.break1.start)
+        self.assertEqual(724986, bpp.break1.end)
+        self.assertEqual(724986, bpp.break2.start)
+        self.assertEqual(724986, bpp.break2.end)
+        self.assertEqual(SVTYPE.INS, bpp.event_type)
+
+    def testDeletion(self):
+        event = Mock(
+            chrom='1',
+            pos=1265353,
+            id=None,
+            info={},
+            ref='GCGTGTGCCATGCA',
+            stop=1265366,
+            alts=('G',),
+        )
+        bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.MUTECT, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual(1265353, bpp.break1.start)
+        self.assertEqual(1265353, bpp.break1.end)
+        self.assertEqual(1265366, bpp.break2.start)
+        self.assertEqual(1265366, bpp.break2.end)
+        self.assertEqual(SVTYPE.DEL, bpp.event_type)
+
+    def testMalformated(self):
+        event = Mock(
+            chrom='1',
+            pos=53678660,
+            id=None,
+            info={'SVTYPE': 'BND'},
+            ref='C',
+            alts=('CTTTTAAATGTAACATGACATAATATATTTCCTAAATAATTTAAAATAATC.',),
+            stop=53678660,
+        )
+        with self.assertRaises(NotImplementedError):
+            _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.MUTECT, False)
+
+
 class TestVCF(unittest.TestCase):
     def setUp(self):
         self.tra = Mock(

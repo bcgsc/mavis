@@ -85,6 +85,7 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
         SUPPORTED_TOOL.VCF,
         SUPPORTED_TOOL.BREAKSEQ,
         SUPPORTED_TOOL.STRELKA,
+        SUPPORTED_TOOL.MUTECT,
     ]:
 
         std_row.update(row)
@@ -272,6 +273,7 @@ def _convert_tool_output(
         SUPPORTED_TOOL.VCF,
         SUPPORTED_TOOL.BREAKSEQ,
         SUPPORTED_TOOL.STRELKA,
+        SUPPORTED_TOOL.MUTECT,
     ]:
         rows = read_vcf(input_file, file_type, log)
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
