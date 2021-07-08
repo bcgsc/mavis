@@ -865,13 +865,13 @@ class TestMutect(unittest.TestCase):
             chrom='1', pos=724986, id=None, info={}, ref='G', stop=724986, alts=('GGAATT',)
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.MUTECT, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual(724986, bpp.break1.start)
-        self.assertEqual(724986, bpp.break1.end)
-        self.assertEqual(724986, bpp.break2.start)
-        self.assertEqual(724986, bpp.break2.end)
-        self.assertEqual(SVTYPE.INS, bpp.event_type)
+        assert bpp.break1.start == 724986
+        assert bpp.break1.end == 724986
+        assert bpp.break2.start == 724986
+        assert bpp.break2.end == 724986
+        assert bpp.event_type == SVTYPE.INS
 
     def testDeletion(self):
         event = Mock(
@@ -884,13 +884,13 @@ class TestMutect(unittest.TestCase):
             alts=('G',),
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.MUTECT, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual(1265353, bpp.break1.start)
-        self.assertEqual(1265353, bpp.break1.end)
-        self.assertEqual(1265366, bpp.break2.start)
-        self.assertEqual(1265366, bpp.break2.end)
-        self.assertEqual(SVTYPE.DEL, bpp.event_type)
+        assert bpp.break1.start == 1265353
+        assert bpp.break1.end == 1265353
+        assert bpp.break2.start == 1265366
+        assert bpp.break2.end == 1265366
+        assert bpp.event_type == SVTYPE.DEL
 
     def testMalformated(self):
         event = Mock(
