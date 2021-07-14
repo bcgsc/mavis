@@ -193,7 +193,7 @@ def convert_file(input_file: str, file_type: str, log):
         try:
             rows.extend(convert_record(vcf_record, log=log))
         except Exception as err:
-            if file_type != SUPPORTED_TOOL.STRELKA:
+            if file_type not in [SUPPORTED_TOOL.STRELKA, SUPPORTED_TOOL.MUTECT]:
                 raise err
             else:
                 log('Ignoring', vcf_record)
