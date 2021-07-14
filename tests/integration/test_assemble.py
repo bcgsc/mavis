@@ -1,20 +1,18 @@
-import os
 import time
-import unittest
 
+import pytest
 import timeout_decorator
-
 from mavis.assemble import Contig, assemble, filter_contigs
-from mavis.interval import Interval
 from mavis.constants import reverse_complement
-from mavis.validate.constants import DEFAULTS
+from mavis.interval import Interval
+from mavis.schemas import DEFAULTS
 from mavis.util import LOG
 
-from . import MockObject, RUN_FULL
-from ..util import get_data
+from ..util import get_data, long_running_test
+from . import MockObject
 
 
-class TestFilterContigs(unittest.TestCase):
+class TestFilterContigs:
     @timeout_decorator.timeout(30)
     def test_large_set(self):
         contigs = []
@@ -28,61 +26,66 @@ class TestFilterContigs(unittest.TestCase):
         print()
         for c in filtered:
             print(c.seq)
-        self.assertEqual(3, len(filtered))  # figure out amount later. need to optimize timing
+        assert len(filtered) == 3  # figure out amount later. need to optimize timing
 
 
-class TestContigRemap(unittest.TestCase):
-    def setUp(self):
-        self.contig = Contig(' ' * 60, None)
-        self.contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=10))
-        self.contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=20))
-        self.contig.add_mapped_sequence(MockObject(reference_start=50, reference_end=60))
-
-    def test_depth_even_coverage(self):
-        covg = self.contig.remap_depth(Interval(1, 10))
-        self.assertEqual(2, covg)
-
-    def test_depth_mixed_coverage(self):
-        covg = self.contig.remap_depth(Interval(1, 20))
-        self.assertEqual(1.5, covg)
-
-    def test_depth_no_coverage(self):
-        covg = self.contig.remap_depth(Interval(21, 49))
-        self.assertEqual(0, covg)
-
-    def test_depth_whole_contig_coverage(self):
-        self.assertAlmostEqual(40 / 60, self.contig.remap_depth())
-
-    def test_depth_weighted_read(self):
-        self.contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=10), 5)
-        self.assertAlmostEqual(42 / 60, self.contig.remap_depth())
-
-    def test_depth_bad_query_range(self):
-        with self.assertRaises(ValueError):
-            self.contig.remap_depth(Interval(0, 10))
-        with self.assertRaises(ValueError):
-            self.contig.remap_depth(Interval(1, len(self.contig.seq) + 1))
-
-    def test_coverage(self):
-        self.assertEqual(0.5, self.contig.remap_coverage())
+@pytest.fixture
+def contig():
+    contig = Contig(' ' * 60, None)
+    contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=10))
+    contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=20))
+    contig.add_mapped_sequence(MockObject(reference_start=50, reference_end=60))
+    return contig
 
 
-class TestAssemble(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # load files here so they do not count towar timeout checking
-        sequences = set()
-        with open(get_data('long_filter_assembly.txt'), 'r') as fh:
-            sequences.update([s.strip() for s in fh.readlines() if s])
-        cls.long_filter_seq = sequences
-        sequences = set()
-        with open(get_data('large_assembly.txt'), 'r') as fh:
-            sequences.update([line.strip() for line in fh.readlines()])
-        cls.large_assembly_seq = sequences
+class TestContigRemap:
+    def test_depth_even_coverage(self, contig):
+        covg = contig.remap_depth(Interval(1, 10))
+        assert covg == 2
 
-    def setUp(self):
-        self.log = lambda *x, **k: print(x, k)
+    def test_depth_mixed_coverage(self, contig):
+        covg = contig.remap_depth(Interval(1, 20))
+        assert covg == 1.5
 
+    def test_depth_no_coverage(self, contig):
+        covg = contig.remap_depth(Interval(21, 49))
+        assert covg == 0
+
+    def test_depth_whole_contig_coverage(self, contig):
+        assert pytest.approx(contig.remap_depth()) == 40 / 60
+
+    def test_depth_weighted_read(self, contig):
+        contig.add_mapped_sequence(MockObject(reference_start=0, reference_end=10), 5)
+        assert pytest.approx(contig.remap_depth()) == 42 / 60
+
+    def test_depth_bad_query_range(self, contig):
+        with pytest.raises(ValueError):
+            contig.remap_depth(Interval(0, 10))
+        with pytest.raises(ValueError):
+            contig.remap_depth(Interval(1, len(contig.seq) + 1))
+
+    def test_coverage(self, contig):
+        assert contig.remap_coverage() == 0.5
+
+
+@pytest.fixture
+def long_filter_seq():
+    # load files here so they do not count towar timeout checking
+    sequences = set()
+    with open(get_data('long_filter_assembly.txt'), 'r') as fh:
+        sequences.update([s.strip() for s in fh.readlines() if s])
+    return sequences
+
+
+@pytest.fixture
+def large_assembly_seq():
+    sequences = set()
+    with open(get_data('large_assembly.txt'), 'r') as fh:
+        sequences.update([line.strip() for line in fh.readlines()])
+    return sequences
+
+
+class TestAssemble:
     def test1(self):
         sequences = [
             'TCTTTTTCTTTCTTTCTTTCTTTCTTTCTATTCTATCTTCTTCCTGACTCTTCCTAGCTTAGTCTTACTGACAAGCATGTTACCTTCTTTTTATTTTTGTTTTTAAACCACATTGATCGTAAATCGCCGTGCTTGGTGCTTAATGTACTT',
@@ -178,11 +181,10 @@ class TestAssemble(unittest.TestCase):
             remap_min_exact_match=6,
             assembly_max_paths=20,
             assembly_min_uniq=0.01,
-            log=self.log,
         )
         for contig in assembly:
             print(contig.seq)
-        self.assertTrue(assembly)
+        assert assembly
 
     def test_assembly_low_center(self):
         sequences = {
@@ -246,11 +248,10 @@ class TestAssemble(unittest.TestCase):
             remap_min_exact_match=6,
             assembly_max_paths=20,
             assembly_min_uniq=0.01,
-            log=self.log,
         )
         for assembly in assemblies:
             print(assembly.seq)
-        self.assertEqual(2, len(assemblies))
+        assert len(assemblies) == 2
 
     def test_low_evidence(self):
         seqs = [
@@ -281,11 +282,10 @@ class TestAssemble(unittest.TestCase):
             remap_min_exact_match=6,
             assembly_max_paths=20,
             assembly_min_uniq=0.01,
-            log=self.log,
         )
         for assembly in assemblies:
             print(assembly.seq, assembly.remap_score())
-        self.assertEqual(2, len(assemblies))
+        assert len(assemblies) == 2
 
     def test_multiple_events(self):
         sequences = {
@@ -335,47 +335,42 @@ class TestAssemble(unittest.TestCase):
         assemblies = assemble(
             sequences,
             kmer_size,
-            min_edge_trim_weight=DEFAULTS.assembly_min_edge_trim_weight,
+            min_edge_trim_weight=DEFAULTS['validate.assembly_min_edge_trim_weight'],
             remap_min_match=0.95,
             remap_min_overlap=75 * 0.9,
             min_contig_length=75,
-            remap_min_exact_match=DEFAULTS.assembly_min_exact_match_to_remap,
-            assembly_max_paths=DEFAULTS.assembly_max_paths,
+            remap_min_exact_match=DEFAULTS['validate.assembly_min_exact_match_to_remap'],
+            assembly_max_paths=DEFAULTS['validate.assembly_max_paths'],
             assembly_min_uniq=0.01,
-            log=self.log,
         )
         print('assemblies', len(assemblies))
         for assembly in assemblies:
             print(assembly.seq, assembly.remap_score())
             print(reverse_complement(assembly.seq))
         expected = 'ACCAGGTCTTCGATATATAAAAACCCTAGGTCGGCCGGTCGGCCGTGTTAGTGAGACACACACACACACATGTATACCCGTGCGCGCCCGCGGGAGAGAGAGAGAGAGAGATATATATATAGCAGACCAGGAGAGCGAGAGCGAGAGAGATATAGAGAGATCGCGCGCGAGAGAGATAGGAGACC'
-        self.assertEqual(expected, assemblies[0].seq)
-        self.assertEqual(1, len(assemblies))
+        assert assemblies[0].seq == expected
+        assert len(assemblies) == 1
 
     @timeout_decorator.timeout(300)
-    @unittest.skipIf(
-        not RUN_FULL,
-        'slower tests will not be run unless the environment variable RUN_FULL is given',
-    )
-    def test_large_assembly(self):
+    @long_running_test
+    def test_large_assembly(self, large_assembly_seq):
         # simply testing that this will complete before the timeout
-        sequences = self.large_assembly_seq
-        kmer_size = 150 * DEFAULTS.assembly_kmer_size
+        kmer_size = 150 * DEFAULTS['validate.assembly_kmer_size']
         print('read inputs')
         contigs = assemble(
-            sequences,
+            large_assembly_seq,
             kmer_size,
-            min_edge_trim_weight=DEFAULTS.assembly_min_edge_trim_weight,
-            assembly_max_paths=DEFAULTS.assembly_max_paths,
+            min_edge_trim_weight=DEFAULTS['validate.assembly_min_edge_trim_weight'],
+            assembly_max_paths=DEFAULTS['validate.assembly_max_paths'],
             min_contig_length=150,
             log=LOG,
             remap_min_exact_match=30,
-            assembly_min_uniq=DEFAULTS.assembly_min_uniq,
+            assembly_min_uniq=DEFAULTS['validate.assembly_min_uniq'],
         )
         for contig in contigs:
             print(len(contig.seq), contig.remap_score())
             print(contig.seq)
-        self.assertTrue(len(contigs))
+        assert len(contigs)
 
     def test_assemble_short_contig(self):
         sequences = {
@@ -627,16 +622,12 @@ class TestAssemble(unittest.TestCase):
         print('target', target)
         for contig in contigs:
             print(len(contig.seq), contig.remap_score(), contig.seq)
-        self.assertTrue({target, reverse_complement(target)} & {c.seq for c in contigs})
+        assert {target, reverse_complement(target)} & {c.seq for c in contigs}
 
-    @timeout_decorator.timeout(60)
-    @unittest.skipIf(
-        not RUN_FULL,
-        'slower tests will not be run unless the environment variable RUN_FULL is given',
-    )
-    def test_long_filter_bug(self):
-        sequences = self.long_filter_seq
-        contigs = assemble(sequences, 111, 3, 8, 0.1, 0.1, log=LOG)
+    @timeout_decorator.timeout(120)
+    @long_running_test
+    def test_long_filter_bug(self, long_filter_seq):
+        contigs = assemble(long_filter_seq, 111, 3, 8, 0.1, 0.1, log=LOG)
         for c in contigs:
             print(c.seq, c.remap_score())
-        self.assertTrue(len(contigs))
+        assert len(contigs)

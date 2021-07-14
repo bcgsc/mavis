@@ -1,17 +1,15 @@
 import unittest
 
+import pytest
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
-from mavis.tools import (
-    _convert_tool_row,
-    SUPPORTED_TOOL,
-    _parse_transabyss,
-)
-from mavis.tools.vcf import parse_bnd_alt as _parse_bnd_alt, convert_record as _parse_vcf_record
+from mavis.tools import SUPPORTED_TOOL, _convert_tool_row, _parse_transabyss
+from mavis.tools.vcf import convert_record as _parse_vcf_record
+from mavis.tools.vcf import parse_bnd_alt as _parse_bnd_alt
 
 from .mock import Mock
 
 
-class TestDelly(unittest.TestCase):
+class TestDelly:
     def test_convert_insertion(self):
         row = Mock(
             chrom='1',
@@ -28,28 +26,28 @@ class TestDelly(unittest.TestCase):
             alts=[],
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual(247760043 - 10, bpp.break1.start)
-        self.assertEqual(247760043 + 10, bpp.break1.end)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(STRAND.NS, bpp.break1.strand)
-        self.assertEqual(247760044 - 10, bpp.break2.start)
-        self.assertEqual(247760044 + 10, bpp.break2.end)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual(STRAND.NS, bpp.break2.strand)
-        self.assertEqual('1', bpp.break2.chr)
-        self.assertEqual(SVTYPE.INS, bpp.event_type)
-        self.assertEqual(None, bpp.untemplated_seq)
+        assert bpp.break1.chr == '1'
+        assert bpp.break1.start == 247760043 - 10
+        assert bpp.break1.end == 247760043 + 10
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break1.strand == STRAND.NS
+        assert bpp.break2.start == 247760044 - 10
+        assert bpp.break2.end == 247760044 + 10
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert bpp.break2.strand == STRAND.NS
+        assert bpp.break2.chr == '1'
+        assert bpp.event_type == SVTYPE.INS
+        assert bpp.untemplated_seq is None
 
         bpp_list = _convert_tool_row(
             _parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False, assume_no_untemplated=True
         )
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual(None, bpp.untemplated_seq)
-        self.assertNotEqual('', bpp.untemplated_seq)
+        assert bpp.untemplated_seq is None
+        assert bpp.untemplated_seq != ''
 
     def test_convert_convert_translocation(self):
         row = Mock(
@@ -69,43 +67,43 @@ class TestDelly(unittest.TestCase):
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False)
         for b in bpp_list:
             print(b)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         row.info['CT'] = 'NtoN'
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.DELLY, False)
         for b in bpp_list:
             print(b)
-        self.assertEqual(4, len(bpp_list))
+        assert len(bpp_list) == 4
 
 
-class TestCnvNator(unittest.TestCase):
+class TestCnvNator:
     def test_convert_deletion(self):
         row = {'event_type': 'deletion', 'coordinates': '1:1-10000'}
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CNVNATOR, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual(1, bpp.break1.start)
-        self.assertEqual(1, bpp.break1.end)
-        self.assertEqual(10000, bpp.break2.start)
-        self.assertEqual(10000, bpp.break2.start)
-        self.assertEqual(SVTYPE.DEL, bpp.event_type)
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual('1', bpp.break2.chr)
+        assert bpp.break1.start == 1
+        assert bpp.break1.end == 1
+        assert bpp.break2.start == 10000
+        assert bpp.break2.start == 10000
+        assert bpp.event_type == SVTYPE.DEL
+        assert bpp.break1.chr == '1'
+        assert bpp.break2.chr == '1'
 
     def test_convert_duplication(self):
         row = {'event_type': 'duplication', 'coordinates': '1:1-10000'}
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CNVNATOR, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual(1, bpp.break1.start)
-        self.assertEqual(1, bpp.break1.end)
-        self.assertEqual(10000, bpp.break2.start)
-        self.assertEqual(10000, bpp.break2.start)
-        self.assertEqual(SVTYPE.DUP, bpp.event_type)
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual('1', bpp.break2.chr)
+        assert bpp.break1.start == 1
+        assert bpp.break1.end == 1
+        assert bpp.break2.start == 10000
+        assert bpp.break2.start == 10000
+        assert bpp.event_type == SVTYPE.DUP
+        assert bpp.break1.chr == '1'
+        assert bpp.break2.chr == '1'
 
 
-class TestStarFusion(unittest.TestCase):
+class TestStarFusion:
     def test_convert_standard_event(self):
         row = {
             'FusionName': 'GAS6--RASA3',
@@ -114,14 +112,14 @@ class TestStarFusion(unittest.TestCase):
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, True)
 
-        self.assertEqual(2, len(bpp_list))
+        assert len(bpp_list) == 2
         bpp = bpp_list[0]
-        self.assertEqual('chr13', bpp.break1.chr)
-        self.assertEqual('chr13', bpp.break2.chr)
-        self.assertEqual(114529969, bpp.break1.start)
-        self.assertEqual(114751269, bpp.break2.start)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(True, bpp.stranded)
+        assert bpp.break1.chr == 'chr13'
+        assert bpp.break2.chr == 'chr13'
+        assert bpp.break1.start == 114529969
+        assert bpp.break2.start == 114751269
+        assert bpp.opposing_strands is False
+        assert bpp.stranded is True
 
     def test_convert_translocation(self):
         row = {
@@ -131,22 +129,22 @@ class TestStarFusion(unittest.TestCase):
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, True)
 
-        self.assertEqual(2, len(bpp_list))
+        assert len(bpp_list) == 2
         bpp = bpp_list[0]
-        self.assertEqual('chr17', bpp.break1.chr)
-        self.assertEqual('chr20', bpp.break2.chr)
-        self.assertEqual(59445688, bpp.break1.start)
-        self.assertEqual(49411710, bpp.break2.start)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(True, bpp.stranded)
+        assert bpp.break1.chr == 'chr17'
+        assert bpp.break2.chr == 'chr20'
+        assert bpp.break1.start == 59445688
+        assert bpp.break2.start == 49411710
+        assert bpp.opposing_strands is False
+        assert bpp.stranded is True
 
     def test_malformed(self):
         row = {'FusionName': 'BCAS4--BCAS3', 'LeftBreakpoint': '', 'RightBreakpoint': None}
-        with self.assertRaises(AssertionError):
+        with pytest.raises(AssertionError):
             _convert_tool_row(row, SUPPORTED_TOOL.STARFUSION, False)
 
 
-class TestTransAbyss(unittest.TestCase):
+class TestTransAbyss:
     def test_convert_stranded_indel_insertion(self):
         row = {
             'chr': '1',
@@ -158,16 +156,16 @@ class TestTransAbyss(unittest.TestCase):
             'id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
-        self.assertEqual(2, len(bpp_list))
+        assert len(bpp_list) == 2
         bpp = bpp_list[0]
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual('1', bpp.break2.chr)
-        self.assertEqual(10015, bpp.break1.start)
-        self.assertEqual(10016, bpp.break2.start)
-        self.assertEqual(SVTYPE.INS, bpp.event_type)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(True, bpp.stranded)
-        self.assertEqual('AAT', bpp.untemplated_seq)
+        assert bpp.break1.chr == '1'
+        assert bpp.break2.chr == '1'
+        assert bpp.break1.start == 10015
+        assert bpp.break2.start == 10016
+        assert bpp.event_type == SVTYPE.INS
+        assert bpp.opposing_strands is False
+        assert bpp.stranded is True
+        assert bpp.untemplated_seq == 'AAT'
 
     def test_convert_indel_deletion(self):
         row = {
@@ -185,9 +183,9 @@ class TestTransAbyss(unittest.TestCase):
         print(_convert_tool_row)
         for bpp in bpp_list:
             print(bpp)
-        self.assertEqual(2, len(bpp_list))
+        assert len(bpp_list) == 2
         bpp = bpp_list[0]
-        self.assertEqual('', bpp.untemplated_seq)
+        assert bpp.untemplated_seq == ''
 
     def test_convert_indel_unstranded_insertion(self):
         row = {
@@ -202,15 +200,15 @@ class TestTransAbyss(unittest.TestCase):
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, False)
         print([str(b) for b in bpp_list])
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
 
         bpp = bpp_list[0]
-        self.assertEqual(SVTYPE.INS, bpp.event_type)
-        self.assertEqual(STRAND.NS, bpp.break1.strand)
-        self.assertEqual(STRAND.NS, bpp.break2.strand)
-        self.assertEqual(False, bpp.stranded)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual('TT', bpp.untemplated_seq)
+        assert bpp.event_type == SVTYPE.INS
+        assert bpp.break1.strand == STRAND.NS
+        assert bpp.break2.strand == STRAND.NS
+        assert bpp.stranded is False
+        assert bpp.opposing_strands is False
+        assert bpp.untemplated_seq == 'TT'
 
     def test_convert_indel_duplication(self):
         row = {
@@ -225,15 +223,15 @@ class TestTransAbyss(unittest.TestCase):
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, False)
         print([str(b) for b in bpp_list])
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
 
         bpp = bpp_list[0]
-        self.assertEqual(SVTYPE.DUP, bpp.event_type)
-        self.assertEqual(STRAND.NS, bpp.break1.strand)
-        self.assertEqual(STRAND.NS, bpp.break2.strand)
-        self.assertEqual(False, bpp.stranded)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual('', bpp.untemplated_seq)
+        assert bpp.event_type == SVTYPE.DUP
+        assert bpp.break1.strand == STRAND.NS
+        assert bpp.break2.strand == STRAND.NS
+        assert bpp.stranded is False
+        assert bpp.opposing_strands is False
+        assert bpp.untemplated_seq == ''
 
     def test_convert_translocation(self):
         raise unittest.SkipTest('TODO')
@@ -249,7 +247,7 @@ class TestTransAbyss(unittest.TestCase):
             'id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.TA, True)
-        self.assertEqual(2, len(bpp_list))
+        assert len(bpp_list) == 2
 
     def test_parse_stranded_translocation(self):
         row = {
@@ -263,10 +261,10 @@ class TestTransAbyss(unittest.TestCase):
         }
         std = _parse_transabyss(row)
         print(std)
-        self.assertTrue('event_type' not in std)
+        assert 'event_type' not in std
 
 
-class TestManta(unittest.TestCase):
+class TestManta:
     def test_convert_deletion(self):
         row = Mock(
             chrom='21',
@@ -277,16 +275,16 @@ class TestManta(unittest.TestCase):
             alts=[],
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.MANTA, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('21', bpp.break1.chr)
-        self.assertEqual(9412306, bpp.break1.start)
-        self.assertEqual(9412310, bpp.break1.end)
-        self.assertEqual(9412400, bpp.break2.start)
-        self.assertEqual(9412404, bpp.break2.end)
-        self.assertEqual('21', bpp.break2.chr)
-        print(bpp, bpp.tracking_id)
-        self.assertEqual('manta-MantaDEL:20644:0:2:0:0:0', bpp.tracking_id)
+        assert bpp.break1.chr == '21'
+        assert bpp.break1.start == 9412306
+        assert bpp.break1.end == 9412310
+        assert bpp.break2.start == 9412400
+        assert bpp.break2.end == 9412404
+        assert bpp.break2.chr == '21'
+        print(bpp, bpp.data['tracking_id'])
+        assert bpp.data['tracking_id'] == 'manta-MantaDEL:20644:0:2:0:0:0'
 
     def test_convert_duplication(self):
         row = Mock(
@@ -298,11 +296,11 @@ class TestManta(unittest.TestCase):
             alts=[],
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.MANTA, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual('1', bpp.break2.chr)
-        self.assertEqual('manta-MantaDUP:TANDEM:22477:0:1:0:9:0', bpp.tracking_id)
+        assert bpp.break1.chr == '1'
+        assert bpp.break2.chr == '1'
+        assert bpp.data['tracking_id'] == 'manta-MantaDUP:TANDEM:22477:0:1:0:9:0'
 
     def test_non_trans_bnd(self):
         row = Mock(
@@ -322,16 +320,16 @@ class TestManta(unittest.TestCase):
         )
         vcf_list = _parse_vcf_record(row)
         bpp_list = _convert_tool_row(vcf_list[0], SUPPORTED_TOOL.MANTA, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual('1', bpp.break2.chr)
-        self.assertEqual(17051724, bpp.break1.start)
-        self.assertEqual(234912188, bpp.break2.start)
-        self.assertEqual('R', bpp.break1.orient)
-        self.assertEqual('R', bpp.break2.orient)
-        self.assertEqual('manta-MantaBND:207:0:1:0:0:0:0', bpp.tracking_id)
-        self.assertEqual(1, len(bpp_list))
+        assert bpp.break1.chr == '1'
+        assert bpp.break2.chr == '1'
+        assert bpp.break1.start == 17051724
+        assert bpp.break2.start == 234912188
+        assert bpp.break1.orient == 'R'
+        assert bpp.break2.orient == 'R'
+        assert bpp.data['tracking_id'] == 'manta-MantaBND:207:0:1:0:0:0:0'
+        assert len(bpp_list) == 1
 
     def test_non_trans_bnd_from_mate(self):
         row = Mock(
@@ -351,19 +349,19 @@ class TestManta(unittest.TestCase):
         )
         vcf_list = _parse_vcf_record(row)
         bpp_list = _convert_tool_row(vcf_list[0], SUPPORTED_TOOL.MANTA, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual('1', bpp.break2.chr)
-        self.assertEqual(17051724, bpp.break1.start)
-        self.assertEqual(234912188, bpp.break2.start)
-        self.assertEqual('R', bpp.break1.orient)
-        self.assertEqual('R', bpp.break2.orient)
-        self.assertEqual('manta-MantaBND:207:0:1:0:0:0:1', bpp.tracking_id)
-        self.assertEqual(1, len(bpp_list))
+        assert bpp.break1.chr == '1'
+        assert bpp.break2.chr == '1'
+        assert bpp.break1.start == 17051724
+        assert bpp.break2.start == 234912188
+        assert bpp.break1.orient == 'R'
+        assert bpp.break2.orient == 'R'
+        assert bpp.data['tracking_id'] == 'manta-MantaBND:207:0:1:0:0:0:1'
+        assert len(bpp_list) == 1
 
 
-class TestDefuse(unittest.TestCase):
+class TestDefuse:
     def test_convert_inverted_translocation(self):
         row = {
             'gene_chromosome1': 'X',
@@ -375,18 +373,18 @@ class TestDefuse(unittest.TestCase):
             'cluster_id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('3', bpp.break1.chr)
-        self.assertEqual('X', bpp.break2.chr)
-        self.assertEqual(50294136, bpp.break1.start)
-        self.assertEqual(153063989, bpp.break2.start)
-        self.assertEqual(None, bpp.event_type)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual(False, bpp.stranded)
-        self.assertEqual('defuse-1', bpp.tracking_id)
+        assert bpp.break1.chr == '3'
+        assert bpp.break2.chr == 'X'
+        assert bpp.break1.start == 50294136
+        assert bpp.break2.start == 153063989
+        assert bpp.event_type is None
+        assert bpp.opposing_strands is False
+        assert bpp.break1.orient == ORIENT.RIGHT
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert bpp.stranded is False
+        assert bpp.data['tracking_id'] == 'defuse-1'
 
     def test_convert_translocation(self):
         row = {
@@ -399,18 +397,18 @@ class TestDefuse(unittest.TestCase):
             'cluster_id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('3', bpp.break1.chr)
-        self.assertEqual('X', bpp.break2.chr)
-        self.assertEqual(50294136, bpp.break1.start)
-        self.assertEqual(153063989, bpp.break2.start)
-        self.assertEqual(None, bpp.event_type)
-        self.assertEqual(True, bpp.opposing_strands)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual(False, bpp.stranded)
-        self.assertEqual('defuse-1', bpp.tracking_id)
+        assert bpp.break1.chr == '3'
+        assert bpp.break2.chr == 'X'
+        assert bpp.break1.start == 50294136
+        assert bpp.break2.start == 153063989
+        assert bpp.event_type is None
+        assert bpp.opposing_strands is True
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert bpp.stranded is False
+        assert bpp.data['tracking_id'] == 'defuse-1'
 
     def test_convert_indel(self):
         row = {
@@ -423,18 +421,18 @@ class TestDefuse(unittest.TestCase):
             'cluster_id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual('1', bpp.break2.chr)
-        self.assertEqual(1663681, bpp.break1.start)
-        self.assertEqual(151732089, bpp.break2.start)
-        self.assertEqual(None, bpp.event_type)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual(False, bpp.stranded)
-        self.assertEqual('defuse-1', bpp.tracking_id)
+        assert bpp.break1.chr == '1'
+        assert bpp.break2.chr == '1'
+        assert bpp.break1.start == 1663681
+        assert bpp.break2.start == 151732089
+        assert bpp.event_type is None
+        assert bpp.opposing_strands is False
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert bpp.stranded is False
+        assert bpp.data['tracking_id'] == 'defuse-1'
 
     def test_convert_inversion(self):
         row = {
@@ -447,21 +445,21 @@ class TestDefuse(unittest.TestCase):
             'cluster_id': 1,
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.DEFUSE, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('1', bpp.break1.chr)
-        self.assertEqual('1', bpp.break2.chr)
-        self.assertEqual(144898348, bpp.break1.start)
-        self.assertEqual(235294748, bpp.break2.start)
-        self.assertEqual(None, bpp.event_type)
-        self.assertEqual(True, bpp.opposing_strands)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual(False, bpp.stranded)
-        self.assertEqual('defuse-1', bpp.tracking_id)
+        assert bpp.break1.chr == '1'
+        assert bpp.break2.chr == '1'
+        assert bpp.break1.start == 144898348
+        assert bpp.break2.start == 235294748
+        assert bpp.event_type is None
+        assert bpp.opposing_strands is True
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert bpp.stranded is False
+        assert bpp.data['tracking_id'] == 'defuse-1'
 
 
-class TestChimerascan(unittest.TestCase):
+class TestChimerascan:
     def test_convert_pos_pos(self):
         row = {
             'chrom5p': 'chr3',
@@ -475,17 +473,17 @@ class TestChimerascan(unittest.TestCase):
             'chimera_cluster_id': 'CLUSTER30',
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('3', bpp.break1.chr)
-        self.assertEqual('3', bpp.break2.chr)
+        assert bpp.break1.chr == '3'
+        assert bpp.break2.chr == '3'
         print(bpp)
-        self.assertEqual(int(row['end5p']), bpp.break1.start)
-        self.assertEqual(int(row['start3p']), bpp.break2.start)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual(False, bpp.stranded)
+        assert bpp.break1.start == int(row['end5p'])
+        assert bpp.break2.start == int(row['start3p'])
+        assert bpp.opposing_strands is False
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert bpp.stranded is False
 
     def test_convert_pos_neg(self):
         row = {
@@ -500,17 +498,17 @@ class TestChimerascan(unittest.TestCase):
             'chimera_cluster_id': 'CLUSTER30',
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('3', bpp.break1.chr)
-        self.assertEqual('3', bpp.break2.chr)
+        assert bpp.break1.chr == '3'
+        assert bpp.break2.chr == '3'
         print(bpp)
-        self.assertEqual(int(row['end5p']), bpp.break1.start)
-        self.assertEqual(int(row['end3p']), bpp.break2.start)
-        self.assertEqual(True, bpp.opposing_strands)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual(False, bpp.stranded)
+        assert bpp.break1.start == int(row['end5p'])
+        assert bpp.break2.start == int(row['end3p'])
+        assert bpp.opposing_strands is True
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert bpp.stranded is False
 
     def test_convert_neg_pos(self):
         row = {
@@ -525,17 +523,17 @@ class TestChimerascan(unittest.TestCase):
             'chimera_cluster_id': 'CLUSTER30',
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('3', bpp.break1.chr)
-        self.assertEqual('3', bpp.break2.chr)
+        assert bpp.break1.chr == '3'
+        assert bpp.break2.chr == '3'
         print(bpp)
-        self.assertEqual(int(row['start5p']), bpp.break1.start)
-        self.assertEqual(int(row['start3p']), bpp.break2.start)
-        self.assertEqual(True, bpp.opposing_strands)
-        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual(False, bpp.stranded)
+        assert bpp.break1.start == int(row['start5p'])
+        assert bpp.break2.start == int(row['start3p'])
+        assert bpp.opposing_strands is True
+        assert bpp.break1.orient == ORIENT.RIGHT
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert bpp.stranded is False
 
     def test_convert_neg_neg(self):
         row = {
@@ -550,162 +548,162 @@ class TestChimerascan(unittest.TestCase):
             'chimera_cluster_id': 'CLUSTER30',
         }
         bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.CHIMERASCAN, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('3', bpp.break1.chr)
-        self.assertEqual('3', bpp.break2.chr)
+        assert bpp.break1.chr == '3'
+        assert bpp.break2.chr == '3'
         print(bpp)
-        self.assertEqual(int(row['start5p']), bpp.break1.start)
-        self.assertEqual(int(row['end3p']), bpp.break2.start)
-        self.assertEqual(False, bpp.opposing_strands)
-        self.assertEqual(ORIENT.RIGHT, bpp.break1.orient)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual(False, bpp.stranded)
+        assert bpp.break1.start == int(row['start5p'])
+        assert bpp.break2.start == int(row['end3p'])
+        assert bpp.opposing_strands is False
+        assert bpp.break1.orient == ORIENT.RIGHT
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert bpp.stranded is False
 
 
-class TestPindel(unittest.TestCase):
+class TestPindel:
     def test_convert_deletion(self):
         row = Mock(chrom='21', pos=9412306, info={'SVTYPE': 'DEL'}, stop=9412400, id=None, alts=[])
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.PINDEL, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('21', bpp.break1.chr)
-        self.assertEqual('21', bpp.break2.chr)
-        self.assertEqual(SVTYPE.DEL, bpp.event_type)
-        self.assertEqual(row.pos, bpp.break1.start)
-        self.assertEqual(row.pos, bpp.break1.end)
-        self.assertEqual(row.stop, bpp.break2.start)
-        self.assertEqual(row.stop, bpp.break2.end)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(STRAND.NS, bpp.break1.strand)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual(STRAND.NS, bpp.break2.strand)
-        self.assertEqual(False, bpp.stranded)
-        self.assertEqual(False, bpp.opposing_strands)
+        assert bpp.break1.chr == '21'
+        assert bpp.break2.chr == '21'
+        assert bpp.event_type == SVTYPE.DEL
+        assert bpp.break1.start == row.pos
+        assert bpp.break1.end == row.pos
+        assert bpp.break2.start == row.stop
+        assert bpp.break2.end == row.stop
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break1.strand == STRAND.NS
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert bpp.break2.strand == STRAND.NS
+        assert bpp.stranded is False
+        assert bpp.opposing_strands is False
 
     def test_convert_insertion(self):
         row = Mock(chrom='21', pos=9412306, info={'SVTYPE': 'INS'}, stop=9412400, id=None, alts=[])
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.PINDEL, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('21', bpp.break1.chr)
-        self.assertEqual('21', bpp.break2.chr)
-        self.assertEqual(SVTYPE.INS, bpp.event_type)
-        self.assertEqual(row.pos, bpp.break1.start)
-        self.assertEqual(row.pos, bpp.break1.end)
-        self.assertEqual(row.stop, bpp.break2.start)
-        self.assertEqual(row.stop, bpp.break2.end)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(STRAND.NS, bpp.break1.strand)
-        self.assertEqual(ORIENT.RIGHT, bpp.break2.orient)
-        self.assertEqual(STRAND.NS, bpp.break2.strand)
-        self.assertEqual(False, bpp.stranded)
-        self.assertEqual(False, bpp.opposing_strands)
+        assert bpp.break1.chr == '21'
+        assert bpp.break2.chr == '21'
+        assert bpp.event_type == SVTYPE.INS
+        assert bpp.break1.start == row.pos
+        assert bpp.break1.end == row.pos
+        assert bpp.break2.start == row.stop
+        assert bpp.break2.end == row.stop
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break1.strand == STRAND.NS
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert bpp.break2.strand == STRAND.NS
+        assert bpp.stranded is False
+        assert bpp.opposing_strands is False
 
     def test_convert_inversion(self):
         row = Mock(chrom='21', pos=9412306, info={'SVTYPE': 'INV'}, stop=9412400, id=None, alts=[])
         bpp_list = _convert_tool_row(_parse_vcf_record(row)[0], SUPPORTED_TOOL.PINDEL, False)
-        self.assertEqual(2, len(bpp_list))
+        assert len(bpp_list) == 2
         bpp = sorted(bpp_list, key=lambda x: x.break1)[0]
-        self.assertEqual('21', bpp.break1.chr)
-        self.assertEqual('21', bpp.break2.chr)
-        self.assertEqual(SVTYPE.INV, bpp.event_type)
-        self.assertEqual(row.pos, bpp.break1.start)
-        self.assertEqual(row.pos, bpp.break1.end)
-        self.assertEqual(row.stop, bpp.break2.start)
-        self.assertEqual(row.stop, bpp.break2.end)
-        self.assertEqual(ORIENT.LEFT, bpp.break1.orient)
-        self.assertEqual(STRAND.NS, bpp.break1.strand)
-        self.assertEqual(ORIENT.LEFT, bpp.break2.orient)
-        self.assertEqual(STRAND.NS, bpp.break2.strand)
-        self.assertEqual(False, bpp.stranded)
-        self.assertEqual(True, bpp.opposing_strands)
+        assert bpp.break1.chr == '21'
+        assert bpp.break2.chr == '21'
+        assert bpp.event_type == SVTYPE.INV
+        assert bpp.break1.start == row.pos
+        assert bpp.break1.end == row.pos
+        assert bpp.break2.start == row.stop
+        assert bpp.break2.end == row.stop
+        assert bpp.break1.orient == ORIENT.LEFT
+        assert bpp.break1.strand == STRAND.NS
+        assert bpp.break2.orient == ORIENT.LEFT
+        assert bpp.break2.strand == STRAND.NS
+        assert bpp.stranded is False
+        assert bpp.opposing_strands is True
 
 
-class TestParseBndAlt(unittest.TestCase):
+class TestParseBndAlt:
     def test_right(self):
         # '[4:190898243[AGGT'
         chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('[4:190898243[A')
-        self.assertEqual('4', chrom)
-        self.assertEqual(190898243, pos)
-        self.assertEqual(ORIENT.RIGHT, orient1)
-        self.assertEqual(ORIENT.RIGHT, orient2)
-        self.assertEqual('', seq)
-        self.assertEqual('A', ref)
+        assert chrom == '4'
+        assert pos == 190898243
+        assert orient1 == ORIENT.RIGHT
+        assert orient2 == ORIENT.RIGHT
+        assert seq == ''
+        assert ref == 'A'
 
     def test_right_untemp_seq(self):
         chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('[5:190898243[AGGT')
-        self.assertEqual('5', chrom)
-        self.assertEqual(190898243, pos)
-        self.assertEqual(ORIENT.RIGHT, orient1)
-        self.assertEqual(ORIENT.RIGHT, orient2)
-        self.assertEqual('AGG', seq)
-        self.assertEqual('T', ref)
+        assert chrom == '5'
+        assert pos == 190898243
+        assert orient1 == ORIENT.RIGHT
+        assert orient2 == ORIENT.RIGHT
+        assert seq == 'AGG'
+        assert ref == 'T'
 
         chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('CAGTNNNCA[5:190898243[')
-        self.assertEqual('5', chrom)
-        self.assertEqual(190898243, pos)
-        self.assertEqual(ORIENT.LEFT, orient1)
-        self.assertEqual(ORIENT.RIGHT, orient2)
-        self.assertEqual('AGTNNNCA', seq)
-        self.assertEqual('C', ref)
+        assert chrom == '5'
+        assert pos == 190898243
+        assert orient1 == ORIENT.LEFT
+        assert orient2 == ORIENT.RIGHT
+        assert seq == 'AGTNNNCA'
+        assert ref == 'C'
 
         chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('CTG[21:47575965[')
-        self.assertEqual('21', chrom)
-        self.assertEqual(47575965, pos)
-        self.assertEqual(ORIENT.LEFT, orient1)
-        self.assertEqual(ORIENT.RIGHT, orient2)
-        self.assertEqual('TG', seq)
-        self.assertEqual('C', ref)
+        assert chrom == '21'
+        assert pos == 47575965
+        assert orient1 == ORIENT.LEFT
+        assert orient2 == ORIENT.RIGHT
+        assert seq == 'TG'
+        assert ref == 'C'
 
     def test_left(self):
         chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('G]10:198982]')
-        self.assertEqual('10', chrom)
-        self.assertEqual(198982, pos)
-        self.assertEqual(ORIENT.LEFT, orient1)
-        self.assertEqual(ORIENT.LEFT, orient2)
-        self.assertEqual('', seq)
-        self.assertEqual('G', ref)
+        assert chrom == '10'
+        assert pos == 198982
+        assert orient1 == ORIENT.LEFT
+        assert orient2 == ORIENT.LEFT
+        assert seq == ''
+        assert ref == 'G'
 
         chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt(']10:198982]G')
-        self.assertEqual('10', chrom)
-        self.assertEqual(198982, pos)
-        self.assertEqual(ORIENT.LEFT, orient2)
-        self.assertEqual('', seq)
-        self.assertEqual('G', ref)
+        assert chrom == '10'
+        assert pos == 198982
+        assert orient2 == ORIENT.LEFT
+        assert seq == ''
+        assert ref == 'G'
 
     def test_alternate_chrom(self):
         chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('G]GL000.01:198982]')
-        self.assertEqual('GL000.01', chrom)
-        self.assertEqual(198982, pos)
-        self.assertEqual(ORIENT.LEFT, orient2)
-        self.assertEqual('', seq)
-        self.assertEqual('G', ref)
+        assert chrom == 'GL000.01'
+        assert pos == 198982
+        assert orient2 == ORIENT.LEFT
+        assert seq == ''
+        assert ref == 'G'
 
     def test_left_untemp_seq(self):
         chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt(']11:123456]AGTNNNCAT')
-        self.assertEqual('11', chrom)
-        self.assertEqual(123456, pos)
-        self.assertEqual(ORIENT.LEFT, orient2)
-        self.assertEqual('AGTNNNCA', seq)
-        self.assertEqual('T', ref)
+        assert chrom == '11'
+        assert pos == 123456
+        assert orient2 == ORIENT.LEFT
+        assert seq == 'AGTNNNCA'
+        assert ref == 'T'
 
         chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt(']8:1682443]TGC')
-        self.assertEqual('8', chrom)
-        self.assertEqual(1682443, pos)
-        self.assertEqual(ORIENT.LEFT, orient2)
-        self.assertEqual('TG', seq)
-        self.assertEqual('C', ref)
+        assert chrom == '8'
+        assert pos == 1682443
+        assert orient2 == ORIENT.LEFT
+        assert seq == 'TG'
+        assert ref == 'C'
 
         chrom, pos, orient1, orient2, ref, seq = _parse_bnd_alt('AAGTG]11:66289601]')
-        self.assertEqual('11', chrom)
-        self.assertEqual(66289601, pos)
-        self.assertEqual(ORIENT.LEFT, orient2)
-        self.assertEqual('AGTG', seq)
-        self.assertEqual('A', ref)
+        assert chrom == '11'
+        assert pos == 66289601
+        assert orient2 == ORIENT.LEFT
+        assert seq == 'AGTG'
+        assert ref == 'A'
 
 
-class TestBreakDancer(unittest.TestCase):
+class TestBreakDancer:
     def test_itx(self):
         row = {
             'Chr1': '1',
@@ -720,15 +718,15 @@ class TestBreakDancer(unittest.TestCase):
             'num_Reads': '43',
         }
         bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(SVTYPE.DUP, bpps[0].event_type)
-        self.assertEqual(10001, bpps[0].break1.start)
-        self.assertEqual(10001, bpps[0].break1.end)
-        self.assertEqual(ORIENT.RIGHT, bpps[0].break1.orient)
-        self.assertEqual(10546, bpps[0].break2.start)
-        self.assertEqual(10546, bpps[0].break2.end)
-        self.assertEqual(ORIENT.LEFT, bpps[0].break2.orient)
-        self.assertEqual(False, bpps[0].opposing_strands)
+        assert len(bpps) == 1
+        assert bpps[0].event_type == SVTYPE.DUP
+        assert bpps[0].break1.start == 10001
+        assert bpps[0].break1.end == 10001
+        assert bpps[0].break1.orient == ORIENT.RIGHT
+        assert bpps[0].break2.start == 10546
+        assert bpps[0].break2.end == 10546
+        assert bpps[0].break2.orient == ORIENT.LEFT
+        assert bpps[0].opposing_strands is False
 
     def test_deletion(self):
         row = {
@@ -744,15 +742,15 @@ class TestBreakDancer(unittest.TestCase):
             'num_Reads': '67',
         }
         bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(SVTYPE.DEL, bpps[0].event_type)
-        self.assertEqual(869445, bpps[0].break1.start)
-        self.assertEqual(869445, bpps[0].break1.end)
-        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
-        self.assertEqual(870225, bpps[0].break2.start)
-        self.assertEqual(870225, bpps[0].break2.end)
-        self.assertEqual(ORIENT.RIGHT, bpps[0].break2.orient)
-        self.assertEqual(False, bpps[0].opposing_strands)
+        assert len(bpps) == 1
+        assert bpps[0].event_type == SVTYPE.DEL
+        assert bpps[0].break1.start == 869445
+        assert bpps[0].break1.end == 869445
+        assert bpps[0].break1.orient == ORIENT.LEFT
+        assert bpps[0].break2.start == 870225
+        assert bpps[0].break2.end == 870225
+        assert bpps[0].break2.orient == ORIENT.RIGHT
+        assert bpps[0].opposing_strands is False
 
     def test_inversion(self):
         row = {
@@ -768,24 +766,24 @@ class TestBreakDancer(unittest.TestCase):
             'num_Reads': '2',
         }
         bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
-        self.assertEqual(2, len(bpps))
-        self.assertEqual(SVTYPE.INV, bpps[0].event_type)
-        self.assertEqual(13143396, bpps[0].break1.start)
-        self.assertEqual(13143396, bpps[0].break1.end)
-        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
-        self.assertEqual(13218683, bpps[0].break2.start)
-        self.assertEqual(13218683, bpps[0].break2.end)
-        self.assertEqual(ORIENT.LEFT, bpps[0].break2.orient)
-        self.assertEqual(True, bpps[0].opposing_strands)
+        assert len(bpps) == 2
+        assert bpps[0].event_type == SVTYPE.INV
+        assert bpps[0].break1.start == 13143396
+        assert bpps[0].break1.end == 13143396
+        assert bpps[0].break1.orient == ORIENT.LEFT
+        assert bpps[0].break2.start == 13218683
+        assert bpps[0].break2.end == 13218683
+        assert bpps[0].break2.orient == ORIENT.LEFT
+        assert bpps[0].opposing_strands is True
 
-        self.assertEqual(SVTYPE.INV, bpps[1].event_type)
-        self.assertEqual(13143396, bpps[1].break1.start)
-        self.assertEqual(13143396, bpps[1].break1.end)
-        self.assertEqual(ORIENT.RIGHT, bpps[1].break1.orient)
-        self.assertEqual(13218683, bpps[1].break2.start)
-        self.assertEqual(13218683, bpps[1].break2.end)
-        self.assertEqual(ORIENT.RIGHT, bpps[1].break2.orient)
-        self.assertEqual(True, bpps[1].opposing_strands)
+        assert bpps[1].event_type == SVTYPE.INV
+        assert bpps[1].break1.start == 13143396
+        assert bpps[1].break1.end == 13143396
+        assert bpps[1].break1.orient == ORIENT.RIGHT
+        assert bpps[1].break2.start == 13218683
+        assert bpps[1].break2.end == 13218683
+        assert bpps[1].break2.orient == ORIENT.RIGHT
+        assert bpps[1].opposing_strands is True
 
     def test_insertion(self):
         row = {
@@ -801,30 +799,30 @@ class TestBreakDancer(unittest.TestCase):
             'num_Reads': '3',
         }
         bpps = _convert_tool_row(row, SUPPORTED_TOOL.BREAKDANCER, False, True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(SVTYPE.INS, bpps[0].event_type)
-        self.assertEqual(20216146, bpps[0].break1.start)
-        self.assertEqual(20216146, bpps[0].break1.end)
-        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
-        self.assertEqual(20218060, bpps[0].break2.start)
-        self.assertEqual(20218060, bpps[0].break2.end)
-        self.assertEqual(ORIENT.RIGHT, bpps[0].break2.orient)
-        self.assertEqual(False, bpps[0].opposing_strands)
+        assert len(bpps) == 1
+        assert bpps[0].event_type == SVTYPE.INS
+        assert bpps[0].break1.start == 20216146
+        assert bpps[0].break1.end == 20216146
+        assert bpps[0].break1.orient == ORIENT.LEFT
+        assert bpps[0].break2.start == 20218060
+        assert bpps[0].break2.end == 20218060
+        assert bpps[0].break2.orient == ORIENT.RIGHT
+        assert bpps[0].opposing_strands is False
 
 
-class TestStrelka(unittest.TestCase):
+class TestStrelka:
     def testInsertion(self):
         event = Mock(
             chrom='1', pos=724986, id=None, info={}, ref='G', stop=724986, alts=('GGAATT',)
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual(724986, bpp.break1.start)
-        self.assertEqual(724986, bpp.break1.end)
-        self.assertEqual(724986, bpp.break2.start)
-        self.assertEqual(724986, bpp.break2.end)
-        self.assertEqual(SVTYPE.INS, bpp.event_type)
+        assert bpp.break1.start == 724986
+        assert bpp.break1.end == 724986
+        assert bpp.break2.start == 724986
+        assert bpp.break2.end == 724986
+        assert bpp.event_type == SVTYPE.INS
 
     def testDeletion(self):
         event = Mock(
@@ -837,13 +835,13 @@ class TestStrelka(unittest.TestCase):
             alts=('G',),
         )
         bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
-        self.assertEqual(1, len(bpp_list))
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual(1265353, bpp.break1.start)
-        self.assertEqual(1265353, bpp.break1.end)
-        self.assertEqual(1265366, bpp.break2.start)
-        self.assertEqual(1265366, bpp.break2.end)
-        self.assertEqual(SVTYPE.DEL, bpp.event_type)
+        assert bpp.break1.start == 1265353
+        assert bpp.break1.end == 1265353
+        assert bpp.break2.start == 1265366
+        assert bpp.break2.end == 1265366
+        assert bpp.event_type == SVTYPE.DEL
 
     def testMalformated(self):
         event = Mock(
@@ -855,7 +853,7 @@ class TestStrelka(unittest.TestCase):
             alts=('CTTTTAAATGTAACATGACATAATATATTTCCTAAATAATTTAAAATAATC.',),
             stop=53678660,
         )
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
 
 
@@ -917,53 +915,79 @@ class TestVCF(unittest.TestCase):
             alts=[],
         )
 
-    def test_no_ci(self):
-        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
-        self.assertEqual(1, len(bpp_list))
-        bpp = bpp_list[0]
-        self.assertEqual(21673582, bpp.break1.start)
-        self.assertEqual(21673582, bpp.break1.end)
-        self.assertEqual(58921502, bpp.break2.start)
-        self.assertEqual(58921502, bpp.break2.end)
 
-    def test_ci(self):
-        self.tra.info.update({'CIEND': [-700, 700], 'CIPOS': [-700, 700]})
-        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
-        self.assertEqual(1, len(bpp_list))
+@pytest.fixture
+def vcf_translocation():
+    return Mock(
+        chrom='2',
+        pos=21673582,
+        id=None,
+        info={'SVTYPE': 'TRA', 'CT': '5to5', 'CHR2': '3'},
+        stop=58921502,
+        alts=[],
+    )
+
+
+class TestVCF:
+    def test_no_ci(self, vcf_translocation):
+        bpp_list = _convert_tool_row(
+            _parse_vcf_record(vcf_translocation)[0], SUPPORTED_TOOL.VCF, False
+        )
+        assert len(bpp_list) == 1
+        bpp = bpp_list[0]
+        assert bpp.break1.start == 21673582
+        assert bpp.break1.end == 21673582
+        assert bpp.break2.start == 58921502
+        assert bpp.break2.end == 58921502
+
+    def test_ci(self, vcf_translocation):
+        vcf_translocation.info.update({'CIEND': [-700, 700], 'CIPOS': [-700, 700]})
+        bpp_list = _convert_tool_row(
+            _parse_vcf_record(vcf_translocation)[0], SUPPORTED_TOOL.VCF, False
+        )
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
         print(bpp)
-        self.assertEqual(21673582 - 700, bpp.break1.start)
-        self.assertEqual(21673582 + 700, bpp.break1.end)
-        self.assertEqual(58921502 - 700, bpp.break2.start)
-        self.assertEqual(58921502 + 700, bpp.break2.end)
+        assert bpp.break1.start == 21673582 - 700
+        assert bpp.break1.end == 21673582 + 700
+        assert bpp.break2.start == 58921502 - 700
+        assert bpp.break2.end == 58921502 + 700
 
-    def test_precise_flag_ignores_ci(self):
-        self.tra.info.update({'CIEND': [-700, 700], 'CIPOS': [-700, 700], 'PRECISE': True})
-        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
-        self.assertEqual(1, len(bpp_list))
+    def test_precise_flag_ignores_ci(self, vcf_translocation):
+        vcf_translocation.info.update({'CIEND': [-700, 700], 'CIPOS': [-700, 700], 'PRECISE': True})
+        bpp_list = _convert_tool_row(
+            _parse_vcf_record(vcf_translocation)[0], SUPPORTED_TOOL.VCF, False
+        )
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual(21673582, bpp.break1.start)
-        self.assertEqual(21673582, bpp.break1.end)
-        self.assertEqual(58921502, bpp.break2.start)
-        self.assertEqual(58921502, bpp.break2.end)
+        assert bpp.break1.start == 21673582
+        assert bpp.break1.end == 21673582
+        assert bpp.break2.start == 58921502
+        assert bpp.break2.end == 58921502
 
-    def test_no_id(self):
-        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
-        self.assertEqual(1, len(bpp_list))
+    def test_no_id(self, vcf_translocation):
+        bpp_list = _convert_tool_row(
+            _parse_vcf_record(vcf_translocation)[0], SUPPORTED_TOOL.VCF, False
+        )
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertTrue(bpp.data[COLUMNS.tracking_id])
+        assert bpp.data[COLUMNS.tracking_id]
 
-    def test_N_id(self):
-        self.tra.id = 'N'
-        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
-        self.assertEqual(1, len(bpp_list))
+    def test_N_id(self, vcf_translocation):
+        vcf_translocation.id = 'N'
+        bpp_list = _convert_tool_row(
+            _parse_vcf_record(vcf_translocation)[0], SUPPORTED_TOOL.VCF, False
+        )
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertTrue(bpp.data[COLUMNS.tracking_id])
-        self.assertNotEqual('N', bpp.data[COLUMNS.tracking_id])
+        assert bpp.data[COLUMNS.tracking_id]
+        assert bpp.data[COLUMNS.tracking_id] != 'N'
 
-    def test_id_given(self):
-        self.tra.id = 'thing-1'
-        bpp_list = _convert_tool_row(_parse_vcf_record(self.tra)[0], SUPPORTED_TOOL.VCF, False)
-        self.assertEqual(1, len(bpp_list))
+    def test_id_given(self, vcf_translocation):
+        vcf_translocation.id = 'thing-1'
+        bpp_list = _convert_tool_row(
+            _parse_vcf_record(vcf_translocation)[0], SUPPORTED_TOOL.VCF, False
+        )
+        assert len(bpp_list) == 1
         bpp = bpp_list[0]
-        self.assertEqual('vcf-thing-1', bpp.data[COLUMNS.tracking_id])
+        assert bpp.data[COLUMNS.tracking_id] == 'vcf-thing-1'

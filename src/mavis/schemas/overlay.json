@@ -1,0 +1,142 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "properties": {
+        "illustrate.breakpoint_color": {
+            "default": "#000000",
+            "description": "Breakpoint outline color",
+            "type": "string"
+        },
+        "illustrate.domain_color": {
+            "default": "#ccccb3",
+            "description": "Domain fill color",
+            "type": "string"
+        },
+        "illustrate.domain_mismatch_color": {
+            "default": "#b2182b",
+            "description": "Domain fill color on 0%% match",
+            "type": "string"
+        },
+        "illustrate.domain_name_regex_filter": {
+            "default": "^PF\\d+$",
+            "description": "The regular expression used to select domains to be displayed (filtered by name)",
+            "type": "string"
+        },
+        "illustrate.domain_scaffold_color": {
+            "default": "#000000",
+            "description": "The color of the domain scaffold",
+            "type": "string"
+        },
+        "illustrate.drawing_width_iter_increase": {
+            "default": 500,
+            "description": "The amount (in  pixels) by which to increase the drawing width upon failure to fit",
+            "type": "integer"
+        },
+        "illustrate.exon_min_focus_size": {
+            "default": 10,
+            "description": "Minimum size of an exon for it to be granted a label or min exon width",
+            "type": "integer"
+        },
+        "illustrate.gene1_color": {
+            "default": "#657e91",
+            "description": "The color of genes near the first gene",
+            "pattern": "^#[a-zA-Z0-9]{6}",
+            "type": "string"
+        },
+        "illustrate.gene1_color_selected": {
+            "default": "#518dc5",
+            "description": "The color of the first gene",
+            "pattern": "^#[a-zA-Z0-9]{6}",
+            "type": "string"
+        },
+        "illustrate.gene2_color": {
+            "default": "#325556",
+            "description": "The color of genes near the second gene",
+            "pattern": "^#[a-zA-Z0-9]{6}",
+            "type": "string"
+        },
+        "illustrate.gene2_color_selected": {
+            "default": "#4c9677",
+            "description": "The color of the second gene",
+            "pattern": "^#[a-zA-Z0-9]{6}",
+            "type": "string"
+        },
+        "illustrate.label_color": {
+            "default": "#000000",
+            "description": "The label color",
+            "pattern": "^#[a-zA-Z0-9]{6}",
+            "type": "string"
+        },
+        "illustrate.mask_fill": {
+            "default": "#ffffff",
+            "description": "Color of mask (for deleted region etc.)",
+            "pattern": "^#[a-zA-Z0-9]{6}",
+            "type": "string"
+        },
+        "illustrate.mask_opacity": {
+            "default": 0.7,
+            "description": "Opacity of the mask layer",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+        },
+        "illustrate.max_drawing_retries": {
+            "default": 5,
+            "description": "The maximum number of retries for attempting a drawing. each iteration the width is extended. if it is still insufficient after this number a gene-level only drawing will be output",
+            "type": "integer"
+        },
+        "illustrate.novel_exon_color": {
+            "default": "#5D3F6A",
+            "description": "Novel exon fill color",
+            "pattern": "^#[a-zA-Z0-9]{6}",
+            "type": "string"
+        },
+        "illustrate.scaffold_color": {
+            "default": "#000000",
+            "description": "The color used for the gene/transcripts scaffolds",
+            "pattern": "^#[a-zA-Z0-9]{6}",
+            "type": "string"
+        },
+        "illustrate.splice_color": {
+            "default": "#000000",
+            "description": "Splicing lines color",
+            "pattern": "^#[a-zA-Z0-9]{6}",
+            "type": "string"
+        },
+        "illustrate.width": {
+            "default": 1000,
+            "description": "The drawing width in pixels",
+            "type": "integer"
+        },
+        "log": {
+            "type": "string"
+        },
+        "log_level": {
+            "default": "INFO",
+            "enum": [
+                "INFO",
+                "DEBUG"
+            ],
+            "type": "string"
+        },
+        "reference.annotations": {
+            "examples": [
+                "tests/data/mock_annotations.json"
+            ],
+            "items": {
+                "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+        },
+        "validate.min_mapping_quality": {
+            "default": 5,
+            "description": "The minimum mapping quality of reads to be used as evidence",
+            "type": "integer"
+        }
+    },
+    "required": [
+        "reference.annotations"
+    ],
+    "type": "object"
+}

@@ -1,15 +1,14 @@
-import unittest
-
-from mavis.annotate.file_io import load_reference_genome
-from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import CIGAR, ORIENT, reverse_complement, STRAND
-from mavis.interval import Interval
-from mavis.validate.evidence import TranscriptomeEvidence
-from mavis.validate.constants import DEFAULTS
 from functools import partial
 
-from . import MockRead, MockObject, get_example_genes
+import pytest
+from mavis.annotate.file_io import load_reference_genome
+from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import ORIENT, STRAND
+from mavis.interval import Interval
+from mavis.validate.evidence import TranscriptomeEvidence
+
 from ..util import get_data
+from . import MockObject, get_example_genes
 
 REFERENCE_GENOME = None
 REF_CHR = 'fake'
@@ -25,55 +24,61 @@ def setUpModule():
         raise AssertionError('fake genome file does not have the expected contents')
 
 
-class TestNetSizeTransEGFR(unittest.TestCase):
-    def setUp(self):
-        self.evidence = MockObject(
-            annotations={},
-            read_length=100,
-            max_expected_fragment_size=550,
-            call_error=11,
-            overlapping_transcripts=set(get_example_genes()['EGFR'].transcripts),
-        )
-        setattr(
-            self.evidence, '_select_transcripts', lambda *pos: self.evidence.overlapping_transcripts
-        )
-        setattr(self.evidence, 'distance', partial(TranscriptomeEvidence.distance, self.evidence))
+@pytest.fixture
+def egfr_evidence():
+    evidence = MockObject(
+        annotations={},
+        read_length=100,
+        max_expected_fragment_size=550,
+        call_error=11,
+        overlapping_transcripts=set(get_example_genes()['EGFR'].transcripts),
+    )
+    setattr(evidence, '_select_transcripts', lambda *pos: evidence.overlapping_transcripts)
+    setattr(evidence, 'distance', partial(TranscriptomeEvidence.distance, evidence))
+    return evidence
 
-    def egfr_distance(self, pos1, pos2):
-        return TranscriptomeEvidence.distance(self.evidence, pos1, pos2)
 
-    def test_deletion_in_exon(self):
+class TestNetSizeTransEGFR:
+    def test_deletion_in_exon(self, egfr_evidence):
         bpp = BreakpointPair(
             Breakpoint('7', 55238890, orient=ORIENT.LEFT),
             Breakpoint('7', 55238899, orient=ORIENT.RIGHT),
             untemplated_seq='',
         )
-        self.assertEqual(Interval(-8), bpp.net_size(self.egfr_distance))
+        assert bpp.net_size(
+            lambda p1, p2: TranscriptomeEvidence.distance(egfr_evidence, p1, p2)
+        ) == Interval(-8)
 
         bpp = BreakpointPair(
             Breakpoint('7', 55238890, orient=ORIENT.LEFT),
             Breakpoint('7', 55238899, orient=ORIENT.RIGHT),
             untemplated_seq='GTAC',
         )
-        self.assertEqual(Interval(-4), bpp.net_size(self.egfr_distance))
+        assert bpp.net_size(
+            lambda p1, p2: TranscriptomeEvidence.distance(egfr_evidence, p1, p2)
+        ) == Interval(-4)
 
-    def test_deletion_across_intron(self):
+    def test_deletion_across_intron(self, egfr_evidence):
         # 55240539_55240621  55323947_55324313
         bpp = BreakpointPair(
             Breakpoint('7', 55240610, orient=ORIENT.LEFT),
             Breakpoint('7', 55323950, orient=ORIENT.RIGHT),
             untemplated_seq='GTAC',
         )
-        self.assertEqual(Interval(-10), bpp.net_size(self.egfr_distance))
+        assert bpp.net_size(
+            lambda p1, p2: TranscriptomeEvidence.distance(egfr_evidence, p1, p2)
+        ) == Interval(-10)
         # 55210998_55211181 55218987_55219055
         bpp = BreakpointPair(
             Breakpoint('7', 55211180, orient=ORIENT.LEFT),
             Breakpoint('7', 55218990, orient=ORIENT.RIGHT),
             untemplated_seq='',
         )
-        self.assertEqual(Interval(-4 + -135, -4), bpp.net_size(self.egfr_distance))
+        assert bpp.net_size(
+            lambda p1, p2: TranscriptomeEvidence.distance(egfr_evidence, p1, p2)
+        ) == Interval(-4 + -135, -4)
 
-    def test_insertion_at_exon_start_mixed(self):
+    def test_insertion_at_exon_start_mixed(self, egfr_evidence):
         # EXON 15: 55232973-55233130
         # EXON 16: 55238868-55238906
         # EXON 17: 55240676-55240817
@@ -82,55 +87,67 @@ class TestNetSizeTransEGFR(unittest.TestCase):
             Breakpoint('7', 55238868, orient=ORIENT.RIGHT),
             untemplated_seq='TTATCG',
         )
-        self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
+        assert bpp.net_size(
+            lambda p1, p2: TranscriptomeEvidence.distance(egfr_evidence, p1, p2)
+        ) == Interval(6)
 
-    def test_insertion_at_exon_start(self):
+    def test_insertion_at_exon_start(self, egfr_evidence):
         # 55238868_55238906
         bpp = BreakpointPair(
             Breakpoint('7', 55233130, orient=ORIENT.LEFT),
             Breakpoint('7', 55238868, orient=ORIENT.RIGHT),
             untemplated_seq='TTATCG',
         )
-        self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
+        assert bpp.net_size(
+            lambda p1, p2: TranscriptomeEvidence.distance(egfr_evidence, p1, p2)
+        ) == Interval(6)
 
-    def test_insertion_at_exon_end_mixed(self):
+    def test_insertion_at_exon_end_mixed(self, egfr_evidence):
         # 55238868_55238906
         bpp = BreakpointPair(
             Breakpoint('7', 55238905, orient=ORIENT.LEFT),
             Breakpoint('7', 55238906, orient=ORIENT.RIGHT),
             untemplated_seq='TTATCG',
         )
-        self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
+        assert bpp.net_size(
+            lambda p1, p2: TranscriptomeEvidence.distance(egfr_evidence, p1, p2)
+        ) == Interval(6)
 
-    def test_insertion_at_exon_end(self):
+    def test_insertion_at_exon_end(self, egfr_evidence):
         # 55238868_55238906
         bpp = BreakpointPair(
             Breakpoint('7', 55238906, orient=ORIENT.LEFT),
             Breakpoint('7', 55240676, orient=ORIENT.RIGHT),
             untemplated_seq='TTATCG',
         )
-        self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
+        assert bpp.net_size(
+            lambda p1, p2: TranscriptomeEvidence.distance(egfr_evidence, p1, p2)
+        ) == Interval(6)
 
-    def test_insertion_in_intron(self):
+    def test_insertion_in_intron(self, egfr_evidence):
         # 55238868_55238906
         bpp = BreakpointPair(
             Breakpoint('7', 5523750, orient=ORIENT.LEFT),
             Breakpoint('7', 5523751, orient=ORIENT.RIGHT),
             untemplated_seq='TTATCG',
         )
-        self.assertEqual(Interval(6), bpp.net_size(self.egfr_distance))
+        assert bpp.net_size(
+            lambda p1, p2: TranscriptomeEvidence.distance(egfr_evidence, p1, p2)
+        ) == Interval(6)
 
-    def test_indel_in_intron(self):
+    def test_indel_in_intron(self, egfr_evidence):
         # 55238868_55238906
         bpp = BreakpointPair(
             Breakpoint('7', 5523700, orient=ORIENT.LEFT),
             Breakpoint('7', 5523751, orient=ORIENT.RIGHT),
             untemplated_seq='TTATCG',
         )
-        self.assertEqual(Interval(-44), bpp.net_size(self.egfr_distance))
+        assert bpp.net_size(
+            lambda p1, p2: TranscriptomeEvidence.distance(egfr_evidence, p1, p2)
+        ) == Interval(-44)
 
 
-class TestLt(unittest.TestCase):
+class TestLt:
     def test_break1(self):
         bpp1 = BreakpointPair(
             Breakpoint('1', 1, 10, orient=ORIENT.LEFT),
@@ -142,7 +159,7 @@ class TestLt(unittest.TestCase):
             Breakpoint('2', 1, orient=ORIENT.LEFT),
             untemplated_seq='',
         )
-        self.assertTrue(bpp2 < bpp1)
+        assert bpp2 < bpp1
 
     def test_useq(self):
         bpp1 = BreakpointPair(
@@ -155,7 +172,7 @@ class TestLt(unittest.TestCase):
             Breakpoint('2', 1, orient=ORIENT.LEFT),
             untemplated_seq=None,
         )
-        self.assertTrue(bpp2 > bpp1)
+        assert bpp2 > bpp1
 
     def test_break2(self):
         bpp1 = BreakpointPair(
@@ -168,20 +185,20 @@ class TestLt(unittest.TestCase):
             Breakpoint('2', 1, orient=ORIENT.LEFT),
             untemplated_seq=None,
         )
-        self.assertTrue(bpp2 < bpp1)
+        assert bpp2 < bpp1
 
 
-class TestBreakpointSequenceHomology(unittest.TestCase):
+class TestBreakpointSequenceHomology:
     def test_left_pos_right_pos(self):
         b1 = Breakpoint(REF_CHR, 157, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1788, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('CAATGC', ''), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+        assert bpp.breakpoint_sequence_homology(REFERENCE_GENOME) == ('CAATGC', '')
 
         b1 = Breakpoint(REF_CHR, 589, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 704, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('TTAA', 'ATAGC'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+        assert bpp.breakpoint_sequence_homology(REFERENCE_GENOME) == ('TTAA', 'ATAGC')
 
     def test_left_pos_left_neg(self):
         # CCC|AAA ------------ TTT|GGG
@@ -190,7 +207,7 @@ class TestBreakpointSequenceHomology(unittest.TestCase):
         b1 = Breakpoint(REF_CHR, 1459, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2914, strand=STRAND.NEG, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('CCC', 'TTT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+        assert bpp.breakpoint_sequence_homology(REFERENCE_GENOME) == ('CCC', 'TTT')
 
     def test_left_neg_left_pos(self):
         # CCC|AAA ------------ TTT|GGG
@@ -199,7 +216,7 @@ class TestBreakpointSequenceHomology(unittest.TestCase):
         b1 = Breakpoint(REF_CHR, 1459, strand=STRAND.NEG, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2914, strand=STRAND.POS, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('CCC', 'TTT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+        assert bpp.breakpoint_sequence_homology(REFERENCE_GENOME) == ('CCC', 'TTT')
 
     def test_right_pos_right_neg(self):
         # CCC|AAA ------------ TTT|GGG
@@ -208,7 +225,7 @@ class TestBreakpointSequenceHomology(unittest.TestCase):
         b1 = Breakpoint(REF_CHR, 1460, strand=STRAND.POS, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2915, strand=STRAND.NEG, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('AAA', 'GGG'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+        assert bpp.breakpoint_sequence_homology(REFERENCE_GENOME) == ('AAA', 'GGG')
 
     def test_right_neg_right_pos(self):
         # CCC|AAA ------------ TTT|GGG
@@ -217,14 +234,14 @@ class TestBreakpointSequenceHomology(unittest.TestCase):
         b1 = Breakpoint(REF_CHR, 1460, strand=STRAND.NEG, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2915, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('AAA', 'GGG'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+        assert bpp.breakpoint_sequence_homology(REFERENCE_GENOME) == ('AAA', 'GGG')
 
     def test_close_del(self):
         # ....TT|TT....
         b1 = Breakpoint(REF_CHR, 1001, strand=STRAND.POS, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1002, strand=STRAND.POS, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('', ''), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+        assert bpp.breakpoint_sequence_homology(REFERENCE_GENOME) == ('', '')
 
     def test_close_dup(self):
         # ....GATACATTTCTTCTTGAAAA...
@@ -235,11 +252,11 @@ class TestBreakpointSequenceHomology(unittest.TestCase):
         b1 = Breakpoint(REF_CHR, 745, strand=STRAND.POS, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 747, strand=STRAND.POS, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2)
-        self.assertEqual(('CT', 'TT'), bpp.breakpoint_sequence_homology(REFERENCE_GENOME))
+        assert bpp.breakpoint_sequence_homology(REFERENCE_GENOME) == ('CT', 'TT')
 
     def test_non_specific_error(self):
         b1 = Breakpoint(REF_CHR, 740, 745, strand=STRAND.POS, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 747, strand=STRAND.POS, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2)
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             bpp.breakpoint_sequence_homology(REFERENCE_GENOME)

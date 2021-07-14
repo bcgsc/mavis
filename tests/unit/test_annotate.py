@@ -1,18 +1,16 @@
 import itertools
 import os
-import unittest
 
-from mavis.annotate.base import ReferenceName
-from mavis.annotate.protein import calculate_orf, Domain, DomainRegion
-from mavis.annotate.variant import IndelCall
+import pytest
 import timeout_decorator
-
-from .mock import Mock, MockFunction
+from mavis.annotate.base import ReferenceName
+from mavis.annotate.protein import Domain, DomainRegion, calculate_orf
+from mavis.annotate.variant import IndelCall
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
-class TestDomainAlignSeq(unittest.TestCase):
+class TestDomainAlignSeq:
     def test_large_combinations_finishes_with_error(self):
         input_seq = (
             'MADDEDYEEVVEYYTEEVVYEEVPGETITKIYETTTTRTSDYEQSETSKPALAQPALAQPASAKPVERRKVIRKKVDPSK'
@@ -273,100 +271,98 @@ class TestDomainAlignSeq(unittest.TestCase):
             regions.append(DomainRegion(p, p + len(seq) - 1, seq=seq))
             p += len(seq)
         d = Domain('name', regions=regions)
-        with self.assertRaises(UserWarning):
+        with pytest.raises(UserWarning):
             d.align_seq(input_seq)
 
 
-class TestCalculateORF(unittest.TestCase):
-    def setUp(self):
-        # load the sequence
-        with open(os.path.join(DATA_DIR, 'calc_orf_test_sequence.fa'), 'r') as fh:
-            self.seq = fh.readlines()[0].strip()
-
+class TestCalculateORF:
     @timeout_decorator.timeout(20)
     def test_very_long(self):
-        calculate_orf(self.seq, 300)
+        # load the sequence
+        with open(os.path.join(DATA_DIR, 'calc_orf_test_sequence.fa'), 'r') as fh:
+            seq = fh.readlines()[0].strip()
+        calculate_orf(seq, 300)
 
 
-class TestReferenceName(unittest.TestCase):
+class TestReferenceName:
     def test_naked_vs_naked_str(self):
-        self.assertEqual('1', ReferenceName('1'))
-        self.assertNotEqual('2', ReferenceName('1'))
-        self.assertTrue(ReferenceName('1') == '1')
-        self.assertTrue(ReferenceName('1') != '2')
+        assert ReferenceName('1') == '1'
+        assert ReferenceName('1') != '2'
+        assert ReferenceName('1') == '1'
+        assert ReferenceName('1') != '2'
 
     def test_naked_vs_prefixed_str(self):
-        self.assertEqual('chr1', ReferenceName('1'))
-        self.assertNotEqual('chr2', ReferenceName('1'))
-        self.assertTrue(ReferenceName('1') == 'chr1')
-        self.assertTrue(ReferenceName('1') != 'chr2')
+        assert ReferenceName('1') == 'chr1'
+        assert ReferenceName('1') != 'chr2'
+        assert ReferenceName('1') == 'chr1'
+        assert ReferenceName('1') != 'chr2'
 
     def test_prefixed_vs_prefixed_str(self):
-        self.assertEqual('chr1', ReferenceName('chr1'))
-        self.assertNotEqual('chr2', ReferenceName('chr1'))
-        self.assertTrue(ReferenceName('chr1') == 'chr1')
-        self.assertTrue(ReferenceName('chr1') != 'chr2')
+        assert ReferenceName('chr1') == 'chr1'
+        assert ReferenceName('chr1') != 'chr2'
+        assert ReferenceName('chr1') == 'chr1'
+        assert ReferenceName('chr1') != 'chr2'
 
     def test_prefixed_vs_naked_str(self):
-        self.assertEqual('1', ReferenceName('chr1'))
-        self.assertNotEqual('2', ReferenceName('chr1'))
-        self.assertTrue(ReferenceName('chr1') == '1')
+        assert ReferenceName('chr1') == '1'
+        assert ReferenceName('chr1') != '2'
+        assert ReferenceName('chr1') == '1'
 
     def test_obj_comparison(self):
         r = ReferenceName('1')
         rprefix = ReferenceName('chr1')
         r2 = ReferenceName('2')
         r2prefix = ReferenceName('chr2')
-        self.assertEqual(r, rprefix)
-        self.assertEqual(rprefix, r)
-        self.assertEqual(rprefix, ReferenceName('chr1'))
-        self.assertEqual(r, ReferenceName('1'))
-        self.assertNotEqual(r2, rprefix)
-        self.assertNotEqual(r2prefix, rprefix)
-        self.assertNotEqual(r2, r)
-        self.assertNotEqual(r2prefix, r)
-        self.assertTrue(r == rprefix)
-        self.assertTrue(r != r2prefix)
-        self.assertFalse(r != rprefix)
+        assert rprefix == r
+        assert r == rprefix
+        assert ReferenceName('chr1') == rprefix
+        assert ReferenceName('1') == r
+        assert rprefix != r2
+        assert rprefix != r2prefix
+        assert r != r2
+        assert r != r2prefix
+        assert r == rprefix
+        assert r != r2prefix
+        assert not r != rprefix
 
     def test_lt(self):
         r = ReferenceName('1')
         rprefix = ReferenceName('chr1')
         r2 = ReferenceName('2')
         r2prefix = ReferenceName('chr2')
-        self.assertTrue(r <= rprefix)
-        self.assertFalse(r < rprefix)
-        self.assertFalse(rprefix < r)
-        self.assertTrue(rprefix <= r)
+        assert r <= rprefix
+        assert not r < rprefix
+        assert not rprefix < r
+        assert rprefix <= r
         for chr1, chr2 in itertools.product([r, rprefix], [r2, r2prefix]):
-            self.assertTrue(chr1 < chr2)
-            self.assertTrue(chr1 <= chr2)
+            assert chr1 < chr2
+            assert chr1 <= chr2
 
     def test_alpha_sort(self):
-        self.assertTrue(ReferenceName('10') < ReferenceName('3'))
-        self.assertTrue(ReferenceName('10') < ReferenceName('chr3'))
-        self.assertTrue(ReferenceName('chr10') < ReferenceName('3'))
-        self.assertTrue(ReferenceName('chr10') < ReferenceName('chr3'))
+        assert ReferenceName('10') < ReferenceName('3')
+        assert ReferenceName('10') < ReferenceName('chr3')
+        assert ReferenceName('chr10') < ReferenceName('3')
+        assert ReferenceName('chr10') < ReferenceName('chr3')
 
     def test_gt(self):
         r = ReferenceName('1')
         rprefix = ReferenceName('chr1')
         r2 = ReferenceName('2')
         r2prefix = ReferenceName('chr2')
-        self.assertTrue(rprefix >= r)
-        self.assertTrue(r >= rprefix)
-        self.assertFalse(r > rprefix)
-        self.assertFalse(rprefix > r)
+        assert rprefix >= r
+        assert r >= rprefix
+        assert not r > rprefix
+        assert not rprefix > r
         for chr1, chr2 in itertools.product([r, rprefix], [r2, r2prefix]):
-            self.assertTrue(chr2 > chr1)
-            self.assertTrue(chr2 >= chr1)
+            assert chr2 > chr1
+            assert chr2 >= chr1
 
     def test_hash(self):
-        self.assertTrue(ReferenceName('3') in {ReferenceName('3')})
-        self.assertTrue(ReferenceName('3') in {ReferenceName('chr3')})
+        assert ReferenceName('3') in {ReferenceName('3')}
+        assert ReferenceName('3') in {ReferenceName('chr3')}
 
 
-class TestIndelCall(unittest.TestCase):
+class TestIndelCall:
     def test_duplication_in_repeat(self):
         ref = 'ASFHGHGSFSFSLLLLLL' 'FLLLLSFSLMVPWSFKW'
         mut = 'ASFHGHGSFSFSLLLLLLL' 'FLLLLSFSLMVPWSFKW'
@@ -374,11 +370,11 @@ class TestIndelCall(unittest.TestCase):
         call = IndelCall(ref, mut)
         print(call)
 
-        self.assertEqual(18, call.nterm_aligned)
-        self.assertEqual(len(ref) - 13 + 1, call.cterm_aligned)
-        self.assertTrue(call.is_dup)
+        assert call.nterm_aligned == 18
+        assert call.cterm_aligned == len(ref) - 13 + 1
+        assert call.is_dup
 
-        self.assertEqual('p.L18dupL', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.L18dupL'
 
     def test_nterminal_extension(self):
 
@@ -387,13 +383,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertFalse(call.nterm_aligned)
-        self.assertEqual(len(call.ref_seq) - 1 + 1, call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('MAF', call.ins_seq)
-        self.assertEqual('', call.del_seq)
+        assert not call.nterm_aligned
+        assert call.cterm_aligned == len(call.ref_seq) - 1 + 1
+        assert not call.is_dup
+        assert call.ins_seq == 'MAF'
+        assert call.del_seq == ''
 
-        self.assertEqual('p.M1ext-3', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.M1ext-3'
 
     def test_nterminal_deletion(self):
         ref = 'MABCDEFGH'
@@ -401,13 +397,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertFalse(call.nterm_aligned)
-        self.assertEqual(len(call.ref_seq) - 4 + 1, call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('', call.ins_seq)
-        self.assertEqual('MAB', call.del_seq)
+        assert not call.nterm_aligned
+        assert call.cterm_aligned == len(call.ref_seq) - 4 + 1
+        assert not call.is_dup
+        assert call.ins_seq == ''
+        assert call.del_seq == 'MAB'
 
-        self.assertEqual('p.M1_B3delMAB', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.M1_B3delMAB'
 
     def test_cterminal_deletion(self):
         ref = 'MABCDEFGH'
@@ -415,13 +411,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertEqual(6, call.nterm_aligned)
-        self.assertFalse(call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('', call.ins_seq)
-        self.assertEqual('FGH', call.del_seq)
+        assert call.nterm_aligned == 6
+        assert not call.cterm_aligned
+        assert not call.is_dup
+        assert call.ins_seq == ''
+        assert call.del_seq == 'FGH'
 
-        self.assertEqual('p.F7_H9delFGH', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.F7_H9delFGH'
 
     def test_cterminal_extension(self):
         ref = 'MABCDEFGH'
@@ -429,13 +425,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertEqual(9, call.nterm_aligned)
-        self.assertFalse(call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('IJK', call.ins_seq)
-        self.assertEqual('', call.del_seq)
+        assert call.nterm_aligned == 9
+        assert not call.cterm_aligned
+        assert not call.is_dup
+        assert call.ins_seq == 'IJK'
+        assert call.del_seq == ''
 
-        self.assertEqual('p.H9ext3', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.H9ext3'
 
     def test_cterminal_stop_extension(self):
         ref = 'MABCDEFGH*'
@@ -443,13 +439,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertEqual(9, call.nterm_aligned)
-        self.assertFalse(call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('IJK', call.ins_seq)
-        self.assertEqual('', call.del_seq)
+        assert call.nterm_aligned == 9
+        assert not call.cterm_aligned
+        assert not call.is_dup
+        assert call.ins_seq == 'IJK'
+        assert call.del_seq == ''
 
-        self.assertEqual('p.*10ext*3', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.*10ext*3'
 
     def test_cterminal_no_orf_ext(self):
         ref = 'MABCDEFGH'
@@ -457,13 +453,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertEqual(9, call.nterm_aligned)
-        self.assertFalse(call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('IJK*', call.ins_seq)
-        self.assertEqual('', call.del_seq)
+        assert call.nterm_aligned == 9
+        assert not call.cterm_aligned
+        assert not call.is_dup
+        assert call.ins_seq == 'IJK*'
+        assert call.del_seq == ''
 
-        self.assertEqual('p.H9ext*4', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.H9ext*4'
 
     def test_single_aa_insertion(self):
         ref = 'MABCDEFGH'
@@ -471,13 +467,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertEqual(4, call.nterm_aligned)
-        self.assertEqual(len(call.ref_seq) - 5 + 1, call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('K', call.ins_seq)
-        self.assertEqual('', call.del_seq)
+        assert call.nterm_aligned == 4
+        assert call.cterm_aligned == len(call.ref_seq) - 5 + 1
+        assert not call.is_dup
+        assert call.ins_seq == 'K'
+        assert call.del_seq == ''
 
-        self.assertEqual('p.C4_D5insK', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.C4_D5insK'
 
     def test_insertion(self):
         ref = 'MABCDEFGH'
@@ -485,13 +481,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertEqual(4, call.nterm_aligned)
-        self.assertEqual(len(call.ref_seq) - 5 + 1, call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('KA', call.ins_seq)
-        self.assertEqual('', call.del_seq)
+        assert call.nterm_aligned == 4
+        assert call.cterm_aligned == len(call.ref_seq) - 5 + 1
+        assert not call.is_dup
+        assert call.ins_seq == 'KA'
+        assert call.del_seq == ''
 
-        self.assertEqual('p.C4_D5insKA', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.C4_D5insKA'
 
     def test_single_aa_deletion(self):
         ref = 'MABCDEFGH'
@@ -499,13 +495,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertEqual(4, call.nterm_aligned)
-        self.assertEqual(len(call.ref_seq) - 6 + 1, call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('', call.ins_seq)
-        self.assertEqual('D', call.del_seq)
+        assert call.nterm_aligned == 4
+        assert call.cterm_aligned == len(call.ref_seq) - 6 + 1
+        assert not call.is_dup
+        assert call.ins_seq == ''
+        assert call.del_seq == 'D'
 
-        self.assertEqual('p.D5delD', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.D5delD'
 
     def test_deletion(self):
         ref = 'MABCDEFGH'
@@ -513,13 +509,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertEqual(4, call.nterm_aligned)
-        self.assertEqual(len(call.ref_seq) - 7 + 1, call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('', call.ins_seq)
-        self.assertEqual('DE', call.del_seq)
+        assert call.nterm_aligned == 4
+        assert call.cterm_aligned == len(call.ref_seq) - 7 + 1
+        assert not call.is_dup
+        assert call.ins_seq == ''
+        assert call.del_seq == 'DE'
 
-        self.assertEqual('p.D5_E6delDE', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.D5_E6delDE'
 
     def test_deletion_in_repeat(self):
         ref = 'MABCDEEEEEEFGH'
@@ -527,13 +523,13 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertEqual(9, call.nterm_aligned)
-        self.assertEqual(len(call.ref_seq) - 8 + 1, call.cterm_aligned)
-        self.assertFalse(call.is_dup)
-        self.assertEqual('', call.ins_seq)
-        self.assertEqual('EE', call.del_seq)
+        assert call.nterm_aligned == 9
+        assert call.cterm_aligned == len(call.ref_seq) - 8 + 1
+        assert not call.is_dup
+        assert call.ins_seq == ''
+        assert call.del_seq == 'EE'
 
-        self.assertEqual('p.E10_E11delEE', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.E10_E11delEE'
 
     def test_insertion_in_repeat(self):
         ref = 'MABCDEEEEFGH'
@@ -541,10 +537,10 @@ class TestIndelCall(unittest.TestCase):
 
         call = IndelCall(ref, mut)
         print(call)
-        self.assertEqual(9, call.nterm_aligned)
-        self.assertEqual(len(call.ref_seq) - 6 + 1, call.cterm_aligned)
-        self.assertTrue(call.is_dup)
-        self.assertEqual('EE', call.ins_seq)
-        self.assertEqual('', call.del_seq)
+        assert call.nterm_aligned == 9
+        assert call.cterm_aligned == len(call.ref_seq) - 6 + 1
+        assert call.is_dup
+        assert call.ins_seq == 'EE'
+        assert call.del_seq == ''
 
-        self.assertEqual('p.E8_E9dupEE', call.hgvs_protein_notation())
+        assert call.hgvs_protein_notation() == 'p.E8_E9dupEE'

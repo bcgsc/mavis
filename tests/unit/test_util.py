@@ -1,417 +1,361 @@
-import os
-import unittest
-
+import pytest
 from mavis.constants import COLUMNS, ORIENT, STRAND
 from mavis.error import NotSpecifiedError
-from mavis.util import (
-    cast,
-    ENV_VAR_PREFIX,
-    get_env_variable,
-    MavisNamespace,
-    WeakMavisNamespace,
-    read_bpp_from_input_file,
-    get_connected_components,
-)
+from mavis.util import cast, get_connected_components, read_bpp_from_input_file
 
-from .mock import Mock
+from ..util import todo
 
 
-class MockFileHandle(Mock):
-    def __init__(self, lines):
-        Mock.__init__(self, lines=lines)
-
-    def readlines(self):
-        return self.lines
-
-
-class TestGetConnectedComponents(unittest.TestCase):
+class TestGetConnectedComponents:
     def test_no_nodes(self):
-        self.assertEqual([], get_connected_components({}))
+        assert get_connected_components({}) == []
 
     def test_no_connections(self):
         graph = {1: {}, 2: {}, 3: {}}
         components = get_connected_components(graph)
-        self.assertEqual(3, len(components))
+        assert len(components) == 3
 
     def test_fully_connected(self):
         graph = {1: {2, 3, 1}, 2: {1, 2, 2}, 3: {3, 2}}
         components = get_connected_components(graph)
-        self.assertEqual(1, len(components))
-        self.assertEqual([{1, 2, 3}], components)
+        assert len(components) == 1
+        assert components == [{1, 2, 3}]
 
     def test_multiple_components(self):
         graph = {1: {2}, 2: {3}, 3: {4}, 6: {7, 8}}
         components = get_connected_components(graph)
-        self.assertEqual(2, len(components))
-        self.assertEqual({1, 2, 3, 4}, components[0])
-        self.assertEqual({6, 7, 8}, components[1])
+        assert len(components) == 2
+        assert components[0] == {1, 2, 3, 4}
+        assert components[1] == {6, 7, 8}
 
 
-class TestCast(unittest.TestCase):
+class TestCast:
     def test_float(self):
-        self.assertEqual(type(1.0), type(cast('1', float)))
-        self.assertNotEqual(type(1.0), type(cast('1', int)))
+        assert type(cast('1', float)) == type(1.0)  # noqa: E721
+        assert type(cast('1', int)) != type(1.0)  # noqa: E721
 
     def test_boolean(self):
-        self.assertEqual(type(False), type(cast('f', bool)))
-        self.assertEqual(type(False), type(cast('false', bool)))
-        self.assertFalse(cast('f', bool))
-        self.assertFalse(cast('false', bool))
-        self.assertFalse(cast('0', bool))
-        self.assertFalse(cast('F', bool))
+        assert type(cast('f', bool)) == type(False)  # noqa: E721
+        assert type(cast('false', bool)) == type(False)  # noqa: E721
+        assert not cast('f', bool)
+        assert not cast('false', bool)
+        assert not cast('0', bool)
+        assert not cast('F', bool)
 
 
-class TestGetEnvVariable(unittest.TestCase):
-    def setUp(self):
-        if 'MAVIS_TEST_ENV' in os.environ:
-            del os.environ['MAVIS_TEST_ENV']
-
-    def test_not_set(self):
-        self.assertEqual(1, get_env_variable('test_env', 1))
-
-    def test_needs_casting(self):
-        os.environ['MAVIS_TEST_ENV'] = '15'
-        self.assertEqual(15, get_env_variable('test_env', 1))
+def mock_file_content(row):
+    header = [c for c in row]
+    line = [row[c] for c in header]
+    lines = ['\t'.join(header), '\t'.join([str(v) for v in line])]
+    return '\n'.join(lines)
 
 
-class TestMavisNamespace(unittest.TestCase):
-    def setUp(self):
-        self.namespace = MavisNamespace()
+class TestReadBreakpointPairsFromFile:
+    def test_break1_strand_ns(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
 
-    def test_item_getter(self):
-        self.namespace.thing = 2
-        self.assertEqual(2, self.namespace['thing'])
-        self.assertEqual(2, self.namespace.thing)
-
-    def test_items(self):
-        print(self.namespace)
-        self.namespace.thing = 2
-        print(self.namespace)
-        self.namespace.otherthing = 3
-        print(self.namespace)
-        self.assertEqual({'thing': 2, 'otherthing': 3}, self.namespace._members)
-        self.assertEqual([('otherthing', 3), ('thing', 2)], list(sorted(self.namespace.items())))
-
-
-class TestWeakMavisNamespace(unittest.TestCase):
-    def setUp(self):
-        self.namespace = WeakMavisNamespace(a=1, b=2, c=3)
-        print(self.namespace._members)
-        for v in ['a', 'b', 'c']:
-            v = ENV_VAR_PREFIX + v.upper()
-            if v in os.environ:
-                del os.environ[v]
-
-    def test_no_env_set(self):
-        self.assertEqual(1, self.namespace.a)
-        self.assertEqual(1, self.namespace['a'])
-
-    def test_env_overrides_default(self):
-        os.environ['MAVIS_A'] = '5'
-        env_name = self.namespace.get_env_name('a')
-        self.assertEqual('MAVIS_A', env_name)
-        self.assertEqual('5', os.environ[env_name])
-        self.assertTrue(self.namespace.is_env_overwritable('a'))
-        self.assertEqual(5, self.namespace.a)
-        self.assertEqual(1, self.namespace._members['a'])
-        self.assertEqual(5, self.namespace['a'])
-
-    def test_error_on_invalid_attr(self):
-        with self.assertRaises(AttributeError):
-            self.namespace.other
-
-    def test_iterate_keys(self):
-        self.assertEqual(['a', 'b', 'c'], list(self.namespace.keys()))
-        self.assertEqual(['a', 'b', 'c'], [k for k in self.namespace])
-
-
-class TestReadBreakpointPairsFromFile(unittest.TestCase):
-    def build_filehandle(self, row):
-        header = [c for c in row]
-        line = [row[c] for c in header]
-        lines = ['\t'.join(header), '\t'.join([str(v) for v in line])]
-        return MockFileHandle(lines)
-
-    def test_break1_strand_ns(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.NS,
-                COLUMNS.break1_orientation: ORIENT.LEFT,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.POS,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: True,
-                COLUMNS.opposing_strands: False,
-            }
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.NS,
+                    COLUMNS.break1_orientation: ORIENT.LEFT,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.POS,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: True,
+                    COLUMNS.opposing_strands: False,
+                }
+            )
         )
-        with self.assertRaises(NotSpecifiedError):
-            bpps = read_bpp_from_input_file(fh, expand_strand=False, expand_orient=True)
+        with pytest.raises(NotSpecifiedError):
+            bpps = read_bpp_from_input_file(input_file, expand_strand=False, expand_orient=True)
             for b in bpps:
                 print(b)
 
-    def test_stranded_no_expand_error(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.NS,
-                COLUMNS.break1_orientation: ORIENT.LEFT,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.POS,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: True,
-                COLUMNS.opposing_strands: False,
-            }
+    def test_stranded_no_expand_error(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.NS,
+                    COLUMNS.break1_orientation: ORIENT.LEFT,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.POS,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: True,
+                    COLUMNS.opposing_strands: False,
+                }
+            )
         )
-        bpps = read_bpp_from_input_file(fh, expand_strand=True, expand_orient=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.POS, bpps[0].break2.strand)
+        bpps = read_bpp_from_input_file(input_file, expand_strand=True, expand_orient=True)
+        assert len(bpps) == 1
+        assert bpps[0].break1.strand == STRAND.POS
+        assert bpps[0].break2.strand == STRAND.POS
 
-    def test_break2_strand_ns(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.POS,
-                COLUMNS.break1_orientation: ORIENT.LEFT,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.NS,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: True,
-                COLUMNS.opposing_strands: False,
-            }
+    def test_break2_strand_ns(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.POS,
+                    COLUMNS.break1_orientation: ORIENT.LEFT,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.NS,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: True,
+                    COLUMNS.opposing_strands: False,
+                }
+            )
         )
 
-        with self.assertRaises(NotSpecifiedError) as err:
+        with pytest.raises(NotSpecifiedError) as err:
             print(err)
-            bpps = read_bpp_from_input_file(fh, expand_strand=False, expand_orient=False)
+            bpps = read_bpp_from_input_file(input_file, expand_strand=False, expand_orient=False)
 
-        bpps = read_bpp_from_input_file(fh, expand_strand=True, expand_orient=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break2.strand)
+        bpps = read_bpp_from_input_file(input_file, expand_strand=True, expand_orient=True)
+        assert len(bpps) == 1
+        assert bpps[0].break2.strand == STRAND.POS
 
-    def test_stranded_expand_strands_and_orient(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.NS,
-                COLUMNS.break1_orientation: ORIENT.LEFT,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.NS,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: True,
-                COLUMNS.opposing_strands: False,
-            }
+    def test_stranded_expand_strands_and_orient(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.NS,
+                    COLUMNS.break1_orientation: ORIENT.LEFT,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.NS,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: True,
+                    COLUMNS.opposing_strands: False,
+                }
+            )
         )
-        bpps = read_bpp_from_input_file(fh, expand_strand=True, expand_orient=False)
-        self.assertEqual(2, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.POS, bpps[0].break2.strand)
-        self.assertEqual(STRAND.NEG, bpps[1].break1.strand)
-        self.assertEqual(STRAND.NEG, bpps[1].break2.strand)
+        bpps = read_bpp_from_input_file(input_file, expand_strand=True, expand_orient=False)
+        assert len(bpps) == 2
+        assert bpps[0].break1.strand == STRAND.POS
+        assert bpps[0].break2.strand == STRAND.POS
+        assert bpps[1].break1.strand == STRAND.NEG
+        assert bpps[1].break2.strand == STRAND.NEG
 
-    def test_expand_strands_and_orient(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.NS,
-                COLUMNS.break1_orientation: ORIENT.LEFT,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.NS,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: False,
-                COLUMNS.opposing_strands: False,
-            }
+    def test_expand_strands_and_orient(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.NS,
+                    COLUMNS.break1_orientation: ORIENT.LEFT,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.NS,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: False,
+                    COLUMNS.opposing_strands: False,
+                }
+            )
         )
-        bpps = read_bpp_from_input_file(fh, expand_strand=True, expand_orient=False)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.NS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NS, bpps[0].break2.strand)
+        bpps = read_bpp_from_input_file(input_file, expand_strand=True, expand_orient=False)
+        assert len(bpps) == 1
+        assert bpps[0].break1.strand == STRAND.NS
+        assert bpps[0].break2.strand == STRAND.NS
 
-    def test_stranded_expand_strands_not_orient(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.NS,
-                COLUMNS.break1_orientation: ORIENT.LEFT,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.NS,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: True,
-                COLUMNS.opposing_strands: False,
-            }
+    def test_stranded_expand_strands_not_orient(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.NS,
+                    COLUMNS.break1_orientation: ORIENT.LEFT,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.NS,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: True,
+                    COLUMNS.opposing_strands: False,
+                }
+            )
         )
-        bpps = read_bpp_from_input_file(fh, expand_strand=True, expand_orient=True)
-        self.assertEqual(2, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.POS, bpps[0].break2.strand)
-        self.assertEqual(STRAND.NEG, bpps[1].break1.strand)
-        self.assertEqual(STRAND.NEG, bpps[1].break2.strand)
+        bpps = read_bpp_from_input_file(input_file, expand_strand=True, expand_orient=True)
+        assert len(bpps) == 2
+        assert bpps[0].break1.strand == STRAND.POS
+        assert bpps[0].break2.strand == STRAND.POS
+        assert bpps[1].break1.strand == STRAND.NEG
+        assert bpps[1].break2.strand == STRAND.NEG
 
-    def test_expand_orient_not_strand(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.NS,
-                COLUMNS.break1_orientation: ORIENT.LEFT,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.NS,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: False,
-                COLUMNS.opposing_strands: False,
-            }
+    def test_expand_orient_not_strand(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.NS,
+                    COLUMNS.break1_orientation: ORIENT.LEFT,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.NS,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: False,
+                    COLUMNS.opposing_strands: False,
+                }
+            )
         )
-        bpps = read_bpp_from_input_file(fh, expand_strand=False, expand_orient=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.NS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NS, bpps[0].break2.strand)
+        bpps = read_bpp_from_input_file(input_file, expand_strand=False, expand_orient=True)
+        assert len(bpps) == 1
+        assert bpps[0].break1.strand == STRAND.NS
+        assert bpps[0].break2.strand == STRAND.NS
 
-    def test_break1_orient_ns(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.POS,
-                COLUMNS.break1_orientation: ORIENT.NS,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.POS,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: False,
-                COLUMNS.opposing_strands: False,
-            }
+    def test_break1_orient_ns(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.POS,
+                    COLUMNS.break1_orientation: ORIENT.NS,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.POS,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: False,
+                    COLUMNS.opposing_strands: False,
+                }
+            )
         )
-        bpps = read_bpp_from_input_file(fh, expand_strand=False, expand_orient=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
+        bpps = read_bpp_from_input_file(input_file, expand_strand=False, expand_orient=True)
+        assert len(bpps) == 1
+        assert bpps[0].break1.orient == ORIENT.LEFT
 
-    def test_break2_orient_ns(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.POS,
-                COLUMNS.break1_orientation: ORIENT.NS,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.POS,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: False,
-                COLUMNS.opposing_strands: False,
-            }
+    @todo
+    def test_break2_orient_ns(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.POS,
+                    COLUMNS.break1_orientation: ORIENT.NS,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.POS,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: False,
+                    COLUMNS.opposing_strands: False,
+                }
+            )
         )
-        bpps = read_bpp_from_input_file(fh, expand_strand=False, expand_orient=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(ORIENT.LEFT, bpps[0].break1.orient)
-        raise unittest.SkipTest('TODO')
+        bpps = read_bpp_from_input_file(input_file, expand_strand=False, expand_orient=True)
+        assert len(bpps) == 1
+        assert bpps[0].break1.orient == ORIENT.LEFT
 
-    def test_both_break_orient_ns(self):
-        raise unittest.SkipTest('TODO')
-
-    def test_base_case(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.POS,
-                COLUMNS.break1_orientation: ORIENT.RIGHT,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.NEG,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: True,
-                COLUMNS.opposing_strands: True,
-            }
+    def test_base_case(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.POS,
+                    COLUMNS.break1_orientation: ORIENT.RIGHT,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.NEG,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: True,
+                    COLUMNS.opposing_strands: True,
+                }
+            )
         )
-        bpps = read_bpp_from_input_file(fh, expand_strand=False, expand_orient=False)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(ORIENT.RIGHT, bpps[0].break1.orient)
-        self.assertEqual(True, bpps[0].opposing_strands)
+        bpps = read_bpp_from_input_file(input_file, expand_strand=False, expand_orient=False)
+        assert len(bpps) == 1
+        assert bpps[0].break1.orient == ORIENT.RIGHT
+        assert bpps[0].opposing_strands is True
 
-    def test_unstranded_with_strand_calls(self):
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.POS,
-                COLUMNS.break1_orientation: ORIENT.RIGHT,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.NEG,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: False,
-                COLUMNS.opposing_strands: True,
-            }
+    def test_unstranded_with_strand_calls(self, tmp_path):
+        input_file = tmp_path / "inputs.tsv"
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.POS,
+                    COLUMNS.break1_orientation: ORIENT.RIGHT,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.NEG,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: False,
+                    COLUMNS.opposing_strands: True,
+                }
+            )
         )
-        bpps = read_bpp_from_input_file(fh, expand_strand=False, expand_orient=False)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.NS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NS, bpps[0].break2.strand)
+        bpps = read_bpp_from_input_file(input_file, expand_strand=False, expand_orient=False)
+        assert len(bpps) == 1
+        assert bpps[0].break1.strand == STRAND.NS
+        assert bpps[0].break2.strand == STRAND.NS
 
-        bpps = read_bpp_from_input_file(fh, expand_strand=False, expand_orient=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.NS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NS, bpps[0].break2.strand)
+        input_file = tmp_path / "inputs2.tsv"
 
-        fh = self.build_filehandle(
-            {
-                COLUMNS.break1_chromosome: '1',
-                COLUMNS.break1_position_start: 1,
-                COLUMNS.break1_position_end: 1,
-                COLUMNS.break1_strand: STRAND.POS,
-                COLUMNS.break1_orientation: ORIENT.RIGHT,
-                COLUMNS.break2_chromosome: '1',
-                COLUMNS.break2_position_start: 10,
-                COLUMNS.break2_position_end: 10,
-                COLUMNS.break2_strand: STRAND.NEG,
-                COLUMNS.break2_orientation: ORIENT.RIGHT,
-                COLUMNS.stranded: True,
-                COLUMNS.opposing_strands: True,
-            }
+        input_file.write_text(
+            mock_file_content(
+                {
+                    COLUMNS.break1_chromosome: '1',
+                    COLUMNS.break1_position_start: 1,
+                    COLUMNS.break1_position_end: 1,
+                    COLUMNS.break1_strand: STRAND.POS,
+                    COLUMNS.break1_orientation: ORIENT.RIGHT,
+                    COLUMNS.break2_chromosome: '1',
+                    COLUMNS.break2_position_start: 10,
+                    COLUMNS.break2_position_end: 10,
+                    COLUMNS.break2_strand: STRAND.NEG,
+                    COLUMNS.break2_orientation: ORIENT.RIGHT,
+                    COLUMNS.stranded: True,
+                    COLUMNS.opposing_strands: True,
+                }
+            )
         )
 
-        bpps = read_bpp_from_input_file(fh, expand_strand=True, expand_orient=False)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NEG, bpps[0].break2.strand)
-
-        bpps = read_bpp_from_input_file(fh, expand_strand=True, expand_orient=True)
-        self.assertEqual(1, len(bpps))
-        self.assertEqual(STRAND.POS, bpps[0].break1.strand)
-        self.assertEqual(STRAND.NEG, bpps[0].break2.strand)
+        bpps = read_bpp_from_input_file(input_file, expand_strand=True, expand_orient=False)
+        assert len(bpps) == 1
+        assert bpps[0].break1.strand == STRAND.POS
+        assert bpps[0].break2.strand == STRAND.NEG

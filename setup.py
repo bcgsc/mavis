@@ -3,7 +3,7 @@ import re
 
 from setuptools import find_packages, setup
 
-VERSION = '2.2.7'
+VERSION = '2.2.8'
 
 
 def parse_md_readme():
@@ -15,7 +15,7 @@ def parse_md_readme():
 
         rst_lines = parse_from_file('README.md').split('\n')
         long_description = [
-            '.. image:: http://mavis.bcgsc.ca/images/acronym.svg\n\n|\n'
+            '.. image:: http://mavis.bcgsc.ca/docs/latest/_static/acronym.svg\n\n|\n'
         ]  # backup since pip can't handle raw directives
         i = 0
         while i < len(rst_lines):
@@ -85,10 +85,12 @@ INSTALL_REQS = [
     'colour',
     'networkx==1.11.0',
     'numpy>=1.13.1',
+    'pandas>=1.1, <2',
     'pysam>=0.9, <=0.15.2',
     'pyvcf==0.6.8',
     'shortuuid>=0.5.0',
     'svgwrite',
+    'mavis_config>=1.1.0, <2.0.0',
 ]
 
 DEPLOY_REQS = ['twine', 'm2r', 'wheel']
@@ -99,20 +101,21 @@ setup(
     version='{}'.format(VERSION),
     url='https://github.com/bcgsc/mavis.git',
     download_url='https://github.com/bcgsc/mavis/archive/v{}.tar.gz'.format(VERSION),
-    packages=find_packages(exclude=['tests']),
+    package_dir={'': 'src'},
+    packages=find_packages(where='src'),
     description='A Structural Variant Post-Processing Package',
     long_description=parse_md_readme(),
     install_requires=INSTALL_REQS,
     extras_require={
         'docs': DOC_REQS,
         'test': TEST_REQS,
-        'dev': ['black', 'flake8'] + DOC_REQS + TEST_REQS + DEPLOY_REQS,
+        'dev': ['black==20.8b1', 'flake8'] + DOC_REQS + TEST_REQS + DEPLOY_REQS,
         'deploy': DEPLOY_REQS,
         'tools': ['pyensembl', 'simplejson'],
     },
     tests_require=TEST_REQS,
     setup_requires=['pip>=9.0.0', 'setuptools>=36.0.0'],
-    python_requires='>=3.2',
+    python_requires='>=3.6',
     author='Caralyn Reisle',
     author_email='creisle@bcgsc.ca',
     test_suite='tests',
@@ -122,6 +125,8 @@ setup(
             'calculate_ref_alt_counts = tools.calculate_ref_alt_counts:main',
         ]
     },
+    include_package_data=True,
+    data_files=[('mavis', ['src/mavis/schemas/config.json', 'src/mavis/schemas/overlay.json'])],
     project_urls={'mavis': 'http://mavis.bcgsc.ca'},
 )
 check_nonpython_dependencies()

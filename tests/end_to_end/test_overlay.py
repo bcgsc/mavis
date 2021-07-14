@@ -1,30 +1,38 @@
+import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
-import unittest
-
 from unittest.mock import patch
 
+import pytest
 from mavis.constants import SUBCOMMAND
 from mavis.main import main
 
-from . import glob_exists
-from ..util import get_data
-
+from ..util import get_data, glob_exists
 
 ANNOTATIONS = get_data('annotations_subsample.json')
 BAM = get_data('mock_reads_for_events.sorted.bam')
 
 
-class TestOverlayOptions(unittest.TestCase):
-    def setUp(self):
-        # create the temp output directory to store file outputs
-        self.temp_output = tempfile.mkdtemp()
-        print('output dir', self.temp_output)
+@pytest.fixture
+def output_dir():
+    temp_output = tempfile.mkdtemp()
+    yield temp_output
+    shutil.rmtree(temp_output)
 
-    def test_basic(self):
+
+@pytest.fixture(scope='module')
+def config_json():
+    _, p = tempfile.mkstemp()
+    print(p)
+    with open(p, 'w') as fh:
+        fh.write(json.dumps({'reference.annotations': [ANNOTATIONS]}))
+    yield p
+
+
+class TestOverlayOptions:
+    def test_basic(self, config_json, output_dir):
         with patch.object(
             sys,
             'argv',
@@ -32,22 +40,21 @@ class TestOverlayOptions(unittest.TestCase):
                 'mavis',
                 SUBCOMMAND.OVERLAY,
                 'GAGE4',
-                '--annotations',
-                ANNOTATIONS,
+                '--config',
+                config_json,
                 '--output',
-                self.temp_output,
+                output_dir,
             ],
         ):
             try:
-                print(sys.argv)
                 returncode = main()
             except SystemExit as err:
-                self.assertEqual(0, err.code)
+                assert err.code == 0
             else:
-                self.assertEqual(0, returncode)
-                self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
+                assert returncode is None
+                assert glob_exists(os.path.join(output_dir, '*GAGE4*.svg'))
 
-    def test_marker(self):
+    def test_marker(self, config_json, output_dir):
         with patch.object(
             sys,
             'argv',
@@ -55,10 +62,10 @@ class TestOverlayOptions(unittest.TestCase):
                 'mavis',
                 SUBCOMMAND.OVERLAY,
                 'GAGE4',
-                '--annotations',
-                ANNOTATIONS,
+                '--config',
+                config_json,
                 '--output',
-                self.temp_output,
+                output_dir,
                 '--marker',
                 'm',
                 '49364900',
@@ -67,12 +74,12 @@ class TestOverlayOptions(unittest.TestCase):
             try:
                 returncode = main()
             except SystemExit as err:
-                self.assertEqual(0, err.code)
+                assert err.code == 0
             else:
-                self.assertEqual(0, returncode)
-                self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
+                assert returncode is None
+                assert glob_exists(os.path.join(output_dir, '*GAGE4*.svg'))
 
-    def test_marker_range(self):
+    def test_marker_range(self, config_json, output_dir):
         with patch.object(
             sys,
             'argv',
@@ -80,10 +87,10 @@ class TestOverlayOptions(unittest.TestCase):
                 'mavis',
                 SUBCOMMAND.OVERLAY,
                 'GAGE4',
-                '--annotations',
-                ANNOTATIONS,
+                '--config',
+                config_json,
                 '--output',
-                self.temp_output,
+                output_dir,
                 '--marker',
                 'm',
                 '49364900',
@@ -93,12 +100,12 @@ class TestOverlayOptions(unittest.TestCase):
             try:
                 returncode = main()
             except SystemExit as err:
-                self.assertEqual(0, err.code)
+                assert err.code == 0
             else:
-                self.assertEqual(0, returncode)
-                self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
+                assert returncode is None
+                assert glob_exists(os.path.join(output_dir, '*GAGE4*.svg'))
 
-    def test_marker_not_enough_args(self):
+    def test_marker_not_enough_args(self, config_json, output_dir):
         with patch.object(
             sys,
             'argv',
@@ -106,10 +113,10 @@ class TestOverlayOptions(unittest.TestCase):
                 'mavis',
                 SUBCOMMAND.OVERLAY,
                 'GAGE4',
-                '--annotations',
-                ANNOTATIONS,
+                '--config',
+                config_json,
                 '--output',
-                self.temp_output,
+                output_dir,
                 '--marker',
                 'm',
             ],
@@ -117,10 +124,10 @@ class TestOverlayOptions(unittest.TestCase):
             try:
                 returncode = main()
             except SystemExit as err:
-                self.assertNotEqual(0, err.code)
+                assert err.code != 0
             else:
-                self.assertNotEqual(0, returncode)
-                self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
+                assert returncode is None
+                assert glob_exists(os.path.join(output_dir, '*GAGE4*.svg'))
 
         with patch.object(
             sys,
@@ -128,23 +135,23 @@ class TestOverlayOptions(unittest.TestCase):
             [
                 'mavis',
                 SUBCOMMAND.OVERLAY,
-                '--annotations',
-                ANNOTATIONS,
+                '--config',
+                config_json,
                 'GAGE4',
                 '--output',
-                self.temp_output,
+                output_dir,
                 '--marker',
             ],
         ):
             try:
                 returncode = main()
             except SystemExit as err:
-                self.assertNotEqual(0, err.code)
+                assert err.code != 0
             else:
-                self.assertNotEqual(0, returncode)
-                self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
+                assert returncode is None
+                assert glob_exists(os.path.join(output_dir, '*GAGE4*.svg'))
 
-    def test_marker_not_int(self):
+    def test_marker_not_int(self, config_json, output_dir):
         with patch.object(
             sys,
             'argv',
@@ -152,10 +159,10 @@ class TestOverlayOptions(unittest.TestCase):
                 'mavis',
                 SUBCOMMAND.OVERLAY,
                 'GAGE4',
-                '--annotations',
-                ANNOTATIONS,
+                '--config',
+                config_json,
                 '--output',
-                self.temp_output,
+                output_dir,
                 '--marker',
                 'm',
                 'k',
@@ -164,12 +171,12 @@ class TestOverlayOptions(unittest.TestCase):
             try:
                 returncode = main()
             except SystemExit as err:
-                self.assertNotEqual(0, err.code)
+                assert err.code != 0
             else:
-                self.assertNotEqual(0, returncode)
-                self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
+                assert returncode is None
+                assert glob_exists(os.path.join(output_dir, '*GAGE4*.svg'))
 
-    def test_read_depth_plot(self):
+    def test_read_depth_plot(self, config_json, output_dir):
         with patch.object(
             sys,
             'argv',
@@ -177,10 +184,10 @@ class TestOverlayOptions(unittest.TestCase):
                 'mavis',
                 SUBCOMMAND.OVERLAY,
                 'GAGE4',
-                '--annotations',
-                ANNOTATIONS,
+                '--config',
+                config_json,
                 '--output',
-                self.temp_output,
+                output_dir,
                 '--read_depth_plot',
                 'axis',
                 BAM,
@@ -189,12 +196,12 @@ class TestOverlayOptions(unittest.TestCase):
             try:
                 returncode = main()
             except SystemExit as err:
-                self.assertEqual(0, err.code)
+                assert err.code == 0
             else:
-                self.assertEqual(0, returncode)
-                self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
+                assert returncode is None
+                assert glob_exists(os.path.join(output_dir, '*GAGE4*.svg'))
 
-    def test_read_depth_plot_binned(self):
+    def test_read_depth_plot_binned(self, config_json, output_dir):
         with patch.object(
             sys,
             'argv',
@@ -202,10 +209,10 @@ class TestOverlayOptions(unittest.TestCase):
                 'mavis',
                 SUBCOMMAND.OVERLAY,
                 'GAGE4',
-                '--annotations',
-                ANNOTATIONS,
+                '--config',
+                config_json,
                 '--output',
-                self.temp_output,
+                output_dir,
                 '--read_depth_plot',
                 'axis',
                 BAM,
@@ -215,12 +222,12 @@ class TestOverlayOptions(unittest.TestCase):
             try:
                 returncode = main()
             except SystemExit as err:
-                self.assertEqual(0, err.code)
+                assert err.code == 0
             else:
-                self.assertEqual(0, returncode)
-                self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
+                assert returncode is None
+                assert glob_exists(os.path.join(output_dir, '*GAGE4*.svg'))
 
-    def test_read_depth_plot_not_binned_but_stranded(self):
+    def test_read_depth_plot_not_binned_but_stranded(self, config_json, output_dir):
         # no ymax
         with patch.object(
             sys,
@@ -229,10 +236,10 @@ class TestOverlayOptions(unittest.TestCase):
                 'mavis',
                 SUBCOMMAND.OVERLAY,
                 'GAGE4',
-                '--annotations',
-                ANNOTATIONS,
+                '--config',
+                config_json,
                 '--output',
-                self.temp_output,
+                output_dir,
                 '--read_depth_plot',
                 'axis',
                 BAM,
@@ -244,11 +251,7 @@ class TestOverlayOptions(unittest.TestCase):
             try:
                 returncode = main()
             except SystemExit as err:
-                self.assertEqual(0, err.code)
+                assert err.code == 0
             else:
-                self.assertEqual(0, returncode)
-                self.assertTrue(glob_exists(os.path.join(self.temp_output, '*GAGE4*.svg')))
-
-    def tearDown(self):
-        # remove the temp directory and outputs
-        shutil.rmtree(self.temp_output)
+                assert returncode is None
+                assert glob_exists(os.path.join(output_dir, '*GAGE4*.svg'))
