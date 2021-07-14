@@ -15,7 +15,7 @@ CLUSTERED_EVENTS = get_data('clustering_input.tab')
 REF_CHR = 'fake'
 
 
-class TestFullClustering(unittest.TestCase):
+class TestFullClustering:
     def test_mocked_events(self):
         # none of the 24 events in the mocked file should cluster together
         # if we change the mock file we may need to update this function
@@ -26,7 +26,7 @@ class TestFullClustering(unittest.TestCase):
             if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
                 bpps.append(bpp)
                 print(bpp)
-        self.assertEqual(28, len(bpps))
+        assert len(bpps) == 28
         clusters = merge_breakpoint_pairs(bpps, 10, 10)
 
         for cluster, input_pairs in sorted(
@@ -35,8 +35,8 @@ class TestFullClustering(unittest.TestCase):
             print(cluster)
             for ip in input_pairs:
                 print('\t', ip)
-            self.assertEqual(1, len(input_pairs))
-        self.assertEqual(len(bpps), len(clusters))
+            assert len(input_pairs) == 1
+        assert len(clusters) == len(bpps)
 
     def test_clustering_events(self):
         # this file contains 2 events that should be clustered and produce a valid bpp
@@ -47,10 +47,10 @@ class TestFullClustering(unittest.TestCase):
             if bpp.data[COLUMNS.protocol] == PROTOCOL.GENOME:
                 bpps.append(bpp)
                 print(bpp)
-        self.assertEqual(2, len(bpps))
+        assert len(bpps) == 2
         clusters = merge_breakpoint_pairs(bpps, 200, 25)
 
-        self.assertEqual(1, len(clusters))
+        assert len(clusters) == 1
 
         for cluster, input_pairs in sorted(
             clusters.items(), key=lambda x: (x[1][0].break1.chr, x[1][0].break2.chr)
@@ -60,17 +60,17 @@ class TestFullClustering(unittest.TestCase):
                 print('\t', ip)
             print(cluster.flatten())
             # BPP(Breakpoint(15:67333604L), Breakpoint(15:67333606R), opposing=False)
-            self.assertEqual('L', cluster.break1.orient)
-            self.assertEqual('R', cluster.break2.orient)
-            self.assertEqual('15', cluster.break1.chr)
-            self.assertEqual('15', cluster.break2.chr)
-            self.assertEqual(67333604, cluster.break1.start)
-            self.assertEqual(67333606, cluster.break2.start)
-            self.assertEqual(67333604, cluster.break1.end)
-            self.assertEqual(67333606, cluster.break2.end)
+            assert cluster.break1.orient == 'L'
+            assert cluster.break2.orient == 'R'
+            assert cluster.break1.chr == '15'
+            assert cluster.break2.chr == '15'
+            assert cluster.break1.start == 67333604
+            assert cluster.break2.start == 67333606
+            assert cluster.break1.end == 67333604
+            assert cluster.break2.end == 67333606
 
 
-class TestMergeBreakpointPairs(unittest.TestCase):
+class TestMergeBreakpointPairs:
     def test_order_is_retained(self):
         # BPP(Breakpoint(1:1925143-1925155R), Breakpoint(1:1925144L), opposing=False)
         # >>  BPP(Breakpoint(1:1925144L), Breakpoint(1:1925144-1925158R), opposing=False)
@@ -93,10 +93,10 @@ class TestMergeBreakpointPairs(unittest.TestCase):
         for merge, inputs in mapping.items():
             print(merge)
             print(inputs)
-        self.assertEqual(1, len(mapping))
+        assert len(mapping) == 1
         merge = list(mapping)[0]
-        self.assertEqual('L', merge.break1.orient)
-        self.assertEqual('R', merge.break2.orient)
+        assert merge.break1.orient == 'L'
+        assert merge.break2.orient == 'R'
 
     def test_merging_identical_large_inputs(self):
         b1 = BreakpointPair(
@@ -110,17 +110,17 @@ class TestMergeBreakpointPairs(unittest.TestCase):
             opposing_strands=False,
         )
         mapping = merge_breakpoint_pairs([b1, b2], 100, 25, verbose=True)
-        self.assertEqual(1, len(mapping))
+        assert len(mapping) == 1
         merge = list(mapping)[0]
-        self.assertEqual(2, len(mapping[merge]))
-        self.assertEqual('L', merge.break1.orient)
-        self.assertEqual('R', merge.break2.orient)
-        self.assertEqual('11', merge.break1.chr)
-        self.assertEqual('11', merge.break2.chr)
-        self.assertEqual(12856838, merge.break1.start)
-        self.assertEqual(12856840, merge.break2.start)  # putative indel will be shifted
-        self.assertEqual(12897006, merge.break1.end)
-        self.assertEqual(12897006, merge.break2.end)
+        assert len(mapping[merge]) == 2
+        assert merge.break1.orient == 'L'
+        assert merge.break2.orient == 'R'
+        assert merge.break1.chr == '11'
+        assert merge.break2.chr == '11'
+        assert merge.break1.start == 12856838
+        assert merge.break2.start == 12856840  # putative indel will be shifted
+        assert merge.break1.end == 12897006
+        assert merge.break2.end == 12897006
 
     def test_events_separate(self):
         bpps = [
@@ -150,28 +150,28 @@ class TestMergeBreakpointPairs(unittest.TestCase):
             ),
         ]
         mapping = merge_breakpoint_pairs(bpps, 100, 25, verbose=True)
-        self.assertEqual(2, len(mapping))
+        assert len(mapping) == 2
 
 
-class TestMergeIntervals(unittest.TestCase):
+class TestMergeIntervals:
     def test_merge_even_length(self):
         i1 = Interval(1001, 1002)
         result = merge_integer_intervals(i1, i1, weight_adjustment=25)
-        self.assertEqual(i1, result)
+        assert result == i1
 
     def test_merge_odd_length(self):
         i1 = Interval(1001, 1003)
         result = merge_integer_intervals(i1, i1, weight_adjustment=25)
-        self.assertEqual(i1, result)
+        assert result == i1
 
     def test_merge_large_length(self):
         i1 = Interval(1001, 5003)
         result = merge_integer_intervals(i1, i1, weight_adjustment=25)
-        self.assertEqual(i1, result)
+        assert result == i1
 
         i1 = Interval(12856838, 12897006)
         result = merge_integer_intervals(i1, i1, weight_adjustment=25)
-        self.assertEqual(i1, result)
+        assert result == i1
 
 
 if __name__ == '__main__':

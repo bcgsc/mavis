@@ -1,9 +1,4 @@
-recursive-include docs *
-recursive-include tests *.py 
-include tests/*/data/*
-recursive-include mavis *.py
-recursive-include tools *.pl *.py *.pm
-recursive-include tab *.py
+recursive-include src *.py *.json
 include README.md
 include LICENSE.txt
 prune docs/build

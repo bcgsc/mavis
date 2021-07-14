@@ -1,106 +1,135 @@
 import unittest
 
+import pytest
 from mavis.annotate.genomic import PreTranscript
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE
 from mavis.pairing import pairing
 
 
-class TestPairing(unittest.TestCase):
-    def setUp(self):
-        self.gev1 = BreakpointPair(
-            Breakpoint('1', 1),
-            Breakpoint('1', 10),
-            opposing_strands=True,
-            data={
-                COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.call_method: CALL_METHOD.CONTIG,
-                COLUMNS.fusion_sequence_fasta_id: None,
-                COLUMNS.protocol: PROTOCOL.GENOME,
-            },
-        )
-        self.gev2 = BreakpointPair(
-            Breakpoint('1', 1),
-            Breakpoint('1', 10),
-            opposing_strands=True,
-            data={
-                COLUMNS.event_type: SVTYPE.DEL,
-                COLUMNS.call_method: CALL_METHOD.CONTIG,
-                COLUMNS.fusion_sequence_fasta_id: None,
-                COLUMNS.protocol: PROTOCOL.GENOME,
-            },
-        )
+@pytest.fixture
+def genomic_event1():
+    return BreakpointPair(
+        Breakpoint('1', 1),
+        Breakpoint('1', 10),
+        opposing_strands=True,
+        **{
+            COLUMNS.event_type: SVTYPE.DEL,
+            COLUMNS.call_method: CALL_METHOD.CONTIG,
+            COLUMNS.fusion_sequence_fasta_id: None,
+            COLUMNS.protocol: PROTOCOL.GENOME,
+        },
+    )
 
-        self.ust1 = PreTranscript(
-            exons=[(1, 100), (301, 400), (501, 600)], strand=STRAND.POS, name='t1'
-        )
-        self.ust2 = PreTranscript(
-            exons=[(1001, 1100), (1301, 1400), (1501, 1600)], strand=STRAND.POS, name='t2'
-        )
-        self.distances = {CALL_METHOD.CONTIG: 0, CALL_METHOD.FLANK: 0, CALL_METHOD.SPLIT: 10}
-        self.TRANSCRIPTS = {self.ust1.name: self.ust1, self.ust2.name: self.ust2}
 
-    def test_genome_protocol_diff_chrom(self):
-        self.gev2.break1.chr = '2'
-        self.assertFalse(pairing.equivalent(self.gev1, self.gev2, self.TRANSCRIPTS))
+@pytest.fixture
+def genomic_event2():
+    return BreakpointPair(
+        Breakpoint('1', 1),
+        Breakpoint('1', 10),
+        opposing_strands=True,
+        **{
+            COLUMNS.event_type: SVTYPE.DEL,
+            COLUMNS.call_method: CALL_METHOD.CONTIG,
+            COLUMNS.fusion_sequence_fasta_id: None,
+            COLUMNS.protocol: PROTOCOL.GENOME,
+        },
+    )
 
-    def test_genome_protocol_diff_orient(self):
-        self.gev2.break1.orient = ORIENT.LEFT
-        self.gev1.break1.orient = ORIENT.RIGHT
-        self.assertFalse(pairing.equivalent(self.gev1, self.gev2, self.TRANSCRIPTS))
 
-    def test_genome_protocol_diff_strand(self):
-        self.gev2.break1.strand = STRAND.POS
-        self.gev1.break1.strand = STRAND.NEG
-        self.assertFalse(pairing.equivalent(self.gev1, self.gev2, self.TRANSCRIPTS))
+@pytest.fixture
+def unspliced_transcript1():
+    return PreTranscript(exons=[(1, 100), (301, 400), (501, 600)], strand=STRAND.POS, name='t1')
 
-    def test_genome_protocol_diff_event_type(self):
-        self.gev2.data[COLUMNS.event_type] = SVTYPE.DEL
-        self.gev1.data[COLUMNS.event_type] = SVTYPE.INS
-        self.assertFalse(pairing.equivalent(self.gev1, self.gev2, self.TRANSCRIPTS))
 
-    def test_genome_protocol_ns_orient(self):
-        self.gev2.break1.orient = ORIENT.LEFT
-        self.gev1.break2.orient = ORIENT.RIGHT
-        self.assertTrue(pairing.equivalent(self.gev1, self.gev2, self.TRANSCRIPTS))
+@pytest.fixture
+def unspliced_transcript2():
+    return PreTranscript(
+        exons=[(1001, 1100), (1301, 1400), (1501, 1600)], strand=STRAND.POS, name='t2'
+    )
 
-    def test_genome_protocol_by_contig(self):
-        self.gev1.call_method = CALL_METHOD.CONTIG
-        self.gev2.call_method = CALL_METHOD.CONTIG
-        self.distances[CALL_METHOD.CONTIG] = 0
-        self.distances[CALL_METHOD.SPLIT] = 10
-        self.assertTrue(pairing.equivalent(self.gev1, self.gev2, distances=self.distances))
 
-        self.gev1.break1.start = 2
-        self.gev1.break1.end = 20
-        self.assertFalse(pairing.equivalent(self.gev1, self.gev2, distances=self.distances))
+@pytest.fixture
+def transcripts(unspliced_transcript1, unspliced_transcript2):
+    return {
+        unspliced_transcript1.name: unspliced_transcript1,
+        unspliced_transcript2.name: unspliced_transcript2,
+    }
 
-    def test_genome_protocol_by_split(self):
-        self.gev1.call_method = CALL_METHOD.SPLIT
-        self.gev2.call_method = CALL_METHOD.SPLIT
-        self.assertTrue(pairing.equivalent(self.gev1, self.gev2, distances=self.distances))
-        self.distances[CALL_METHOD.FLANK] = 100
-        self.distances[CALL_METHOD.SPLIT] = 10
-        self.gev1.break1.start = 11
-        self.gev1.break1.end = 20
-        self.assertFalse(pairing.equivalent(self.gev1, self.gev2, distances=self.distances))
 
-    def test_genome_protocol_by_flanking(self):
-        self.gev1.call_method = CALL_METHOD.FLANK
-        self.gev2.call_method = CALL_METHOD.FLANK
-        self.assertTrue(pairing.equivalent(self.gev1, self.gev2, distances=self.distances))
-        self.distances[CALL_METHOD.FLANK] = 10
-        self.distances[CALL_METHOD.SPLIT] = 100
-        self.gev1.break1.start = 11
-        self.gev1.break1.end = 20
-        self.assertFalse(pairing.equivalent(self.gev1, self.gev2, distances=self.distances))
+@pytest.fixture
+def distances():
+    return {CALL_METHOD.CONTIG: 0, CALL_METHOD.FLANK: 0, CALL_METHOD.SPLIT: 10}
 
-    def test_mixed_protocol_fusions_same_sequence(self):
+
+class TestPairing:
+    def test_genome_protocol_diff_chrom(self, genomic_event1, genomic_event2, transcripts):
+        genomic_event2.break1.chr = '2'
+        assert not pairing.equivalent(genomic_event1, genomic_event2, transcripts)
+
+    def test_genome_protocol_diff_orient(self, genomic_event1, genomic_event2, transcripts):
+        genomic_event2.break1.orient = ORIENT.LEFT
+        genomic_event1.break1.orient = ORIENT.RIGHT
+        assert not pairing.equivalent(genomic_event1, genomic_event2, transcripts)
+
+    def test_genome_protocol_diff_strand(self, genomic_event1, genomic_event2, transcripts):
+        genomic_event2.break1.strand = STRAND.POS
+        genomic_event1.break1.strand = STRAND.NEG
+        assert not pairing.equivalent(genomic_event1, genomic_event2, transcripts)
+
+    def test_genome_protocol_diff_event_type(self, genomic_event1, genomic_event2, transcripts):
+        genomic_event2.data[COLUMNS.event_type] = SVTYPE.DEL
+        genomic_event1.data[COLUMNS.event_type] = SVTYPE.INS
+        assert not pairing.equivalent(genomic_event1, genomic_event2, transcripts)
+
+    def test_genome_protocol_ns_orient(self, genomic_event1, genomic_event2, transcripts):
+        genomic_event2.break1.orient = ORIENT.LEFT
+        genomic_event1.break2.orient = ORIENT.RIGHT
+        assert pairing.equivalent(genomic_event1, genomic_event2, transcripts)
+
+    def test_genome_protocol_by_contig(
+        self, genomic_event1, genomic_event2, transcripts, distances
+    ):
+        genomic_event1.call_method = CALL_METHOD.CONTIG
+        genomic_event2.call_method = CALL_METHOD.CONTIG
+        distances[CALL_METHOD.CONTIG] = 0
+        distances[CALL_METHOD.SPLIT] = 10
+        assert pairing.equivalent(genomic_event1, genomic_event2, distances=distances)
+
+        genomic_event1.break1.start = 2
+        genomic_event1.break1.end = 20
+        assert not pairing.equivalent(genomic_event1, genomic_event2, distances=distances)
+
+    def test_genome_protocol_by_split(self, genomic_event1, genomic_event2, transcripts, distances):
+        genomic_event1.call_method = CALL_METHOD.SPLIT
+        genomic_event2.call_method = CALL_METHOD.SPLIT
+        assert pairing.equivalent(genomic_event1, genomic_event2, distances=distances)
+        distances[CALL_METHOD.FLANK] = 100
+        distances[CALL_METHOD.SPLIT] = 10
+        genomic_event1.break1.start = 11
+        genomic_event1.break1.end = 20
+        assert not pairing.equivalent(genomic_event1, genomic_event2, distances=distances)
+
+    def test_genome_protocol_by_flanking(
+        self, genomic_event1, genomic_event2, transcripts, distances
+    ):
+        genomic_event1.call_method = CALL_METHOD.FLANK
+        genomic_event2.call_method = CALL_METHOD.FLANK
+        assert pairing.equivalent(genomic_event1, genomic_event2, distances=distances)
+        distances[CALL_METHOD.FLANK] = 10
+        distances[CALL_METHOD.SPLIT] = 100
+        genomic_event1.break1.start = 11
+        genomic_event1.break1.end = 20
+        assert not pairing.equivalent(genomic_event1, genomic_event2, distances=distances)
+
+    def test_mixed_protocol_fusions_same_sequence(
+        self, genomic_event1, genomic_event2, transcripts
+    ):
         genome_ev = BreakpointPair(
             Breakpoint('1', 1),
             Breakpoint('1', 10),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
@@ -115,7 +144,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 50),
             Breakpoint('1', 60),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
@@ -126,17 +155,19 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.fusion_cdna_coding_end: 10,
             },
         )
-        self.assertFalse(pairing.equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
+        assert not pairing.equivalent(genome_ev, trans_ev, transcripts)
         genome_ev.data[COLUMNS.fusion_sequence_fasta_id] = 'a'
         trans_ev.data[COLUMNS.fusion_sequence_fasta_id] = 'a'
-        self.assertTrue(pairing.inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
+        assert pairing.inferred_equivalent(genome_ev, trans_ev, transcripts)
 
-    def test_mixed_protocol_fusions_same_sequence_diff_translation(self):
+    def test_mixed_protocol_fusions_same_sequence_diff_translation(
+        self, genomic_event1, genomic_event2, transcripts
+    ):
         genome_ev = BreakpointPair(
             Breakpoint('1', 1),
             Breakpoint('1', 10),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'a',
@@ -151,7 +182,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 50),
             Breakpoint('1', 60),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'a',
@@ -162,14 +193,16 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.fusion_cdna_coding_end: 50,
             },
         )
-        self.assertFalse(pairing.inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
+        assert not pairing.inferred_equivalent(genome_ev, trans_ev, transcripts)
 
-    def test_mixed_protocol_fusions_different_sequence(self):
+    def test_mixed_protocol_fusions_different_sequence(
+        self, genomic_event1, genomic_event2, transcripts
+    ):
         genome_ev = BreakpointPair(
             Breakpoint('1', 1),
             Breakpoint('1', 10),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'a',
@@ -184,7 +217,7 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 50),
             Breakpoint('1', 60),
             opposing_strands=True,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: 'b',
@@ -195,19 +228,21 @@ class TestPairing(unittest.TestCase):
                 COLUMNS.fusion_cdna_coding_end: 10,
             },
         )
-        self.assertFalse(pairing.inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
+        assert not pairing.inferred_equivalent(genome_ev, trans_ev, transcripts)
 
-    def test_mixed_protocol_one_predicted_one_match(self):
+    def test_mixed_protocol_one_predicted_one_match(
+        self, genomic_event1, genomic_event2, transcripts, unspliced_transcript1
+    ):
         genome_ev = BreakpointPair(
             Breakpoint('1', 350, orient=ORIENT.LEFT),
             Breakpoint('1', 400, orient=ORIENT.RIGHT),
             opposing_strands=False,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
-                COLUMNS.transcript1: self.ust1.name,
+                COLUMNS.transcript1: unspliced_transcript1.name,
                 COLUMNS.transcript2: None,
             },
         )
@@ -215,36 +250,38 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 350, orient=ORIENT.LEFT),
             Breakpoint('1', 400, orient=ORIENT.RIGHT),
             opposing_strands=False,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.TRANS,
-                COLUMNS.transcript1: self.ust1.name,
+                COLUMNS.transcript1: unspliced_transcript1.name,
                 COLUMNS.transcript2: None,
             },
         )
-        self.assertTrue(pairing.equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
-        self.assertTrue(pairing.equivalent(trans_ev, genome_ev, self.TRANSCRIPTS))
+        assert pairing.equivalent(genome_ev, trans_ev, transcripts)
+        assert pairing.equivalent(trans_ev, genome_ev, transcripts)
 
-        genome_ev.data[COLUMNS.transcript2] = self.ust1.name
+        genome_ev.data[COLUMNS.transcript2] = unspliced_transcript1.name
         genome_ev.data[COLUMNS.transcript1] = None
-        trans_ev.data[COLUMNS.transcript2] = self.ust1.name
+        trans_ev.data[COLUMNS.transcript2] = unspliced_transcript1.name
         trans_ev.data[COLUMNS.transcript1] = None
-        self.assertTrue(pairing.inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
-        self.assertTrue(pairing.inferred_equivalent(trans_ev, genome_ev, self.TRANSCRIPTS))
+        assert pairing.inferred_equivalent(genome_ev, trans_ev, transcripts)
+        assert pairing.inferred_equivalent(trans_ev, genome_ev, transcripts)
 
-    def test_mixed_protocol_one_predicted_one_mismatch(self):
+    def test_mixed_protocol_one_predicted_one_mismatch(
+        self, genomic_event1, genomic_event2, transcripts, unspliced_transcript1
+    ):
         genome_ev = BreakpointPair(
             Breakpoint('1', 350, orient=ORIENT.LEFT),
             Breakpoint('1', 400, orient=ORIENT.RIGHT),
             opposing_strands=False,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.GENOME,
-                COLUMNS.transcript1: self.ust1.name,
+                COLUMNS.transcript1: unspliced_transcript1.name,
                 COLUMNS.transcript2: None,
             },
         )
@@ -252,24 +289,24 @@ class TestPairing(unittest.TestCase):
             Breakpoint('1', 350, orient=ORIENT.LEFT),
             Breakpoint('1', 400, orient=ORIENT.RIGHT),
             opposing_strands=False,
-            data={
+            **{
                 COLUMNS.event_type: SVTYPE.DEL,
                 COLUMNS.call_method: CALL_METHOD.CONTIG,
                 COLUMNS.fusion_sequence_fasta_id: None,
                 COLUMNS.protocol: PROTOCOL.TRANS,
-                COLUMNS.transcript1: self.ust1.name,
+                COLUMNS.transcript1: unspliced_transcript1.name,
                 COLUMNS.transcript2: None,
             },
         )
-        self.assertTrue(pairing.equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
-        self.assertTrue(pairing.equivalent(trans_ev, genome_ev, self.TRANSCRIPTS))
+        assert pairing.equivalent(genome_ev, trans_ev, transcripts)
+        assert pairing.equivalent(trans_ev, genome_ev, transcripts)
 
-        genome_ev.data[COLUMNS.transcript2] = self.ust1.name
+        genome_ev.data[COLUMNS.transcript2] = unspliced_transcript1.name
         genome_ev.data[COLUMNS.transcript1] = None
-        trans_ev.data[COLUMNS.transcript2] = self.ust1.name
+        trans_ev.data[COLUMNS.transcript2] = unspliced_transcript1.name
         trans_ev.data[COLUMNS.transcript1] = None
-        self.assertTrue(pairing.inferred_equivalent(genome_ev, trans_ev, self.TRANSCRIPTS))
-        self.assertTrue(pairing.inferred_equivalent(trans_ev, genome_ev, self.TRANSCRIPTS))
+        assert pairing.inferred_equivalent(genome_ev, trans_ev, transcripts)
+        assert pairing.inferred_equivalent(trans_ev, genome_ev, transcripts)
 
     def test_mixed_protocol_both_predicted(self):
 
@@ -288,101 +325,107 @@ class TestPairing(unittest.TestCase):
         raise unittest.SkipTest('TODO')
 
 
-class TestBreakpointPrediction(unittest.TestCase):
-    def setUp(self):
-        self.pre_transcript = PreTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.POS)
-        self.n_ust = PreTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.NEG)
+@pytest.fixture
+def positive_transcript():
+    return PreTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.POS)
 
-    def test_exonic_five_prime(self):
+
+@pytest.fixture
+def negative_transcript():
+    return PreTranscript([(101, 200), (301, 400), (501, 600)], strand=STRAND.NEG)
+
+
+class TestBreakpointPrediction:
+    def test_exonic_five_prime(self, positive_transcript):
         b = Breakpoint('1', 350, orient=ORIENT.LEFT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.pre_transcript)
-        self.assertEqual(2, len(breaks))
-        self.assertEqual(200, breaks[0].start)
-        self.assertEqual(b, breaks[1])
+        breaks = pairing.predict_transcriptome_breakpoint(b, positive_transcript)
+        assert len(breaks) == 2
+        assert breaks[0].start == 200
+        assert breaks[1] == b
 
-    def test_exonic_five_prime_first_exon(self):
+    def test_exonic_five_prime_first_exon(self, positive_transcript):
         b = Breakpoint('1', 150, orient=ORIENT.LEFT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.pre_transcript)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(b, breaks[0])
+        breaks = pairing.predict_transcriptome_breakpoint(b, positive_transcript)
+        assert len(breaks) == 1
+        assert breaks[0] == b
 
-    def test_exonic_three_prime(self):
+    def test_exonic_three_prime(self, positive_transcript):
         b = Breakpoint('1', 350, orient=ORIENT.RIGHT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.pre_transcript)
-        self.assertEqual(2, len(breaks))
-        self.assertEqual(501, breaks[1].start)
-        self.assertEqual(b, breaks[0])
+        breaks = pairing.predict_transcriptome_breakpoint(b, positive_transcript)
+        assert len(breaks) == 2
+        assert breaks[1].start == 501
+        assert breaks[0] == b
 
-    def test_exonic_three_prime_last_exon(self):
+    def test_exonic_three_prime_last_exon(self, positive_transcript):
         b = Breakpoint('1', 550, orient=ORIENT.RIGHT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.pre_transcript)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(b, breaks[0])
+        breaks = pairing.predict_transcriptome_breakpoint(b, positive_transcript)
+        assert len(breaks) == 1
+        assert breaks[0] == b
 
-    def test_intronic_five_prime(self):
+    def test_intronic_five_prime(self, positive_transcript):
         b = Breakpoint('1', 450, orient=ORIENT.LEFT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.pre_transcript)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(400, breaks[0].start)
+        breaks = pairing.predict_transcriptome_breakpoint(b, positive_transcript)
+        assert len(breaks) == 1
+        assert breaks[0].start == 400
 
-    def test_intronic_three_prime(self):
+    def test_intronic_three_prime(self, positive_transcript):
         b = Breakpoint('1', 250, orient=ORIENT.RIGHT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.pre_transcript)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(301, breaks[0].start)
+        breaks = pairing.predict_transcriptome_breakpoint(b, positive_transcript)
+        assert len(breaks) == 1
+        assert breaks[0].start == 301
 
-    def test_outside_transcript(self):
+    def test_outside_transcript(self, positive_transcript):
         b = Breakpoint('1', 100, orient=ORIENT.RIGHT)
-        with self.assertRaises(AssertionError):
-            pairing.predict_transcriptome_breakpoint(b, self.pre_transcript)
+        with pytest.raises(AssertionError):
+            pairing.predict_transcriptome_breakpoint(b, positive_transcript)
 
     # for neg transcripts
-    def test_exonic_three_prime_neg(self):
+    def test_exonic_three_prime_neg(self, negative_transcript):
         b = Breakpoint('1', 350, orient=ORIENT.LEFT, strand=STRAND.NEG)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.n_ust)
-        self.assertEqual(2, len(breaks))
-        self.assertEqual(200, breaks[0].start)
-        self.assertEqual(b, breaks[1])
+        breaks = pairing.predict_transcriptome_breakpoint(b, negative_transcript)
+        assert len(breaks) == 2
+        assert breaks[0].start == 200
+        assert breaks[1] == b
 
-    def test_intronic_three_prime_neg(self):
+    def test_intronic_three_prime_neg(self, negative_transcript):
         b = Breakpoint('1', 450, orient=ORIENT.LEFT, strand=STRAND.NEG)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.n_ust)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(400, breaks[0].start)
+        breaks = pairing.predict_transcriptome_breakpoint(b, negative_transcript)
+        assert len(breaks) == 1
+        assert breaks[0].start == 400
 
-    def test_exonic_five_prime_neg_first_exon(self):
+    def test_exonic_five_prime_neg_first_exon(self, negative_transcript):
         b = Breakpoint('1', 150, orient=ORIENT.LEFT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.n_ust)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(b, breaks[0])
+        breaks = pairing.predict_transcriptome_breakpoint(b, negative_transcript)
+        assert len(breaks) == 1
+        assert breaks[0] == b
 
-    def test_exonic_three_prime_neg_first_exon(self):
+    def test_exonic_three_prime_neg_first_exon(self, negative_transcript):
         b = Breakpoint('1', 150, orient=ORIENT.LEFT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.n_ust)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(b, breaks[0])
+        breaks = pairing.predict_transcriptome_breakpoint(b, negative_transcript)
+        assert len(breaks) == 1
+        assert breaks[0] == b
 
-    def test_exonic_five_prime_neg(self):
+    def test_exonic_five_prime_neg(self, negative_transcript):
         b = Breakpoint('1', 350, orient=ORIENT.RIGHT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.n_ust)
-        self.assertEqual(2, len(breaks))
-        self.assertEqual(501, breaks[1].start)
-        self.assertEqual(b, breaks[0])
+        breaks = pairing.predict_transcriptome_breakpoint(b, negative_transcript)
+        assert len(breaks) == 2
+        assert breaks[1].start == 501
+        assert breaks[0] == b
 
-    def test_exonic_five_prime_neg_last_exon(self):
+    def test_exonic_five_prime_neg_last_exon(self, negative_transcript):
         b = Breakpoint('1', 550, orient=ORIENT.RIGHT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.n_ust)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(b, breaks[0])
+        breaks = pairing.predict_transcriptome_breakpoint(b, negative_transcript)
+        assert len(breaks) == 1
+        assert breaks[0] == b
 
-    def test_intronic_five_prime_neg(self):
+    def test_intronic_five_prime_neg(self, negative_transcript):
         b = Breakpoint('1', 250, orient=ORIENT.RIGHT)
-        breaks = pairing.predict_transcriptome_breakpoint(b, self.n_ust)
-        self.assertEqual(1, len(breaks))
-        self.assertEqual(301, breaks[0].start)
+        breaks = pairing.predict_transcriptome_breakpoint(b, negative_transcript)
+        assert len(breaks) == 1
+        assert breaks[0].start == 301
 
 
-class TestEquivalent(unittest.TestCase):
+class TestEquivalent:
     def test_useq_uncertainty(self):
         event1 = BreakpointPair(
             Breakpoint('1', 157540650, orient='L'),
@@ -397,7 +440,7 @@ class TestEquivalent(unittest.TestCase):
             event_type='deletion',
             call_method='spanning reads',
         )
-        self.assertTrue(pairing.equivalent(event1, event2))
+        assert pairing.equivalent(event1, event2)
 
     def test_useq_uncertainty2(self):
         event1 = BreakpointPair(
@@ -414,4 +457,4 @@ class TestEquivalent(unittest.TestCase):
             call_method='contig',
             untemplated_seq='TTTTTTTTT',
         )
-        self.assertTrue(pairing.equivalent(event1, event2))
+        assert pairing.equivalent(event1, event2)

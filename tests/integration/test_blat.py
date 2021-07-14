@@ -1,6 +1,5 @@
-import shutil
-import unittest
-
+import mavis.bam.cigar as _cigar
+import pytest
 from Bio import SeqIO
 from mavis.align import query_coverage_interval
 from mavis.annotate.file_io import load_reference_genome
@@ -8,11 +7,9 @@ from mavis.bam.cache import BamCache
 from mavis.blat import Blat
 from mavis.constants import CIGAR, reverse_complement
 from mavis.interval import Interval
-import mavis.bam.cigar as _cigar
 
-from . import MockBamFileHandle, MockObject, MockLongString
 from ..util import get_data
-
+from . import MockBamFileHandle, MockLongString, MockObject
 
 REFERENCE_GENOME = None
 
@@ -29,16 +26,18 @@ def setUpModule():
     BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
 
 
-class TestBlat(unittest.TestCase):
-    def setUp(self):
-        self.cache = BamCache(MockBamFileHandle({'Y': 23, 'fake': 0, 'reference3': 3, '14': 13}))
+@pytest.fixture
+def cache():
+    return BamCache(MockBamFileHandle({'Y': 23, 'fake': 0, 'reference3': 3, '14': 13}))
 
+
+class TestBlat:
     def test_read_pslx(self):
         mapping = {}
         for record in SeqIO.parse(get_data('blat_input.fa'), 'fasta'):
             mapping[record.id] = record.seq
         header, rows = Blat.read_pslx(get_data('blat_output.pslx'), mapping)
-        self.assertEqual(11067, len(rows))
+        assert len(rows) == 11067
         expect_pslx_header = [
             'match',
             'mismatch',
@@ -64,9 +63,9 @@ class TestBlat(unittest.TestCase):
             'qseqs',
             'tseqs',
         ]
-        self.assertEqual(expect_pslx_header, header)
+        assert header == expect_pslx_header
 
-    def test_pslx_row_to_pysam_single_block(self):
+    def test_pslx_row_to_pysam_single_block(self, cache):
         pslx_row = {
             'score': 20,
             'tseqs': ['AATACCAAATACATGATATA'],
@@ -82,11 +81,11 @@ class TestBlat(unittest.TestCase):
             'qseq_full': 'AGCCTCCCAAGTAGCTGGGACTACAGGCGCCCGCCACTACGCCCGGCTAATTTTTTGTATTTTTAGTAGAGACGGGGTTTCACCGTTTT'
             'AGCCAGGATGGTCTCGATCTCCTGACCTCATGATCCGCCCGCCTCGGC',
         }
-        read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
-        self.assertEqual(23, read.reference_id)
-        self.assertEqual(Interval(93, 112), query_coverage_interval(read))
+        read = Blat.pslx_row_to_pysam(pslx_row, cache, None)
+        assert read.reference_id == 23
+        assert query_coverage_interval(read) == Interval(93, 112)
 
-    def test_pslx_row_to_pysam_full_reverse(self):
+    def test_pslx_row_to_pysam_full_reverse(self, cache):
         pslx_row = {
             'match': 128,
             'mismatch': 0,
@@ -114,13 +113,13 @@ class TestBlat(unittest.TestCase):
             'percent_ident': 100.0,
             'qseq_full': 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT',
         }
-        read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
-        self.assertEqual(3, read.reference_id)
-        self.assertEqual([(CIGAR.S, 117), (CIGAR.M, 128)], read.cigar)
-        self.assertEqual(2187, read.reference_start)
-        self.assertEqual(Interval(117, 244), query_coverage_interval(read))
+        read = Blat.pslx_row_to_pysam(pslx_row, cache, None)
+        assert read.reference_id == 3
+        assert read.cigar == [(CIGAR.S, 117), (CIGAR.M, 128)]
+        assert read.reference_start == 2187
+        assert query_coverage_interval(read) == Interval(117, 244)
 
-    def test_pslx_row_to_pysam_simple(self):
+    def test_pslx_row_to_pysam_simple(self, cache):
         pslx_row = {
             'tstarts': [950],
             'block_sizes': [53],
@@ -131,14 +130,14 @@ class TestBlat(unittest.TestCase):
             'score': 0,
             'qseq_full': 'ATCTAATAACTTGATCAATA' 'TCTGTGATTATATTTTCATT' 'GCCTTCCAATTTT',
         }
-        read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
-        self.assertEqual(0, read.reference_id)
-        self.assertEqual(Interval(0, 52), query_coverage_interval(read))
-        self.assertEqual(950, read.reference_start)
-        self.assertEqual(1003, read.reference_end)
-        self.assertEqual([(CIGAR.M, 53)], read.cigar)
+        read = Blat.pslx_row_to_pysam(pslx_row, cache, None)
+        assert read.reference_id == 0
+        assert query_coverage_interval(read) == Interval(0, 52)
+        assert read.reference_start == 950
+        assert read.reference_end == 1003
+        assert read.cigar == [(CIGAR.M, 53)]
 
-    def test_pslx_row_to_pysam_simple_with_reference(self):
+    def test_pslx_row_to_pysam_simple_with_reference(self, cache):
         pslx_row = {
             'tstarts': [950],
             'block_sizes': [53],
@@ -149,14 +148,14 @@ class TestBlat(unittest.TestCase):
             'score': 0,
             'qseq_full': 'ATCTAATAACTTGATCAATA' 'TCTGTGATTATATTTTCATT' 'GCCTTCCAATTTT',
         }
-        read = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
-        self.assertEqual(0, read.reference_id)
-        self.assertEqual(Interval(0, 52), query_coverage_interval(read))
-        self.assertEqual(950, read.reference_start)
-        self.assertEqual(1003, read.reference_end)
-        self.assertEqual([(CIGAR.EQ, 53)], read.cigar)
+        read = Blat.pslx_row_to_pysam(pslx_row, cache, REFERENCE_GENOME)
+        assert read.reference_id == 0
+        assert query_coverage_interval(read) == Interval(0, 52)
+        assert read.reference_start == 950
+        assert read.reference_end == 1003
+        assert read.cigar == [(CIGAR.EQ, 53)]
 
-    def test_pslx_row_to_pysam_gapped_alignment(self):
+    def test_pslx_row_to_pysam_gapped_alignment(self, cache):
         pslx_row = {
             'block_count': 1,
             'tstarts': [950, 7233],
@@ -175,13 +174,13 @@ class TestBlat(unittest.TestCase):
             'ATACTTCATGTTGCCATGTT',
             'score': 1,
         }
-        read = Blat.pslx_row_to_pysam(pslx_row, self.cache, None)
-        self.assertEqual(0, read.reference_id)
-        self.assertEqual(Interval(0, 146), query_coverage_interval(read))
-        self.assertEqual(950, read.reference_start)
-        self.assertEqual([(CIGAR.M, 47), (CIGAR.D, 6236), (CIGAR.M, 100)], read.cigar)
+        read = Blat.pslx_row_to_pysam(pslx_row, cache, None)
+        assert read.reference_id == 0
+        assert query_coverage_interval(read) == Interval(0, 146)
+        assert read.reference_start == 950
+        assert read.cigar == [(CIGAR.M, 47), (CIGAR.D, 6236), (CIGAR.M, 100)]
 
-    def test_pslx_row_to_pysam_gapped_alignment_with_reference(self):
+    def test_pslx_row_to_pysam_gapped_alignment_with_reference(self, cache):
         pslx_row = {
             'block_count': 1,
             'tstarts': [950, 7233],
@@ -200,13 +199,13 @@ class TestBlat(unittest.TestCase):
             'ATACTTCATGTTGCCATGTT',
             'score': 1,
         }
-        read = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
-        self.assertEqual(0, read.reference_id)
-        self.assertEqual(Interval(0, 146), query_coverage_interval(read))
-        self.assertEqual(950, read.reference_start)
-        self.assertEqual([(CIGAR.EQ, 53), (CIGAR.D, 6236), (CIGAR.EQ, 94)], read.cigar)
+        read = Blat.pslx_row_to_pysam(pslx_row, cache, REFERENCE_GENOME)
+        assert read.reference_id == 0
+        assert query_coverage_interval(read) == Interval(0, 146)
+        assert read.reference_start == 950
+        assert read.cigar == [(CIGAR.EQ, 53), (CIGAR.D, 6236), (CIGAR.EQ, 94)]
 
-    def test_pslx_row_to_pysam_revcomp_deletion(self):
+    def test_pslx_row_to_pysam_revcomp_deletion(self, cache):
         pslx_row = {
             'block_count': 2,
             'tstarts': [2205, 2281],
@@ -226,17 +225,15 @@ class TestBlat(unittest.TestCase):
                 'CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG',
             ],
         }
-        read = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
-        self.assertEqual(3, read.reference_id)
-        self.assertEqual(Interval(0, 83), query_coverage_interval(read))
-        self.assertEqual(2205, read.reference_start)
-        self.assertEqual([(CIGAR.EQ, 51), (CIGAR.D, 26), (CIGAR.EQ, 33)], read.cigar)
-        self.assertEqual(
-            'TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA', read.query_sequence[0:50]
-        )
-        self.assertEqual('CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG', read.query_sequence[50:])
+        read = Blat.pslx_row_to_pysam(pslx_row, cache, REFERENCE_GENOME)
+        assert read.reference_id == 3
+        assert query_coverage_interval(read) == Interval(0, 83)
+        assert read.reference_start == 2205
+        assert read.cigar == [(CIGAR.EQ, 51), (CIGAR.D, 26), (CIGAR.EQ, 33)]
+        assert read.query_sequence[0:50] == 'TAGGTAGACTGCTCTCAGGCAGAATGAAACATGATGGCACCTGCCACTCA'
+        assert read.query_sequence[50:] == 'CCAAATTCTGTGTTTACAGGGCTTTCATGCTCAG'
 
-    def test_pslx_row_to_pysam_inversion(self):
+    def test_pslx_row_to_pysam_inversion(self, cache):
         s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
         # first part of the inversion
         pslx_row = {
@@ -258,11 +255,11 @@ class TestBlat(unittest.TestCase):
                 'TTTTCATTTCTGTATGTTAAT'
             ],
         }
-        read1 = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
-        self.assertEqual(3, read1.reference_id)
-        self.assertEqual(Interval(125, 244), query_coverage_interval(read1))
-        self.assertEqual(1114, read1.reference_start)
-        self.assertEqual([(CIGAR.S, 125), (CIGAR.EQ, 120)], read1.cigar)
+        read1 = Blat.pslx_row_to_pysam(pslx_row, cache, REFERENCE_GENOME)
+        assert read1.reference_id == 3
+        assert query_coverage_interval(read1) == Interval(125, 244)
+        assert read1.reference_start == 1114
+        assert read1.cigar == [(CIGAR.S, 125), (CIGAR.EQ, 120)]
 
         # second part of the inversion
         pslx_row = {
@@ -284,15 +281,15 @@ class TestBlat(unittest.TestCase):
                 'TCTGTGTTTACAGGGCTTTCATGCTCAG'
             ],
         }
-        read2 = Blat.pslx_row_to_pysam(pslx_row, self.cache, REFERENCE_GENOME)
-        self.assertEqual(3, read2.reference_id)
-        self.assertEqual(2187, read2.reference_start)
-        self.assertEqual([(CIGAR.S, 117), (CIGAR.EQ, 128)], read2.cigar)
-        self.assertEqual(Interval(117, 244), query_coverage_interval(read2))
-        self.assertEqual(read1.query_sequence, reverse_complement(read2.query_sequence))
+        read2 = Blat.pslx_row_to_pysam(pslx_row, cache, REFERENCE_GENOME)
+        assert read2.reference_id == 3
+        assert read2.reference_start == 2187
+        assert read2.cigar == [(CIGAR.S, 117), (CIGAR.EQ, 128)]
+        assert query_coverage_interval(read2) == Interval(117, 244)
+        assert reverse_complement(read2.query_sequence) == read1.query_sequence
         # test that this is selected for duplication or insertion evidence
 
-    def test_pslx_row_to_pysam_duplication(self):
+    def test_pslx_row_to_pysam_duplication(self, cache):
         reference = {
             '14': MockObject(
                 seq=MockLongString(
@@ -312,12 +309,8 @@ class TestBlat(unittest.TestCase):
             'qseq_full': 'AAGAAGGGTAACCTTAAAAAATACATTTCCCACTCCAGAAAATACTCATATGTGGCCTGTTAGCAGCACAAGAAGGGTGAAAGCAATGCCCATTCCTGCCTCCCTCCCCCTGCTCACCTCCACGTCCCTGTTTGCCCCTTTACTCATATGTGGCCTGTTAGCAGCACAAGAAGGGTGAAAGCAATGCCCATTCCTGCCTCCCTCCCCCTGCTCACCTCCACGTCCCTGTTTGCCCCTTTGTAGGTGAAGTGAGTATATTCAGCGTCTTC',
             'score': 1,
         }
-        read2 = Blat.pslx_row_to_pysam(pslx_row, self.cache, reference)
-        self.assertEqual(13, read2.reference_id)
-        self.assertEqual(73014606, read2.reference_start)
-        self.assertEqual(
-            [(CIGAR.M, 141), (CIGAR.I, 98), (CIGAR.M, 30)], _cigar.convert_for_igv(read2.cigar)
-        )
-        self.assertEqual(
-            Interval(0, len(pslx_row['qseq_full']) - 1), query_coverage_interval(read2)
-        )
+        read2 = Blat.pslx_row_to_pysam(pslx_row, cache, reference)
+        assert read2.reference_id == 13
+        assert read2.reference_start == 73014606
+        assert _cigar.convert_for_igv(read2.cigar) == [(CIGAR.M, 141), (CIGAR.I, 98), (CIGAR.M, 30)]
+        assert query_coverage_interval(read2) == Interval(0, len(pslx_row['qseq_full']) - 1)

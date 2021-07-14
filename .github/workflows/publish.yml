@@ -8,10 +8,8 @@ on:
     types: [created]
 
 jobs:
-  deploy:
-
+  pypi:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
@@ -30,3 +28,15 @@ jobs:
         python setup.py sdist bdist_wheel install
         twine check dist/*
         twine upload dist/*
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      - run: |
+          docker build --file Dockerfile --tag bcgsc/mavis:latest --tag bcgsc/mavis:${{ github.event.release.tag_name }} .
+      - run: docker push bcgsc/mavis:latest
+      - run: docker push bcgsc/mavis:${{ github.event.release.tag_name }}

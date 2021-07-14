@@ -21,7 +21,6 @@ not available,
 | [DGV annotations](../../inputs/reference/#dgv-database-of-genomic-variants) (text/tabbed)     | `MAVIS_DGV_ANNOTATION`    | [![](../images/get_app-24px.svg) GRCh37/Hg19](http://www.bcgsc.ca/downloads/mavis/dgv_hg19_variants.tab)<br>[![](../images/get_app-24px.svg) GRCh38](http://www.bcgsc.ca/downloads/mavis/dgv_hg38_variants.tab)                                               |
 | [aligner reference](../../inputs/reference/#aligner-reference)                                | `MAVIS_ALIGNER_REFERENCE` | [![](../images/get_app-24px.svg) GRCh37/Hg19 2bit (blat)](http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/hg19.2bit)<br>[![](../images/get_app-24px.svg) GRCh38 2bit (blat)](http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.2bit)         |
 
-
 If the environment variables above are set they will be used as the
 default values when any step of the pipeline script is called (including
 generating the template config file)
@@ -38,11 +37,13 @@ chromosomes. This is only used during visualization.
 
 The structure of the file should look something like this
 
-    chr1    0       2300000 p36.33  gneg
-    chr1    2300000 5400000 p36.32  gpos25
-    chr1    5400000 7200000 p36.31  gneg
-    chr1    7200000 9200000 p36.23  gpos25
-    chr1    9200000 12700000        p36.22  gneg
+```text
+chr1    0       2300000 p36.33  gneg
+chr1    2300000 5400000 p36.32  gpos25
+chr1    5400000 7200000 p36.31  gneg
+chr1    7200000 9200000 p36.23  gpos25
+chr1    9200000 12700000        p36.22  gneg
+```
 
 ## Masking File
 
@@ -52,9 +53,11 @@ known false positives, bad mapping, centromeres, telomeres etc. An
 example of the expected format is shown below. The file should have four
 columns: chr, start, end and name.
 
-    #chr    start   end     name
-    chr1    0       2300000 centromere
-    chr1    9200000 12700000        telomere
+```text
+chr    start   end     name
+chr1    0       2300000 centromere
+chr1    9200000 12700000        telomere
+```
 
 The pre-built masking files in the downloads table above are telomere
 regions, centromere regions (based on the cytoband file), and nspan
@@ -81,7 +84,6 @@ the ensembl annotations file including non-coding transcripts below.
 
 [![](../images/get_app-24px.svg) GRCh37/Hg19 + Ensembl69 (includes non-coding genes)](http://www.bcgsc.ca/downloads/mavis/ensembl69_hg19_annotations_with_ncrna.json)
 
-
 !!! warning
     the `mavis.annotate.file_io.load_reference_genes`{.interpreted-text
     role="func"} will only load valid translations. If the cds sequence in
@@ -98,7 +100,7 @@ be seen below
     {
         "name": string,
         "start": int,
-        "end": int
+        "end": int,
         "aliases": [string, string, ...],
         "transcripts": [
             {
@@ -180,10 +182,12 @@ awk '{print $2"\t"$3"\t"$4"\t"$1} GRCh37_hg19_variants_2016-05-15.txt > dgv_hg19
 Note in hg19 the column is called "name" and in hg38 the column is
 called "variantaccession". An example is shown below
 
-    #chr     start   end     name
-    1       1       2300000 nsv482937
-    1       10001   22118   dgv1n82
-    1       10001   127330  nsv7879
+```text
+chr     start   end     name
+1       1       2300000 nsv482937
+1       10001   22118   dgv1n82
+1       10001   127330  nsv7879
+```
 
 ## Aligner Reference
 

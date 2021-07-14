@@ -1,348 +1,396 @@
-import argparse
-import os
-import unittest
-from unittest.mock import patch
+import json
 import sys
-from mavis.main import main as mavis_main
-from mavis.cluster import main as cluster_main
-from mavis.validate import main as validate_main
-from mavis import util
+import tempfile
+from unittest.mock import patch
 
-from . import ARGUMENT_ERROR
+import pytest
+from mavis import util
+from mavis.cluster import main as cluster_main
+from mavis.main import main as mavis_main
+from mavis.validate import main as validate_main
+
 from ..util import get_data
 
 
-def expect_error(testcase, func, catchtype):
+@pytest.fixture
+def output_dir():
+    temp_output = tempfile.mkdtemp()
+    yield temp_output
+
+
+@pytest.fixture
+def configpath(tmp_path):
+    p = tmp_path / "config.json"
+    return p
+
+
+def expect_error(testcase, func, catchtype=None):
     try:
         func()
-    except catchtype as err:
-        return err
-    else:
+    except (SystemExit, Exception) as err:
+        if catchtype is None or isinstance(err, catchtype):
+            return err
         raise AssertionError('Did not throw the expected error', catchtype)
 
 
-class TestCluster(unittest.TestCase):
-    def test_trans_multiple_annotations_no_masking(self):
-        args = [
-            'mavis',
-            'cluster',
-            '--annotations',
-            get_data('example_genes.json'),
-            get_data('mock_annotations.json'),
-            '--library',
-            'translib',
-            '--protocol',
-            'transcriptome',
-            '--disease_status',
-            'diseased',
-            '--input',
-            get_data('mock_sv_events.tsv'),
-            '--output',
-            'outdir',
-        ]
-        with patch.object(cluster_main, 'main', util.DEVNULL):
-            with patch.object(sys, 'argv', args):
-                mavis_main()
-
-    def test_trans_multiple_annotations_with_masking(self):
-        args = [
-            'mavis',
-            'cluster',
-            '--annotations',
-            get_data('example_genes.json'),
-            get_data('mock_annotations.json'),
-            '--library',
-            'translib',
-            '--protocol',
-            'transcriptome',
-            '--disease_status',
-            'diseased',
-            '--input',
-            get_data('mock_sv_events.tsv'),
-            '--output',
-            'outdir',
-            '--masking',
-            get_data('mock_masking.tab'),
-        ]
-        with patch.object(cluster_main, 'main', util.DEVNULL):
-            with patch.object(sys, 'argv', args):
-                mavis_main()
-
-    def test_error_missing_annotations_translib_uninform(self):
+class TestCluster:
+    def test_trans_multiple_annotations_no_masking(self, configpath, output_dir):
+        configpath.write_text(
+            json.dumps(
+                {
+                    'reference.annotations': [
+                        get_data('example_genes.json'),
+                        get_data('mock_annotations.json'),
+                    ],
+                    'libraries': {
+                        'translib': {
+                            'disease_status': 'diseased',
+                            'protocol': 'transcriptome',
+                            'assign': [get_data('mock_sv_events.tsv')],
+                        }
+                    },
+                    'output_dir': output_dir,
+                }
+            )
+        )
         args = [
             'mavis',
             'cluster',
             '--library',
             'translib',
-            '--protocol',
-            'transcriptome',
-            '--disease_status',
-            'diseased',
-            '--input',
+            '--inputs',
             get_data('mock_sv_events.tsv'),
             '--output',
-            'outdir',
-            '--uninformative_filter',
-            'True',
+            output_dir,
+            '--config',
+            str(configpath),
         ]
         with patch.object(cluster_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
-                err = expect_error(self, mavis_main, SystemExit)
-                self.assertEqual(ARGUMENT_ERROR, err.code)
+                mavis_main()
 
-    def test_ok_missing_annotations_translib_nofilter(self):
+    def test_trans_multiple_annotations_with_masking(self, configpath, output_dir):
+        configpath.write_text(
+            json.dumps(
+                {
+                    'libraries': {
+                        'translib': {
+                            'disease_status': 'diseased',
+                            'protocol': 'transcriptome',
+                            'assign': [get_data('mock_sv_events.tsv')],
+                        }
+                    },
+                    'cluster.uninformative_filter': True,
+                    'reference.annotations': [
+                        get_data('example_genes.json'),
+                        get_data('mock_annotations.json'),
+                    ],
+                    'reference.masking': [get_data('mock_masking.tab')],
+                    'output_dir': output_dir,
+                }
+            )
+        )
         args = [
             'mavis',
             'cluster',
             '--library',
             'translib',
-            '--protocol',
-            'transcriptome',
-            '--disease_status',
-            'diseased',
-            '--input',
+            '--inputs',
             get_data('mock_sv_events.tsv'),
             '--output',
-            'outdir',
+            output_dir,
+            '--config',
+            str(configpath),
         ]
         with patch.object(cluster_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 mavis_main()
 
+    def test_error_missing_annotations_translib_uninform(self, configpath, output_dir):
+        configpath.write_text(
+            json.dumps(
+                {
+                    'libraries': {
+                        'translib': {
+                            'disease_status': 'diseased',
+                            'protocol': 'transcriptome',
+                            'assign': [get_data('mock_sv_events.tsv')],
+                        }
+                    },
+                    'cluster.uninformative_filter': True,
+                    'output_dir': output_dir,
+                }
+            )
+        )
+        args = ['mavis', 'cluster', '--library', 'translib', '--output', output_dir]
+        with patch.object(cluster_main, 'main', util.DEVNULL):
+            with patch.object(sys, 'argv', args):
+                expect_error(self, mavis_main)
 
-class TestValidate(unittest.TestCase):
-    def test_error_missing_annotations_translib(self):
+
+class TestValidate:
+    def test_error_missing_annotations_translib(self, configpath, output_dir):
+        configpath.write_text(
+            json.dumps(
+                {
+                    'libraries': {
+                        'translib': {
+                            'disease_status': 'diseased',
+                            'protocol': 'transcriptome',
+                            'assign': [get_data('mock_sv_events.tsv')],
+                            'bam_file': get_data('mock_trans_reads_for_events.sorted.bam'),
+                            'read_length': 125,
+                            'median_fragment_size': 200,
+                            'stdev_fragment_size': 50,
+                        }
+                    },
+                    'cluster.uninformative_filter': True,
+                    'reference.reference_genome': [get_data('mock_reference_genome.fa')],
+                    'reference.aligner_reference': [get_data('mock_reference_genome.fa')],
+                    'output_dir': output_dir,
+                }
+            )
+        )
         args = [
             'mavis',
             'validate',
             '--library',
             'translib',
-            '--protocol',
-            'transcriptome',
-            '--bam_file',
-            get_data('mock_trans_reads_for_events.sorted.bam'),
-            '--stdev_fragment_size',
-            '50',
-            '--median_fragment_size',
-            '200',
             '--input',
             get_data('mock_sv_events.tsv'),
             '--output',
-            'outdir',
-            '--reference_genome',
-            get_data('mock_reference_genome.fa'),
-            '--aligner_reference',
-            get_data('mock_reference_genome.fa'),
-            '--read_length',
-            '125',
+            output_dir,
+            '--config',
+            str(configpath),
         ]
         with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
-                err = expect_error(self, mavis_main, SystemExit)
-                self.assertEqual(ARGUMENT_ERROR, err.code)
+                expect_error(self, mavis_main)
 
-    def test_ok_missing_annotations_genome(self):
+    def test_ok_multi_ref_genome(self, configpath, output_dir):
+        configpath.write_text(
+            json.dumps(
+                {
+                    'libraries': {
+                        'translib': {
+                            'disease_status': 'diseased',
+                            'protocol': 'genome',
+                            'assign': [get_data('mock_sv_events.tsv')],
+                            'bam_file': get_data('mock_trans_reads_for_events.sorted.bam'),
+                            'read_length': 125,
+                            'median_fragment_size': 200,
+                            'stdev_fragment_size': 50,
+                        }
+                    },
+                    'reference.annotations': [
+                        get_data('example_genes.json'),
+                        get_data('mock_annotations.json'),
+                    ],
+                    'cluster.uninformative_filter': True,
+                    'reference.reference_genome': [
+                        get_data('mock_reference_genome.fa'),
+                        get_data('example_genes.fa'),
+                    ],
+                    'reference.aligner_reference': [get_data('mock_reference_genome.fa')],
+                    'output_dir': output_dir,
+                }
+            )
+        )
         args = [
             'mavis',
             'validate',
             '--library',
             'translib',
-            '--protocol',
-            'genome',
-            '--bam_file',
-            get_data('mock_trans_reads_for_events.sorted.bam'),
-            '--stdev_fragment_size',
-            '50',
-            '--median_fragment_size',
-            '200',
             '--input',
             get_data('mock_sv_events.tsv'),
             '--output',
-            'outdir',
-            '--reference_genome',
-            get_data('mock_reference_genome.fa'),
-            '--aligner_reference',
-            get_data('mock_reference_genome.fa'),
-            '--read_length',
-            '125',
+            output_dir,
+            '--config',
+            str(configpath),
         ]
         with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
                 mavis_main()
 
-    def test_ok_multi_ref_genome(self):
+    def test_error_multi_aligner_ref(self, configpath, output_dir):
+        configpath.write_text(
+            json.dumps(
+                {
+                    'libraries': {
+                        'translib': {
+                            'disease_status': 'diseased',
+                            'protocol': 'genome',
+                            'assign': [get_data('mock_sv_events.tsv')],
+                            'bam_file': get_data('mock_trans_reads_for_events.sorted.bam'),
+                            'read_length': 125,
+                            'median_fragment_size': 200,
+                            'stdev_fragment_size': 50,
+                        }
+                    },
+                    'reference.annotations': [
+                        get_data('example_genes.json'),
+                        get_data('mock_annotations.json'),
+                    ],
+                    'cluster.uninformative_filter': True,
+                    'reference.reference_genome': [
+                        get_data('mock_reference_genome.fa'),
+                        get_data('example_genes.fa'),
+                    ],
+                    'reference.aligner_reference': [
+                        get_data('mock_reference_genome.fa'),
+                        get_data('example_genes.fa'),
+                    ],
+                    'output_dir': output_dir,
+                }
+            )
+        )
         args = [
             'mavis',
             'validate',
             '--library',
             'translib',
-            '--protocol',
-            'genome',
-            '--bam_file',
-            get_data('mock_trans_reads_for_events.sorted.bam'),
-            '--stdev_fragment_size',
-            '50',
-            '--median_fragment_size',
-            '200',
             '--input',
             get_data('mock_sv_events.tsv'),
             '--output',
-            'outdir',
-            '--reference_genome',
-            get_data('mock_reference_genome.fa'),
-            get_data('example_genes.fa'),
-            '--aligner_reference',
-            get_data('mock_reference_genome.fa'),
-            '--read_length',
-            '125',
+            output_dir,
+            '--config',
+            str(configpath),
         ]
         with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
-                mavis_main()
+                expect_error(self, mavis_main)
 
-    def test_error_multi_aligner_ref(self):
+    def test_error_missing_aligner_ref(self, configpath, output_dir):
+        configpath.write_text(
+            json.dumps(
+                {
+                    'libraries': {
+                        'translib': {
+                            'disease_status': 'diseased',
+                            'protocol': 'genome',
+                            'assign': [get_data('mock_sv_events.tsv')],
+                            'bam_file': get_data('mock_trans_reads_for_events.sorted.bam'),
+                            'read_length': 125,
+                            'median_fragment_size': 200,
+                            'stdev_fragment_size': 50,
+                        }
+                    },
+                    'reference.annotations': [
+                        get_data('example_genes.json'),
+                        get_data('mock_annotations.json'),
+                    ],
+                    'cluster.uninformative_filter': True,
+                    'reference.reference_genome': [
+                        get_data('mock_reference_genome.fa'),
+                        get_data('example_genes.fa'),
+                    ],
+                    'output_dir': output_dir,
+                }
+            )
+        )
         args = [
             'mavis',
             'validate',
             '--library',
             'translib',
-            '--protocol',
-            'genome',
-            '--bam_file',
-            get_data('mock_trans_reads_for_events.sorted.bam'),
-            '--stdev_fragment_size',
-            '50',
-            '--median_fragment_size',
-            '200',
             '--input',
             get_data('mock_sv_events.tsv'),
             '--output',
-            'outdir',
-            '--reference_genome',
-            get_data('mock_reference_genome.fa'),
-            '--aligner_reference',
-            get_data('mock_reference_genome.fa'),
-            get_data('example_genes.fa'),
-            '--read_length',
-            '125',
+            output_dir,
+            '--config',
+            str(configpath),
         ]
         with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
-                err = expect_error(self, mavis_main, SystemExit)
-                self.assertEqual(ARGUMENT_ERROR, err.code)
+                expect_error(self, mavis_main)
 
-    def test_error_missing_aligner_ref(self):
+    def test_error_missing_reference_genome(self, configpath, output_dir):
+        configpath.write_text(
+            json.dumps(
+                {
+                    'libraries': {
+                        'translib': {
+                            'disease_status': 'diseased',
+                            'protocol': 'genome',
+                            'assign': [get_data('mock_sv_events.tsv')],
+                            'bam_file': get_data('mock_trans_reads_for_events.sorted.bam'),
+                            'read_length': 125,
+                            'median_fragment_size': 200,
+                            'stdev_fragment_size': 50,
+                        }
+                    },
+                    'reference.annotations': [
+                        get_data('example_genes.json'),
+                        get_data('mock_annotations.json'),
+                    ],
+                    'cluster.uninformative_filter': True,
+                    'reference.aligner_reference': [
+                        get_data('mock_reference_genome.fa'),
+                        get_data('example_genes.fa'),
+                    ],
+                    'output_dir': output_dir,
+                }
+            )
+        )
         args = [
             'mavis',
             'validate',
             '--library',
             'translib',
-            '--protocol',
-            'genome',
-            '--bam_file',
-            get_data('mock_trans_reads_for_events.sorted.bam'),
-            '--stdev_fragment_size',
-            '50',
-            '--median_fragment_size',
-            '200',
             '--input',
             get_data('mock_sv_events.tsv'),
             '--output',
-            'outdir',
-            '--reference_genome',
-            get_data('mock_reference_genome.fa'),
-            '--read_length',
-            '125',
+            output_dir,
+            '--config',
+            str(configpath),
         ]
         with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
-                err = expect_error(self, mavis_main, SystemExit)
-                self.assertEqual(ARGUMENT_ERROR, err.code)
+                expect_error(self, mavis_main)
 
-    def test_error_missing_reference_genome(self):
+    def test_error_bad_aligner_ref(self, configpath, output_dir):
+        configpath.write_text(
+            json.dumps(
+                {
+                    'libraries': {
+                        'translib': {
+                            'disease_status': 'diseased',
+                            'protocol': 'genome',
+                            'assign': [get_data('mock_sv_events.tsv')],
+                            'bam_file': get_data('mock_trans_reads_for_events.sorted.bam'),
+                            'read_length': 125,
+                            'median_fragment_size': 200,
+                            'stdev_fragment_size': 50,
+                        }
+                    },
+                    'reference.annotations': [
+                        get_data('example_genes.json'),
+                        get_data('mock_annotations.json'),
+                    ],
+                    'cluster.uninformative_filter': True,
+                    'reference.reference_genome': [
+                        get_data('mock_reference_genome.fa'),
+                        get_data('example_genes.fa'),
+                    ],
+                    'reference.aligner_reference': [
+                        'fake_path',
+                    ],
+                    'output_dir': output_dir,
+                }
+            )
+        )
         args = [
             'mavis',
             'validate',
             '--library',
             'translib',
-            '--protocol',
-            'genome',
-            '--bam_file',
-            get_data('mock_trans_reads_for_events.sorted.bam'),
-            '--stdev_fragment_size',
-            '50',
-            '--median_fragment_size',
-            '200',
             '--input',
             get_data('mock_sv_events.tsv'),
             '--output',
-            'outdir',
-            '--aligner_reference',
-            get_data('mock_reference_genome.fa'),
-            '--read_length',
-            '125',
+            output_dir,
+            '--config',
+            str(configpath),
         ]
         with patch.object(validate_main, 'main', util.DEVNULL):
             with patch.object(sys, 'argv', args):
-                err = expect_error(self, mavis_main, SystemExit)
-                self.assertEqual(ARGUMENT_ERROR, err.code)
-
-    def test_error_bad_aligner_ref(self):
-        args = [
-            'mavis',
-            'validate',
-            '--library',
-            'translib',
-            '--protocol',
-            'genome',
-            '--bam_file',
-            get_data('mock_trans_reads_for_events.sorted.bam'),
-            '--stdev_fragment_size',
-            '50',
-            '--median_fragment_size',
-            '200',
-            '--input',
-            get_data('mock_sv_events.tsv'),
-            '--output',
-            'outdir',
-            '--reference_genome',
-            get_data('mock_reference_genome.fa'),
-            '--aligner_reference',
-            'bad',
-            '--read_length',
-            '125',
-        ]
-        with patch.object(validate_main, 'main', util.DEVNULL):
-            with patch.object(sys, 'argv', args):
-                err = expect_error(self, mavis_main, SystemExit)
-                self.assertEqual(ARGUMENT_ERROR, err.code)
-
-    def test_error_none_aligner_ref(self):
-        args = [
-            'mavis',
-            'validate',
-            '--library',
-            'translib',
-            '--protocol',
-            'genome',
-            '--bam_file',
-            get_data('mock_trans_reads_for_events.sorted.bam'),
-            '--stdev_fragment_size',
-            '50',
-            '--median_fragment_size',
-            '200',
-            '--input',
-            get_data('mock_sv_events.tsv'),
-            '--output',
-            'outdir',
-            '--reference_genome',
-            get_data('mock_reference_genome.fa'),
-            '--aligner_reference',
-            'none',
-            '--read_length',
-            '125',
-        ]
-        with patch.object(validate_main, 'main', util.DEVNULL):
-            with patch.object(sys, 'argv', args):
-                err = expect_error(self, mavis_main, SystemExit)
-                self.assertEqual(ARGUMENT_ERROR, err.code)
+                expect_error(self, mavis_main)
