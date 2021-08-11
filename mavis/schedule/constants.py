@@ -60,7 +60,7 @@ When the scheduler should notify [mail_user](/configuration/settings/#mail_user)
 - ``NONE`` - Do not send email
 """
 
-STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env', 'mail_user', 'mail_type']
+STD_OPTIONS = ['memory_limit', 'queue', 'time_limit', 'import_env', 'mail_user', 'mail_type', 'priority']
 
 OPTIONS = WeakMavisNamespace(__name__='mavis.schedule.constants.options')
 """MavisNamespace: submission options
@@ -88,6 +88,7 @@ OPTIONS.add('mail_user', '', defn='User(s) to send notifications to')
 OPTIONS.add(
     'memory_limit', 16000, defn='the maximum number of megabytes (MB) any given job is allowed'
 )  # 16 GB
+OPTIONS.add('priority', '', defn='extra priority of the jobs to be submitted')
 OPTIONS.add('queue', '', cast_type=str, defn='the queue jobs are to be submitted to')
 OPTIONS.add('scheduler', SCHEDULER.SLURM, defn='The scheduler being used', cast_type=SCHEDULER)
 OPTIONS.add(
