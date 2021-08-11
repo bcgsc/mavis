@@ -390,6 +390,7 @@ def read_bpp_from_input_file(
             comment='#',
             na_values=['None', 'none', 'N/A', 'n/a', 'null', 'NULL', 'Null', 'nan', '<NA>', 'NaN'],
         )
+        df = df.where(pd.notnull(df), None)
     except pd.errors.EmptyDataError:
         return []
 
