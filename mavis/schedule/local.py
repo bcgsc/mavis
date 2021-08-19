@@ -1,18 +1,17 @@
 import atexit
-from concurrent import futures
-from datetime import datetime
 import logging
 import multiprocessing
 import os
+from concurrent import futures
+from datetime import datetime
 
 import shortuuid
 
-from ..util import LOG
 from ..annotate.file_io import REFERENCE_DEFAULTS, ReferenceFile
-
+from ..util import LOG
+from .constants import JOB_STATUS, SCHEDULER
 from .job import Job
 from .scheduler import Scheduler
-from .constants import JOB_STATUS, SCHEDULER
 
 
 class LocalJob(Job):
@@ -53,12 +52,16 @@ class LocalJob(Job):
         return {k: v for k, v in result.items() if k not in omit}
 
 
-def write_stamp_callback(response):
+def write_stamp_callback(job, response):
     if response.exception() or response.cancelled() or response.running():
+        LOG('error:' + str(response.exception()), level='ERROR')
+        if not os.path.exists(job.logfile()):
+            with open(job.logfile(), 'w') as fh:
+                fh.write('error:' + str(response.exception()))
         return
     try:
-        LOG('writing:', response.complete_stamp, time_stamp=True, indent_level=1)
-        with open(response.complete_stamp, 'w') as fh:
+        LOG('writing:', job.complete_stamp(), time_stamp=True, indent_level=1)
+        with open(job.complete_stamp(), 'w') as fh:
             fh.write('end: {}\n'.format(int(datetime.timestamp(datetime.utcnow()))))
     except Exception as err:
         LOG('error writing the complete stamp', level=logging.CRITICAL, indent_level=1)
@@ -111,7 +114,7 @@ class LocalScheduler(Scheduler):
             job.func, args
         )  # no arguments, defined all in the job object
         setattr(job.response, 'complete_stamp', job.complete_stamp())
-        job.response.add_done_callback(write_stamp_callback)
+        job.response.add_done_callback(lambda resp: write_stamp_callback(job, resp))
         self.submitted[job.job_ident] = job
         job.rank = len(self.submitted)
         LOG('submitted', job.name, indent_level=1)
@@ -125,6 +128,7 @@ class LocalScheduler(Scheduler):
             return
         self.pool.shutdown(True)
         self.pool = None
+
         for job in self.submitted.values():
             self.update_info(job)
 
