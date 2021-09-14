@@ -126,6 +126,9 @@ class TestConvert(unittest.TestCase):
     def test_strelka(self):
         self.run_main(get_data('strelka.vcf'), SUPPORTED_TOOL.STRELKA, False)
 
+    def test_mutect(self):
+        self.run_main(get_data('mutect.vcf'), SUPPORTED_TOOL.MUTECT, False)
+
 
 def tearDownModule():
     # remove the temp directory and outputs

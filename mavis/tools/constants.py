@@ -15,6 +15,7 @@ SUPPORTED_TOOL = MavisNamespace(
     STRELKA='strelka',
     STARFUSION='starfusion',
     SNIFFLES='sniffles'
+    MUTECT='mutect',
 )
 """
 Supported Tools used to call SVs and then used as input into MAVIS

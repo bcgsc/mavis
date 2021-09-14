@@ -859,6 +859,53 @@ class TestStrelka(unittest.TestCase):
             _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
 
 
+class TestMutect(unittest.TestCase):
+    def testInsertion(self):
+        event = Mock(
+            chrom='1', pos=724986, id=None, info={}, ref='G', stop=724986, alts=('GGAATT',)
+        )
+        bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.MUTECT, False)
+        assert len(bpp_list) == 1
+        bpp = bpp_list[0]
+        assert bpp.break1.start == 724986
+        assert bpp.break1.end == 724986
+        assert bpp.break2.start == 724986
+        assert bpp.break2.end == 724986
+        assert bpp.event_type == SVTYPE.INS
+
+    def testDeletion(self):
+        event = Mock(
+            chrom='1',
+            pos=1265353,
+            id=None,
+            info={},
+            ref='GCGTGTGCCATGCA',
+            stop=1265366,
+            alts=('G',),
+        )
+        bpp_list = _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.MUTECT, False)
+        assert len(bpp_list) == 1
+        bpp = bpp_list[0]
+        assert bpp.break1.start == 1265353
+        assert bpp.break1.end == 1265353
+        assert bpp.break2.start == 1265366
+        assert bpp.break2.end == 1265366
+        assert bpp.event_type == SVTYPE.DEL
+
+    def testMalformated(self):
+        event = Mock(
+            chrom='1',
+            pos=53678660,
+            id=None,
+            info={'SVTYPE': 'BND'},
+            ref='C',
+            alts=('CTTTTAAATGTAACATGACATAATATATTTCCTAAATAATTTAAAATAATC.',),
+            stop=53678660,
+        )
+        with self.assertRaises(NotImplementedError):
+            _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.MUTECT, False)
+
+
 class TestVCF(unittest.TestCase):
     def setUp(self):
         self.tra = Mock(
