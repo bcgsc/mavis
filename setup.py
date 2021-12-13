@@ -89,6 +89,7 @@ INSTALL_REQS = [
     'pyvcf==0.6.8',
     'shortuuid>=0.5.0',
     'svgwrite',
+    'mistune==0.8.4',
 ]
 
 DEPLOY_REQS = ['twine', 'm2r', 'wheel']
