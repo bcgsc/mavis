@@ -123,6 +123,6 @@ See the MAVIS [tutorial](https://mavis.readthedocs.io/en/latest/tutorials/mini) 
 
 ## Citation
 
-If you use MAVIS as a part of your project please cite:
+If you use MAVIS as a part of your project please cite
 
 [Reisle,C. et al. (2018) MAVIS: Merging, Annotation, Validation, and Illustration of Structural variants. Bioinformatics.](https://doi.org/10.1093/bioinformatics/bty621)
