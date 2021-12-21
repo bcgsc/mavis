@@ -28,5 +28,5 @@ def check_nonpython_dependencies():
     else:
         print('Found: aligner at', pth)
 
-check_nonpython_dependencies()
 setup()
+check_nonpython_dependencies()
