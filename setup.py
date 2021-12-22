@@ -3,10 +3,6 @@ import re
 
 from setuptools import setup
 
-# HSTLIB is a dependency for pysam.
-# The cram file libraries fail for some OS versions and mavis does not use cram files so we disable these options
-os.environ['HTSLIB_CONFIGURE_OPTIONS'] = '--disable-lzma --disable-bz2 --disable-libcurl'
-
 def check_nonpython_dependencies():
     """
     check that the non-python dependencies have been installed.
