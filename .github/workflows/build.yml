@@ -18,6 +18,9 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Configue HTSLIB for installation
+      run: |
+        export HTSLIB_CONFIGURE_OPTIONS ='--disable-lzma --disable-bz2 --disable-libcurl'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools
