@@ -21,6 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         export HTSLIB_CONFIGURE_OPTIONS='--disable-lzma --disable-bz2 --disable-libcurl'
+        pip install --upgrade pip
         python -m pip install --upgrade pip setuptools
         pip install .[test]
     - name: Lint with flake8
