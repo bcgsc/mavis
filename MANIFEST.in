@@ -5,6 +5,6 @@ recursive-include mavis *.py
 recursive-include tools *.pl *.py *.pm
 recursive-include tab *.py
 include README.md
-include LICENSE.txt
+include LICENSE
 prune docs/build
 prune docs/source/auto
