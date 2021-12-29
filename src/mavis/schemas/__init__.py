@@ -1,10 +1,14 @@
-import collections
+try:
+    from collections import Mapping
+except ImportError:
+    from collections.abc import Mapping
+
 import os
 
 from snakemake.utils import validate as snakemake_validate
 
 
-class ImmutableDict(collections.Mapping):
+class ImmutableDict(Mapping):
     def __init__(self, data):
         self._data = data
 
