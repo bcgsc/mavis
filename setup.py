@@ -1,35 +1,12 @@
 import os
 import re
+from pathlib import Path
 
 from setuptools import find_packages, setup
 
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 VERSION = '2.2.8'
-
-
-def parse_md_readme():
-    """
-    pypi won't render markdown. After conversion to rst it will still not render unless raw directives are removed
-    """
-    try:
-        from m2r import parse_from_file
-
-        rst_lines = parse_from_file('README.md').split('\n')
-        long_description = [
-            '.. image:: http://mavis.bcgsc.ca/docs/latest/_static/acronym.svg\n\n|\n'
-        ]  # backup since pip can't handle raw directives
-        i = 0
-        while i < len(rst_lines):
-            if re.match(r'^..\s+raw::.*', rst_lines[i]):
-                i += 1
-                while re.match(r'^(\s\s+|\t|$).*', rst_lines[i]):
-                    i += 1
-            else:
-                long_description.append(re.sub('>`_ ', '>`__ ', rst_lines[i]))  # anonymous links
-                i += 1
-        long_description = '\n'.join(long_description)
-    except (ImportError, OSError):
-        long_description = ''
-    return long_description
 
 
 def check_nonpython_dependencies():
@@ -92,7 +69,7 @@ INSTALL_REQS = [
     'mavis_config>=1.1.0, <2.0.0',
 ]
 
-DEPLOY_REQS = ['twine', 'm2r', 'wheel']
+DEPLOY_REQS = ['twine', 'wheel']
 
 
 setup(
@@ -103,7 +80,8 @@ setup(
     package_dir={'': 'src'},
     packages=find_packages(where='src'),
     description='A Structural Variant Post-Processing Package',
-    long_description=parse_md_readme(),
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     install_requires=INSTALL_REQS,
     extras_require={
         'docs': DOC_REQS,
