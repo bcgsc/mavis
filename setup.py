@@ -83,7 +83,7 @@ INSTALL_REQS = [
     'biopython>=1.70, <1.78',
     'braceexpand==0.1.2',
     'colour',
-    'networkx==1.11.0',
+    'networkx>=2.5,<3',
     'numpy>=1.13.1',
     'pandas>=1.1, <2',
     'pysam',
