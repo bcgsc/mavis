@@ -114,7 +114,7 @@ setup(
     },
     tests_require=TEST_REQS,
     setup_requires=['pip>=9.0.0', 'setuptools>=36.0.0'],
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     author='Caralyn Reisle',
     author_email='creisle@bcgsc.ca',
     test_suite='tests',
