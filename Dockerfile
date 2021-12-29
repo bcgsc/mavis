@@ -29,7 +29,7 @@ RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat && \
 COPY setup.py setup.py
 COPY setup.cfg setup.cfg
 COPY src src
-COPY LICENSE.txt LICENSE.txt
+COPY LICENSE LICENSE
 COPY README.md README.md
 
 # install python package
