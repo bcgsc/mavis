@@ -86,7 +86,6 @@ INSTALL_REQS = [
     'networkx==1.11.0',
     'numpy>=1.13.1',
     'pysam>=0.9, <=0.15.2',
-    'pyvcf==0.6.8',
     'shortuuid>=0.5.0',
     'svgwrite',
 ]
@@ -111,7 +110,7 @@ setup(
         'tools': ['pyensembl', 'simplejson'],
     },
     tests_require=TEST_REQS,
-    setup_requires=['pip>=9.0.0', 'setuptools>=36.0.0'],
+    setup_requires=['pip>=9.0.0', 'setuptools>=36.0.0,<58'],
     python_requires='>=3.2',
     author='Caralyn Reisle',
     author_email='creisle@bcgsc.ca',
