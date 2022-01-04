@@ -73,13 +73,13 @@ The easiest way to install [MAVIS](http://mavis.bcgsc.ca) is through the python 
 Ensuring you have a recent version of pip and setuptools will improve the install experience. Older versions of pip and setuptools may have issues with obtaining some of the mavis python dependencies
 
 ``` bash
-pip install --upgrade pip setuptools
+pip install --upgrade pip "setuptools<58"
 ```
 
 or (for Anaconda users)
 
 ``` bash
-conda update pip setuptools
+conda update pip "setuptools<58"
 ```
 
 If this is not a clean/new python install it may be useful to set up mavis in a [virtual python environment](https://docs.python.org/3/tutorial/venv.html)
