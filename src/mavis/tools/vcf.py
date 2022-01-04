@@ -5,7 +5,12 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 from pysam import VariantFile
-from typing_extensions import TypedDict
+
+try:
+    # TypedDict added to typing package directly in later versions
+    from typing import TypedDict
+except ImportError:
+    from typing_extensions import TypedDict
 
 from ..constants import COLUMNS, ORIENT, SVTYPE
 from ..util import DEVNULL
