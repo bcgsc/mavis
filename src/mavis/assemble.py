@@ -66,6 +66,15 @@ class DeBruijnGraph(nx.DiGraph):
     enforces edge weights
     """
 
+    def get_out_edges(self, *args, **kwargs):
+        return list(self.out_edges(*args, **kwargs))
+
+    def get_in_edges(self, *args, **kwargs):
+        return list(self.in_edges(*args, **kwargs))
+
+    def get_nodes(self, *args, **kwargs):
+        return list(self.nodes(*args, **kwargs))
+
     def get_edge_freq(self, n1, n2):
         """
         returns the freq from the data attribute for a specified edge
@@ -85,7 +94,7 @@ class DeBruijnGraph(nx.DiGraph):
         nx.DiGraph.add_edge(self, n1, n2, freq=freq)
 
     def all_edges(self, *nodes, data=False):
-        return self.in_edges(*nodes, data=data) + self.out_edges(*nodes, data=data)
+        return self.get_in_edges(*nodes, data=data) + self.get_out_edges(*nodes, data=data)
 
     def trim_tails_by_freq(self, min_weight):
         """
@@ -95,7 +104,7 @@ class DeBruijnGraph(nx.DiGraph):
             min_weight (int): the minimum weight for an edge to be retained
         """
         ends = sorted(
-            [n for n in self.nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0]
+            [n for n in self.get_nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0]
         )
         visited = set()
 
@@ -126,16 +135,16 @@ class DeBruijnGraph(nx.DiGraph):
         for all nodes in the graph, if the node has an out-degree > 1 and one of the outgoing
         edges has freq < min_weight. then that outgoing edge is deleted
         """
-        nodes = [n for n in self.nodes() if self.degree(n) > 2]
+        nodes = [n for n in self.get_nodes() if self.degree(n) > 2]
         for node in sorted(nodes):
             if self.out_degree(node) > 1:
-                outgoing_edges = self.out_edges(node, data=True)
+                outgoing_edges = self.get_out_edges(node, data=True)
                 best = max([e[2]['freq'] for e in outgoing_edges])
                 for src, tgt, data in outgoing_edges:
                     if data['freq'] < min_weight and data['freq'] != best:
                         self.remove_edge(src, tgt)
             if self.in_degree(node) > 1:
-                ingoing_edges = self.in_edges(node, data=True)
+                ingoing_edges = self.get_in_edges(node, data=True)
                 best = max([e[2]['freq'] for e in ingoing_edges])
                 for src, tgt, data in ingoing_edges:
                     if data['freq'] < min_weight and data['freq'] != best:
@@ -157,7 +166,7 @@ class DeBruijnGraph(nx.DiGraph):
             else:
                 path = []
                 while self.in_degree(src) == 1 and self.out_degree(src) == 1:
-                    s, t, data = self.in_edges(src, data=True)[0]
+                    s, t, data = self.get_in_edges(src, data=True)[0]
                     if data['freq'] >= min_weight or s in path:
                         break
                     path.insert(0, src)
@@ -165,7 +174,7 @@ class DeBruijnGraph(nx.DiGraph):
                 path.insert(0, src)
 
                 while self.in_degree(tgt) == 1 and self.out_degree(tgt) == 1:
-                    s, t, data = self.out_edges(tgt, data=True)[0]
+                    s, t, data = self.get_out_edges(tgt, data=True)[0]
                     if data['freq'] >= min_weight or t in path:
                         break
                     path.append(tgt)
@@ -193,7 +202,7 @@ class DeBruijnGraph(nx.DiGraph):
         """
         nodeset = set()
         if subgraph is None:
-            subgraph = self.nodes()
+            subgraph = self.get_nodes()
         for node in subgraph:
             if self.out_degree(node) == 0:
                 nodeset.add(node)
@@ -205,7 +214,7 @@ class DeBruijnGraph(nx.DiGraph):
         """
         nodeset = set()
         if subgraph is None:
-            subgraph = self.nodes()
+            subgraph = self.get_nodes()
         for node in subgraph:
             if self.in_degree(node) == 0:
                 nodeset.add(node)
@@ -227,7 +236,7 @@ def digraph_connected_components(graph, subgraph=None):
         List[List]: returns a list of compnents which are lists of node names
     """
     if subgraph is None:
-        subgraph = set(graph.nodes())
+        subgraph = set(graph.get_nodes())
     g = nx.Graph()
     for src, tgt in graph.edges():
         if src in subgraph and tgt in subgraph:
@@ -387,7 +396,7 @@ def assemble(
         for kmer in kmers_list:
             assembly.add_edge(kmer[:-1], kmer[1:])
     # use the ab min edge weight to remove all low weight edges first
-    nodes = list(assembly.nodes())
+    nodes = assembly.get_nodes()
     for n in nodes:
         if assembly.in_degree(n) == 0 and assembly.out_degree(n) == 0:
             assembly.remove_node(n)
@@ -396,7 +405,7 @@ def assemble(
         subgraph = assembly.subgraph(component)
         if not nx.is_directed_acyclic_graph(subgraph):
             log('dropping cyclic component', time_stamp=False)
-            for node in subgraph.nodes():
+            for node in subgraph.get_nodes():
                 assembly.remove_node(node)
     # initial data cleaning
     assembly.trim_forks_by_freq(min_edge_trim_weight)
@@ -409,7 +418,7 @@ def assemble(
         # pull the path scores
         path_scores.update(
             pull_contigs_from_component(
-                assembly.subgraph(component),
+                assembly.subgraph(component).copy(),
                 component,
                 min_edge_trim_weight=min_edge_trim_weight,
                 assembly_max_paths=assembly_max_paths,

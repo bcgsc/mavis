@@ -1,5 +1,5 @@
 recursive-include src *.py *.json
 include README.md
 include LICENSE
-prune docs/build
-prune docs/source/auto
+prune docs
+prune tests

@@ -105,7 +105,7 @@ class TestDeBruijnGraph:
         g.add_edge(8, 7)
         g.add_edge(9, 8)
         g.trim_tails_by_freq(2)
-        assert sorted(g.nodes()) == [1, 2, 3, 4, 5, 6]
+        assert sorted(g.get_nodes()) == [1, 2, 3, 4, 5, 6]
 
         g = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
@@ -117,7 +117,7 @@ class TestDeBruijnGraph:
         g.add_edge(8, 7)
         g.add_edge(9, 8)
         g.trim_tails_by_freq(2)
-        assert sorted(g.nodes()) == [1, 2, 3, 4, 5, 6, 7, 8]
+        assert sorted(g.get_nodes()) == [1, 2, 3, 4, 5, 6, 7, 8]
 
         g = DeBruijnGraph()
         for s, t in itertools.combinations([1, 2, 3, 4, 5, 6], 2):
@@ -128,7 +128,7 @@ class TestDeBruijnGraph:
         g.add_edge(7, 8)
         g.add_edge(9, 8)
         g.trim_tails_by_freq(2)
-        assert sorted(g.nodes()) == [1, 2, 3, 4, 5, 6]
+        assert sorted(g.get_nodes()) == [1, 2, 3, 4, 5, 6]
 
     def test_add_edge(self):
         g = DeBruijnGraph()
@@ -151,22 +151,25 @@ class TestDeBruijnGraph:
         for edge in g.edges():
             print(edge)
         g.trim_noncutting_paths_by_freq(3)
-        assert g.nodes() == list(range(1, 9)) + path1[1:-1]
+        print('g.nodes', g.nodes)
+        assert g.get_nodes() == list(range(1, 9)) + path1[1:-1]
+        print('g.nodes', g.nodes)
 
         # add an equal weight path to force namesorting
         path2 = [5, 13, 14, 15, 16, 1]
         for s, t in zip(path2, path2[1:]):
             g.add_edge(s, t)
-
+        print('g.nodes', g.nodes)
         g.trim_noncutting_paths_by_freq(3)
-        assert g.nodes() == list(range(1, 9)) + path2[1:-1]
+        print('g.nodes', g.nodes)
+        assert g.get_nodes() == list(range(1, 9)) + path2[1:-1]
 
         # add back the original path with a higher (but still low) weight
         for s, t in zip(path1, path1[1:]):
             g.add_edge(s, t, freq=2)
 
         g.trim_noncutting_paths_by_freq(3)
-        assert g.nodes() == list(range(1, 9)) + path1[1:-1]
+        assert g.get_nodes() == list(range(1, 9)) + path1[1:-1]
 
         # add the second path with 1 high weight edge
         path2 = [5, 13, 14, 15, 16, 1]
@@ -175,7 +178,7 @@ class TestDeBruijnGraph:
         g.add_edge(14, 15, freq=6)
 
         g.trim_noncutting_paths_by_freq(3)
-        assert g.nodes() == list(range(1, 9)) + path2[1:-1]
+        assert g.get_nodes() == list(range(1, 9)) + path2[1:-1]
 
 
 @pytest.fixture

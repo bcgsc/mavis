@@ -28,6 +28,8 @@ RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat && \
 
 COPY setup.py setup.py
 COPY setup.cfg setup.cfg
+COPY MANIFEST.in MANIFEST.in
+COPY pyproject.toml pyproject.toml
 COPY src src
 COPY LICENSE LICENSE
 COPY README.md README.md
