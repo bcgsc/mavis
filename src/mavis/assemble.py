@@ -418,7 +418,7 @@ def assemble(
         # pull the path scores
         path_scores.update(
             pull_contigs_from_component(
-                assembly.subgraph(component),
+                assembly.subgraph(component).copy(),
                 component,
                 min_edge_trim_weight=min_edge_trim_weight,
                 assembly_max_paths=assembly_max_paths,
