@@ -1,4 +1,5 @@
 recursive-include src *.py *.json
+include src/mavis/schemas/*.json
 include README.md
 include LICENSE
 prune docs
