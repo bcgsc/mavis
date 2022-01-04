@@ -15,6 +15,7 @@ junit
 .tox
 *eggs/
 .mypy_cache
+.snakemake
 
 # aligners
 blat

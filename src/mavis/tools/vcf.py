@@ -1,11 +1,55 @@
+import logging
 import re
-from typing import Dict, List, Tuple
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 
+import pandas as pd
 from pysam import VariantFile
+from typing_extensions import TypedDict
 
 from ..constants import COLUMNS, ORIENT, SVTYPE
 from ..util import DEVNULL
 from .constants import SUPPORTED_TOOL
+
+PANDAS_DEFAULT_NA_VALUES = [
+    '-1.#IND',
+    '1.#QNAN',
+    '1.#IND',
+    '-1.#QNAN',
+    '#N/A',
+    'N/A',
+    'NA',
+    '#NA',
+    'NULL',
+    'NaN',
+    '-NaN',
+    'nan',
+    '-nan',
+]
+
+
+class VcfInfoType(TypedDict, total=False):
+    SVTYPE: str
+    CHR2: str
+    CIPOS: Tuple[int, int]
+    CIEND: Tuple[int, int]
+    CT: str
+    END: Optional[int]
+    PRECISE: bool
+
+
+@dataclass
+class VcfRecordType:
+    id: str
+    pos: int
+    chrom: str
+    alts: List[Optional[str]]
+    info: VcfInfoType
+    ref: str
+
+    @property
+    def stop(self) -> Optional[int]:
+        return self.info.get('END', self.pos)
 
 
 def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
@@ -88,6 +132,7 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
             - duplication: 5to3
     """
     records = []
+
     for alt in record.alts if record.alts else [None]:
         info = {}
         for key in record.info.keys():
@@ -106,7 +151,7 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
         if record.id and record.id != 'N':  # to account for NovoBreak N in the ID field
             std_row['id'] = record.id
 
-        if info.get('SVTYPE', None) == 'BND':
+        if info.get('SVTYPE') == 'BND':
             chr2, end, orient1, orient2, ref, alt = parse_bnd_alt(alt)
             std_row[COLUMNS.break1_orientation] = orient1
             std_row[COLUMNS.break2_orientation] = orient2
@@ -172,6 +217,82 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
     return records
 
 
+def convert_pandas_rows_to_variants(df):
+    def parse_info(info_field):
+        info = {}
+        for pair in info_field.split(';'):
+            if '=' in pair:
+                key, value = pair.split('=', 1)
+                info[key] = value
+            else:
+                info[pair] = True
+
+        # convert info types
+        for key in info:
+            if key in {'CIPOS', 'CIEND'}:
+                ci_start, ci_end = info[key].split(',')
+                info[key] = (int(ci_start), int(ci_end))
+            elif key == 'END':
+                info[key] = int(info[key])
+
+        return info
+
+    df['info'] = df['INFO'].apply(parse_info)
+    df['alts'] = df['ALT'].apply(lambda a: a.split(','))
+
+    rows = []
+    for _, row in df.iterrows():
+
+        rows.append(
+            VcfRecordType(
+                id=row['ID'],
+                pos=row['POS'],
+                info=VcfInfoType(row['info']),
+                chrom=row['CHROM'],
+                ref=row['REF'],
+                alts=row['alts'],
+            )
+        )
+    return rows
+
+
+def pandas_vcf(input_file) -> Tuple[List[str], pd.DataFrame]:
+    """
+    Read a standard vcf file into a pandas dataframe
+    """
+    # read the comment/header information
+    header_lines = []
+    with open(input_file, 'r') as fh:
+        line = '##'
+        while line.startswith('##'):
+            header_lines.append(line)
+            line = fh.readline().strip()
+        header_lines = header_lines[1:]
+    # read the data
+    df = pd.read_csv(
+        input_file,
+        sep='\t',
+        skiprows=len(header_lines),
+        dtype={
+            'CHROM': str,
+            'POS': int,
+            'ID': str,
+            'INFO': str,
+            'FORMAT': str,
+            'REF': str,
+            'ALT': str,
+        },
+        na_values=PANDAS_DEFAULT_NA_VALUES + ['.'],
+    )
+    df = df.rename(columns={df.columns[0]: df.columns[0].replace('#', '')})
+    required_columns = ['CHROM', 'INFO', 'POS', 'REF', 'ALT', 'ID']
+    for col in required_columns:
+        if col not in df.columns:
+            raise KeyError(f'Missing required column: {col}')
+    # convert the format fields using the header
+    return header_lines, df
+
+
 def convert_file(input_file: str, file_type: str, log):
     """process a VCF file
 
@@ -183,18 +304,12 @@ def convert_file(input_file: str, file_type: str, log):
         err: [description]
     """
     rows = []
-    vfile = VariantFile(input_file)
-    try:
-        vfile.header.info.add('END', number=1, type='Integer', description='End of the interval')
-    except ValueError:
-        pass
 
-    for vcf_record in vfile.fetch():
+    _, data = pandas_vcf(input_file)
+
+    for variant_record in convert_pandas_rows_to_variants(data):
         try:
-            rows.extend(convert_record(vcf_record, log=log))
-        except Exception as err:
-            if file_type != SUPPORTED_TOOL.STRELKA:
-                raise err
-            else:
-                log('Ignoring', vcf_record)
+            rows.extend(convert_record(variant_record, log=log))
+        except NotImplementedError as err:
+            logging.warning(str(err))
     return rows
