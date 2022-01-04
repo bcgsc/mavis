@@ -137,6 +137,8 @@ class SlurmScheduler(Scheduler):
             command.append(self.format_dependencies(job))
         if job.name:
             command.extend(['-J', job.name])
+        if job.priority:
+            command.extend('--qos={}'.format(job.priority))
         if job.stdout:
             command.extend(
                 [
