@@ -351,7 +351,7 @@ class TestAssemble:
         assert assemblies[0].seq == expected
         assert len(assemblies) == 1
 
-    @timeout_decorator.timeout(300)
+    @timeout_decorator.timeout(600)
     @long_running_test
     def test_large_assembly(self, large_assembly_seq):
         # simply testing that this will complete before the timeout
