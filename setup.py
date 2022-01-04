@@ -3,7 +3,7 @@ import re
 
 from setuptools import find_packages, setup
 
-VERSION = '2.2.10'
+VERSION = '2.2.11'
 
 
 def parse_md_readme():
