@@ -108,6 +108,20 @@ class TestConvert:
         print(record, record.data)
         assert record.data['CLNSIG'] == 'Pathogenic'
 
+    def test_sniffle(self):
+        results = self.run_main(get_data('sniffles.vcf'), SUPPORTED_TOOL.VCF, False)
+        print(results.keys())
+        record = results['vcf-35777'][0]
+        print(record, record.data)
+        assert record.data['event_type'] == 'translocation'
+    
+    def test_cuteSV(self):
+        results = self.run_main(get_data('cuteSV.vcf'), SUPPORTED_TOOL.VCF, False)
+        print(results.keys())
+        record = results['vcf-cuteSV.BND.0'][0]
+        print(record, record.data)
+        assert record.data['event_type'] == 'inverted translocation'
+    
     def test_breakseq2(self):
         self.run_main(get_data('breakseq.vcf'), SUPPORTED_TOOL.BREAKSEQ, False)
 

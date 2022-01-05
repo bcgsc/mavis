@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
-from pysam import VariantFile
 
 try:
     # TypedDict added to typing package directly in later versions
