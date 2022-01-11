@@ -43,6 +43,9 @@ markdown_refdocs mavis -o docs/package --link
 mkdocs build
 ```
 
+The contents of the user manual can then be viewed by opening the build-docs/index.html
+in any available web browser (i.e. google-chrome, firefox, etc.)
+
 ## Deploy to PyPi
 
 Install deployment dependencies
