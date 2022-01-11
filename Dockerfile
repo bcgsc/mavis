@@ -17,6 +17,13 @@ RUN git clone https://github.com/lh3/bwa.git && \
     cd .. && \
     mv bwa/bwa /usr/local/bin
 
+# install minimap2
+RUN git clone https://github.com/lh3/minimap2.git && \
+    cd minimap2 && \
+    git checkout v2.24 && \
+    make && \
+    cd .. && \
+    mv minimap2/minimap2.1 /usr/local/bin
 
 # install blat dependencies
 RUN apt-get install -y libcurl4
@@ -25,6 +32,13 @@ RUN apt-get install -y libcurl4
 RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat && \
     chmod a+x blat && \
     mv blat /usr/local/bin
+
+# install wtdbg2
+RUN git clone https://github.com/ruanjue/wtdbg2.git && \
+    cd wtdbg2 && \
+    make && \
+    cd .. && \
+    mv wtdbg2/wtdbg2 /usr/local/bin
 
 COPY setup.py setup.py
 COPY setup.cfg setup.cfg

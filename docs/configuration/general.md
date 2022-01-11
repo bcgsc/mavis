@@ -8,7 +8,7 @@ The pipeline can be run in steps or it can be configured using a JSON
 configuration file and setup in a single step. Scripts will be generated
 to run all steps following clustering.
 
-The config schema is found in the mavis package under `mavis/schemas/config.json`
+The config schema is found in the mavis package under `src/mavis/schemas/config.json`
 
 Top level settings follow the pattern `<section>.<setting>`. The convert and library
 sections are nested objects.

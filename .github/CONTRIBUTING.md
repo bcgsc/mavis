@@ -43,8 +43,13 @@ markdown_refdocs mavis -o docs/package --link
 mkdocs build
 ```
 
-The contents of the user manual can then be viewed by opening the build-docs/index.html
-in any available web browser (i.e. google-chrome, firefox, etc.)
+The contents of the user manual can then be viewed by opening the build-docs/index.html in any available web browser 
+(i.e. google-chrome, firefox, etc.). Future development to build the Markdown files into HTML and start a development 
+server to browse the documentation can be done using: 
+
+```bash
+mkdocs serve
+```
 
 ## Deploy to PyPi
 
