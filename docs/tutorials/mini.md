@@ -3,7 +3,7 @@
 This tutorial is based on the data included in the tests folder of
 MAVIS. The data files are very small and this tutorial is really only
 intended for testing a MAVIS install. The data here is simulated and
-results are not representitive of the typical events you would see
+results are not representative of the typical events you would see
 reported from MAVIS. For a more complete tutorial with actual fusion
 gene examples, please see the [full tutorial](../../tutorials/full/).
 
