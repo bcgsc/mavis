@@ -181,9 +181,7 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
                     std_row[COLUMNS.event_type] = SVTYPE.INS
                 elif size < 0:
                     std_row[COLUMNS.event_type] = SVTYPE.DEL
-        std_row.update(
-            {COLUMNS.break1_chromosome: record.chrom, COLUMNS.break2_chromosome: chr2}
-        )
+        std_row.update({COLUMNS.break1_chromosome: record.chrom, COLUMNS.break2_chromosome: chr2})
         if info.get(
             "PRECISE", False
         ):  # DELLY CI only apply when split reads were not used to refine the breakpoint which is then flagged
@@ -201,11 +199,8 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
                     COLUMNS.break1_position_start: max(
                         1, record.pos + info.get("CIPOS", (0, 0))[0]
                     ),
-                    COLUMNS.break1_position_end: record.pos
-                    + info.get("CIPOS", (0, 0))[1],
-                    COLUMNS.break2_position_start: max(
-                        1, end + info.get("CIEND", (0, 0))[0]
-                    ),
+                    COLUMNS.break1_position_end: record.pos + info.get("CIPOS", (0, 0))[1],
+                    COLUMNS.break2_position_start: max(1, end + info.get("CIEND", (0, 0))[0]),
                     COLUMNS.break2_position_end: end + info.get("CIEND", (0, 0))[1],
                 }
             )
