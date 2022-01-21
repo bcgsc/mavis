@@ -12,16 +12,6 @@ from snakemake import main as snakemake_main
 from ..util import glob_exists, long_running_test, package_relative_file
 
 
-def list_files(startpath):
-    for root, dirs, files in os.walk(startpath):
-        level = root.replace(startpath, '').count(os.sep)
-        indent = ' ' * 4 * (level)
-        print('{}{}/'.format(indent, os.path.basename(root)))
-        subindent = ' ' * 4 * (level + 1)
-        for f in files:
-            print('{}{}'.format(subindent, f))
-
-
 @pytest.fixture
 def blat_output_dir():
     temp_output = tempfile.mkdtemp()
@@ -97,7 +87,6 @@ def test_workflow(output_dir):
             if err.code != 0:
                 raise err
 
-    list_files(output_dir)
     for expected_file in [
         os.path.join('summary', 'MAVIS.COMPLETE'),
         os.path.join('pairing', 'MAVIS.COMPLETE'),
@@ -134,7 +123,6 @@ def test_no_validate_worflow(output_dir):
             if err.code != 0:
                 raise err
 
-    list_files(output_dir)
     for expected_file in [
         os.path.join('summary', 'MAVIS.COMPLETE'),
         os.path.join('pairing', 'MAVIS.COMPLETE'),
