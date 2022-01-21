@@ -1,0 +1,52 @@
+{
+    "annotate.draw_fusions_only": false,
+    "convert": {
+        "mock_converted": {
+            "inputs": [
+                "tests/data/mock_sv_events.tsv"
+            ],
+            "file_type": "mavis",
+            "assume_no_untemplated": true
+        }
+    },
+    "skip_stage.validate": true,
+    "cluster.uninformative_filter": true,
+    "cluster.limit_to_chr": null,
+    "cluster.min_clusters_per_file": 5,
+    "libraries": {
+        "mock-A47933": {
+            "assign": [
+                "tests/data/mock_trans_sv_events.tsv"
+            ],
+            "bam_file": "tests/data/mock_trans_reads_for_events.sorted.bam",
+            "disease_status": "diseased",
+            "protocol": "transcriptome",
+            "strand_specific": true
+        },
+        "mock-A36971": {
+            "assign": [
+                "mock_converted"
+            ],
+            "bam_file": "tests/data/mock_reads_for_events.sorted.bam",
+            "disease_status": "diseased",
+            "protocol": "genome",
+            "strand_specific": false
+        }
+    },
+    "output_dir": "output_dir",
+    "reference.annotations": [
+        "tests/data/mock_annotations.json"
+    ],
+    "reference.dgv_annotation": [
+        "tests/data/mock_dgv_annotation.txt"
+    ],
+    "reference.masking": [
+        "tests/data/mock_masking.tab"
+    ],
+    "reference.reference_genome": [
+        "tests/data/mock_reference_genome.fa"
+    ],
+    "reference.template_metadata": [
+        "tests/data/cytoBand.txt"
+    ]
+}
