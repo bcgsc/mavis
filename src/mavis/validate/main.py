@@ -16,7 +16,6 @@ from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
 from ..breakpoint import BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL
-from ..schemas import get_by_prefix
 from ..util import (
     LOG,
     filter_on_overlap,

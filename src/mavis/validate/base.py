@@ -4,6 +4,7 @@ from abc import abstractmethod
 from typing import Dict, List, Optional, Set, Tuple
 
 import pysam
+from mavis_config import DEFAULTS
 
 from ..assemble import assemble
 from ..bam import cigar as _cigar
@@ -23,7 +24,6 @@ from ..constants import (
 )
 from ..error import NotSpecifiedError
 from ..interval import Interval
-from ..schemas import DEFAULTS
 from ..util import DEVNULL
 
 

@@ -5,8 +5,8 @@ import timeout_decorator
 from mavis.assemble import Contig, assemble, filter_contigs
 from mavis.constants import reverse_complement
 from mavis.interval import Interval
-from mavis.schemas import DEFAULTS
 from mavis.util import LOG
+from mavis_config import DEFAULTS
 
 from ..util import get_data, long_running_test
 from . import MockObject

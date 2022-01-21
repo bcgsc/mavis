@@ -3,13 +3,11 @@ from typing import Optional
 
 import pysam
 
-from ..align import SplitAlignment, call_read_events
 from ..annotate.variant import overlapping_transcripts
 from ..bam import cigar as _cigar
 from ..breakpoint import Breakpoint
 from ..constants import CIGAR, COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE
 from ..interval import Interval
-from ..schemas import DEFAULTS
 from .base import Evidence
 
 
