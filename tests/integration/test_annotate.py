@@ -31,7 +31,7 @@ ALT_REF_CHR = 'ref2'
 def setUpModule():
     global REFERENCE_ANNOTATIONS, REFERENCE_GENOME, REF_CHR, EXAMPLE_GENES
     EXAMPLE_GENES = get_example_genes()
-    REFERENCE_ANNOTATIONS = load_annotations(get_data('mock_reference_annotations.tsv'))
+    REFERENCE_ANNOTATIONS = load_annotations(get_data('mock_reference_annotations2.json'))
     count = sum([len(genes) for genes in REFERENCE_ANNOTATIONS.values()])
     print('loaded annotations', count)
     assert count >= 6  # make sure this is the file we expect
@@ -1737,7 +1737,7 @@ class TestAnnotate:
 
 class TestAnnotateEvents:
     def test_annotate_events(self):
-        reference_annotations = load_annotations(get_data('mock_reference_annotations.full.tsv'))
+        reference_annotations = load_annotations(get_data('mock_reference_annotations.full.json'))
         b1 = Breakpoint('fakereference9', 658, orient=ORIENT.RIGHT, strand=STRAND.POS)
         b2 = Breakpoint('fakereference9', 10237, orient=ORIENT.RIGHT, strand=STRAND.NEG)
         bpp = BreakpointPair(
