@@ -215,7 +215,9 @@ def load_reference_genome(*filepaths: str) -> ReferenceGenome:
     """
     reference_genome = {}
     for filename in filepaths:
-        fasta = pyfaidx.Fasta(filename, rebuild=False, sequence_always_upper=True)
+        fasta = pyfaidx.Fasta(
+            filename, rebuild=False, sequence_always_upper=True, build_index=False
+        )
         for chrom, seq in fasta.items():
             if chrom in reference_genome:
                 raise KeyError('Duplicate chromosome name', chrom, filename)
