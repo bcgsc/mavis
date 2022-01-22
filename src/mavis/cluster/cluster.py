@@ -1,8 +1,6 @@
-from __future__ import division
-
+import itertools
 from collections import namedtuple
 from copy import copy
-import itertools
 
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import ORIENT, STRAND

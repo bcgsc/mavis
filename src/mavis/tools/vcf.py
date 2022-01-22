@@ -13,7 +13,6 @@ except ImportError:
 
 from ..constants import COLUMNS, ORIENT, SVTYPE
 from ..util import DEVNULL
-from .constants import SUPPORTED_TOOL
 
 PANDAS_DEFAULT_NA_VALUES = [
     '-1.#IND',

@@ -3,13 +3,9 @@ import itertools
 import logging
 import os
 import re
-import sys
 import time
-from argparse import Namespace
 from datetime import datetime
-from functools import partial
-from glob import glob
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Set
 
 import pandas as pd
 from mavis_config import bash_expands
@@ -25,7 +21,6 @@ from .constants import (
     STRAND,
     SUMMARY_LIST_COLUMNS,
     SVTYPE,
-    MavisNamespace,
     sort_columns,
 )
 from .error import InvalidRearrangement

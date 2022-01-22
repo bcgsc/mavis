@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple
 
 from . import annotate as _annotate
 from . import util as _util

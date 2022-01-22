@@ -1,5 +1,3 @@
-from __future__ import division
-
 from copy import copy as _copy
 from typing import Callable, Dict, List, Optional, Set, Tuple
 

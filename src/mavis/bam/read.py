@@ -1,6 +1,5 @@
 import itertools
 import re
-import subprocess
 from copy import copy
 
 import pysam

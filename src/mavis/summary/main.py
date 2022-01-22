@@ -1,7 +1,6 @@
 import os
 import re
 import time
-from functools import partial
 from typing import Dict, List, Tuple
 
 import pandas as pd
@@ -9,7 +8,7 @@ import pandas as pd
 from ..annotate.file_io import ReferenceFile
 from ..breakpoint import BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SPLICE_TYPE, SVTYPE
-from ..util import LOG, generate_complete_stamp, output_tabbed_file, read_inputs, soft_cast
+from ..util import LOG, generate_complete_stamp, output_tabbed_file, read_inputs
 from .constants import HOMOPOLYMER_MIN_LENGTH
 from .summary import (
     annotate_dgv,

@@ -1,5 +1,4 @@
 import itertools
-import warnings
 
 import distance
 import networkx as nx
