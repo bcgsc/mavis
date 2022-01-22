@@ -3,7 +3,6 @@ import logging
 from abc import abstractmethod
 from typing import Dict, List, Optional, Set, Tuple
 
-import pyfaidx
 import pysam
 from mavis_config import DEFAULTS
 
@@ -24,6 +23,7 @@ from ..constants import (
 )
 from ..error import NotSpecifiedError
 from ..interval import Interval
+from ..types import ReferenceGenome
 from ..util import DEVNULL
 
 
@@ -46,7 +46,7 @@ class Evidence(BreakpointPair):
     split_reads: Tuple[Set, Set]
     stdev_fragment_size: int
     strand_determining_read: int
-    reference_genome: Dict[str, pyfaidx.FastaRecord]
+    reference_genome: ReferenceGenome
     # abstract properties
     inner_window1: Interval
     inner_window2: Interval

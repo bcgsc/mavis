@@ -1,22 +1,17 @@
-from typing import Dict, List
-
-import pyfaidx
+from typing import List
 
 from ..breakpoint import Breakpoint
 from ..constants import ORIENT, PRIME, PROTOCOL, STRAND, SVTYPE, reverse_complement
 from ..error import NotSpecifiedError
 from ..interval import Interval, IntervalMapping
+from ..types import ReferenceGenome
 from .genomic import Exon, PreTranscript, Transcript
 from .protein import Domain, Translation, calculate_orf
 
 
-def determine_prime(transcript, breakpoint):
+def determine_prime(transcript: Transcript, breakpoint: Breakpoint) -> int:
     """
     determine the side of the transcript 5' or 3' which is 'kept' given the breakpoint
-
-    Args:
-        transcript (Transcript): the transcript
-        breakpoint (Breakpoint): the breakpoint
 
     Returns:
         PRIME: 5' or 3'
@@ -74,13 +69,13 @@ class FusionTranscript(PreTranscript):
         self.break1 = None  # first breakpoint position in the fusion transcript
         self.break2 = None  # second breakpoint position in the fusion transcript
 
-    def exon_number(self, exon):
+    def exon_number(self, exon: Exon) -> int:
         """
         Args:
-            exon (Exon): the exon to be numbered
+            exon: the exon to be numbered
 
         Returns:
-            int: the number of the exon in the original transcript (prior to fusion)
+            the number of the exon in the original transcript (prior to fusion)
         """
         old_exon = self.exon_mapping[exon.position]
         return old_exon.transcript.exon_number(old_exon)
@@ -283,7 +278,7 @@ class FusionTranscript(PreTranscript):
     def build(
         cls,
         ann,
-        reference_genome: Dict[str, pyfaidx.FastaRecord],
+        reference_genome: ReferenceGenome,
         min_orf_size=None,
         max_orf_cap=None,
         min_domain_mapping_match=None,
@@ -482,7 +477,7 @@ class FusionTranscript(PreTranscript):
                             pass
         return fusion_pre_transcript
 
-    def get_seq(self, reference_genome=None, ignore_cache=False):
+    def get_seq(self, reference_genome=None, ignore_cache=False) -> str:
         return PreTranscript.get_seq(self)
 
     def get_cdna_seq(

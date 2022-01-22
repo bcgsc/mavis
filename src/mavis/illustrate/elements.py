@@ -2,20 +2,21 @@
 This is the primary module responsible for generating svg visualizations
 
 """
-import itertools
 import re
+from typing import Optional
 
-from .util import (
-    dynamic_label_color,
-    generate_interval_mapping,
-    LabelMapping,
-    split_intervals_into_tracks,
-    Tag,
-)
 from ..annotate.variant import FusionTranscript
 from ..constants import CODON_SIZE, GIEMSA_STAIN, ORIENT, STRAND
 from ..error import DrawingFitError, NotSpecifiedError
 from ..interval import Interval
+from ..types import ReferenceGenome
+from .util import (
+    LabelMapping,
+    Tag,
+    dynamic_label_color,
+    generate_interval_mapping,
+    split_intervals_into_tracks,
+)
 
 # draw gene level view
 # draw gene box
@@ -180,7 +181,7 @@ def draw_transcript_with_translation(
     labels,
     colors,
     mapping,
-    reference_genome=None,
+    reference_genome: Optional[ReferenceGenome] = None,
     genomic_min=None,
     genomic_max=None,
 ):
@@ -449,7 +450,7 @@ def draw_ustranscript(
     labels=LabelMapping(),
     colors={},
     mapping=None,
-    reference_genome=None,
+    reference_genome: Optional[ReferenceGenome] = None,
     masks=None,
 ):
     """

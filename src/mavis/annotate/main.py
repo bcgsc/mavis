@@ -10,6 +10,7 @@ from ..constants import COLUMNS, PRIME, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.diagram import draw_sv_summary_diagram
+from ..types import ReferenceGenome
 from ..util import LOG, generate_complete_stamp, mkdirp, read_inputs
 from .constants import PASS_FILENAME
 from .file_io import ReferenceFile
@@ -30,7 +31,13 @@ ACCEPTED_FILTERS = {
 }
 
 
-def draw(drawing_config, ann, reference_genome, template_metadata, drawings_directory):
+def draw(
+    drawing_config,
+    ann,
+    reference_genome: ReferenceGenome,
+    template_metadata,
+    drawings_directory,
+):
     """
     produces the svg diagram and json legend for a given annotation
     """

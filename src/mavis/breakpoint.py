@@ -3,11 +3,10 @@ from __future__ import division
 from copy import copy as _copy
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-import pyfaidx
-
 from .constants import COLUMNS, DNA_ALPHABET, ORIENT, STRAND, SVTYPE, reverse_complement
 from .error import InvalidRearrangement, NotSpecifiedError
 from .interval import Interval
+from .types import ReferenceGenome
 
 
 class Breakpoint(Interval):
@@ -431,9 +430,7 @@ class BreakpointPair:
             return False
         return True
 
-    def breakpoint_sequence_homology(
-        self, reference_genome: Dict[str, pyfaidx.FastaRecord]
-    ) -> Tuple[str, str]:
+    def breakpoint_sequence_homology(self, reference_genome: ReferenceGenome) -> Tuple[str, str]:
         """
         for a given set of breakpoints matches the sequence opposite the partner breakpoint
         this sequence comparison is done with reference to a reference genome and does not

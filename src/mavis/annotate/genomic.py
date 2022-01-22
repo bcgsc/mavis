@@ -1,11 +1,10 @@
 import itertools
-from typing import Dict, Optional
-
-import pyfaidx
+from typing import Optional
 
 from ..constants import ORIENT, STRAND, reverse_complement
 from ..error import NotSpecifiedError
 from ..interval import Interval
+from ..types import ReferenceGenome
 from .base import BioInterval, ReferenceName
 from .constants import SPLICE_SITE_TYPE
 from .splicing import SpliceSite, SplicingPattern
@@ -128,7 +127,7 @@ class Gene(BioInterval):
         """see :func:`structural_variant.annotate.base.BioInterval.key`"""
         return BioInterval.key(self), self.strand
 
-    def get_seq(self, reference_genome: Dict[str, pyfaidx.FastaRecord], ignore_cache: bool = False):
+    def get_seq(self, reference_genome: ReferenceGenome, ignore_cache: bool = False):
         """
         gene sequence is always given wrt to the positive forward strand regardless of gene strand
 
@@ -512,7 +511,7 @@ class PreTranscript(BioInterval):
 
     def get_seq(
         self,
-        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        reference_genome: Optional[ReferenceGenome] = None,
         ignore_cache: bool = False,
     ) -> str:
         """
@@ -543,7 +542,7 @@ class PreTranscript(BioInterval):
     def get_cdna_seq(
         self,
         splicing_pattern: SplicingPattern,
-        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        reference_genome: Optional[ReferenceGenome] = None,
         ignore_cache: bool = False,
     ) -> str:
         """
@@ -615,13 +614,13 @@ class Transcript(BioInterval):
         elif len(splicing_patt) % 2 != 0:
             raise AssertionError('splicing pattern must be a list of 3\'5\' splicing positions')
 
-    def convert_genomic_to_cdna(self, pos):
+    def convert_genomic_to_cdna(self, pos: int) -> int:
         """
         Args:
-            pos (int): the genomic position to be converted
+            pos: the genomic position to be converted
 
         Returns:
-            int: the cdna equivalent
+            the cdna equivalent
 
         Raises:
             IndexError: when a genomic position not present in the cdna is attempted to be converted
@@ -633,19 +632,19 @@ class Transcript(BioInterval):
             pos, self.splicing_pattern, **kwargs
         )
 
-    def convert_cdna_to_genomic(self, pos):
+    def convert_cdna_to_genomic(self, pos: int) -> int:
         """
         Args:
-            pos (int): cdna position
+            pos : cdna position
 
         Returns:
-            int: the genomic equivalent
+            the genomic equivalent
         """
         return self.unspliced_transcript.convert_cdna_to_genomic(pos, self.splicing_pattern)
 
     def get_seq(
         self,
-        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        reference_genome: Optional[ReferenceGenome] = None,
         ignore_cache: bool = False,
     ) -> str:
         """

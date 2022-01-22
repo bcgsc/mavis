@@ -8,6 +8,7 @@ from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import COLUMNS, GENE_PRODUCT_TYPE, PROTOCOL, STOP_AA, STRAND, SVTYPE
 from ..error import NotSpecifiedError
 from ..interval import Interval
+from ..types import ReferenceGenome
 from ..util import DEVNULL
 from .fusion import FusionTranscript, determine_prime
 from .genomic import Gene, IntergenicRegion, PreTranscript, Transcript
@@ -454,7 +455,9 @@ class IndelCall:
         )
 
 
-def call_protein_indel(ref_translation, fusion_translation, reference_genome=None):
+def call_protein_indel(
+    ref_translation, fusion_translation, reference_genome: Optional[ReferenceGenome] = None
+):
     """
     compare the fusion protein/aa sequence to the reference protein/aa sequence and
     return an hgvs notation indel call

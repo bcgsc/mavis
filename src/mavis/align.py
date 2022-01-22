@@ -6,25 +6,15 @@ import os
 import re
 import subprocess
 import warnings
-from copy import copy
 
 import pysam
 
 from .bam import cigar as _cigar
 from .bam import read as _read
 from .breakpoint import Breakpoint, BreakpointPair
-from .constants import (
-    CIGAR,
-    COLUMNS,
-    NA_MAPPING_QUALITY,
-    ORIENT,
-    STRAND,
-    SVTYPE,
-    MavisNamespace,
-    reverse_complement,
-)
-from .error import InvalidRearrangement
+from .constants import CIGAR, ORIENT, STRAND, SVTYPE, MavisNamespace, reverse_complement
 from .interval import Interval
+from .types import ReferenceGenome
 from .util import DEVNULL
 
 
@@ -194,7 +184,7 @@ def query_coverage_interval(read):
     return Interval(st, end)
 
 
-def convert_to_duplication(alignment, reference_genome):
+def convert_to_duplication(alignment, reference_genome: ReferenceGenome):
     """
     Given a breakpoint call, tests if the untemplated sequences matches the preceding
     reference sequence. If it does this is annotated as a duplication and the new
@@ -395,7 +385,7 @@ def call_paired_read_event(read1, read2, is_stranded=False):
 def align_sequences(
     sequences,
     input_bam_cache,
-    reference_genome,
+    reference_genome: ReferenceGenome,
     aligner,
     aligner_reference,
     aligner_output_file='aligner_out.temp',

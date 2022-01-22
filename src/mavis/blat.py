@@ -12,10 +12,9 @@
 import logging
 import math
 import re
-from typing import Any, Dict
+from typing import Dict
 
 import pandas as pd
-import pyfaidx
 
 from .align import query_coverage_interval
 from .bam import cigar as _cigar
@@ -30,6 +29,7 @@ from .constants import (
     reverse_complement,
 )
 from .interval import Interval
+from .types import ReferenceGenome
 from .util import LOG
 
 
@@ -208,7 +208,7 @@ class Blat:
         return header, final_rows
 
     @staticmethod
-    def pslx_row_to_pysam(row: Dict, bam_cache, reference_genome: Dict[str, pyfaidx.FastaRecord]):
+    def pslx_row_to_pysam(row: Dict, bam_cache, reference_genome: ReferenceGenome):
         """
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
@@ -360,7 +360,7 @@ class Blat:
 def process_blat_output(
     input_bam_cache,
     query_id_mapping,
-    reference_genome,
+    reference_genome: ReferenceGenome,
     aligner_output_file='aligner_out.temp',
     blat_min_percent_of_max_score=0.8,
     blat_min_identity=0.7,

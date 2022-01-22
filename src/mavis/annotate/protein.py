@@ -1,23 +1,22 @@
 import itertools
-from typing import Dict, List, Optional, Tuple
-
-import pyfaidx
+from typing import List, Optional, Tuple
 
 from ..constants import CODON_SIZE, START_AA, STOP_AA, translate
 from ..error import NotSpecifiedError
 from ..interval import Interval
+from ..types import ReferenceGenome
 from .base import BioInterval
 
 
-def calculate_orf(spliced_cdna_sequence, min_orf_size=None):
+def calculate_orf(spliced_cdna_sequence: str, min_orf_size=None) -> List[Interval]:
     """
     calculate all possible open reading frames given a spliced cdna sequence (no introns)
 
     Args:
-        spliced_cdna_sequence (str): the sequence
+        spliced_cdna_sequence: the sequence
 
     Returns:
-        List[Interval]: list of open reading frame positions on the input sequence
+        list of open reading frame positions on the input sequence
     """
     # do not revcomp
     assert START_AA != STOP_AA
@@ -89,7 +88,7 @@ class Domain:
         return tuple([self.name, self.translation])
 
     def score_region_mapping(
-        self, reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None
+        self, reference_genome: Optional[ReferenceGenome] = None
     ) -> Tuple[int, int]:
         """
         compares the sequence in each DomainRegion to the sequence collected for that domain region from the
@@ -122,7 +121,7 @@ class Domain:
 
     def get_seqs(
         self,
-        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        reference_genome: Optional[ReferenceGenome] = None,
         ignore_cache: bool = False,
     ) -> List[str]:
         """
@@ -157,7 +156,7 @@ class Domain:
     def align_seq(
         self,
         input_sequence: str,
-        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        reference_genome: Optional[ReferenceGenome] = None,
         min_region_match: float = 0.5,
     ) -> Tuple[int, int, List[DomainRegion]]:
         """
@@ -378,7 +377,7 @@ class Translation(BioInterval):
 
     def get_cds_seq(
         self,
-        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        reference_genome: Optional[ReferenceGenome] = None,
         ignore_cache: bool = False,
     ) -> str:
         """
@@ -400,7 +399,7 @@ class Translation(BioInterval):
 
     def get_seq(
         self,
-        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        reference_genome: Optional[ReferenceGenome] = None,
         ignore_cache: bool = False,
     ) -> str:
         """
@@ -413,7 +412,7 @@ class Translation(BioInterval):
 
     def get_aa_seq(
         self,
-        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        reference_genome: Optional[ReferenceGenome] = None,
         ignore_cache: bool = False,
     ) -> str:
         """

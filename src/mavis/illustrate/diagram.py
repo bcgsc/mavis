@@ -2,15 +2,17 @@
 This is the primary module responsible for generating svg visualizations
 
 """
-from svgwrite import Drawing
+from typing import Optional
 
-from .elements import draw_exon_track, draw_genes, draw_template, draw_ustranscript, draw_vmarker
-from .scatter import draw_scatter
-from .util import generate_interval_mapping, LabelMapping
+from svgwrite import Drawing
 
 from ..annotate.genomic import IntergenicRegion
 from ..interval import Interval
+from ..types import ReferenceGenome
 from ..util import DEVNULL
+from .elements import draw_exon_track, draw_genes, draw_template, draw_ustranscript, draw_vmarker
+from .scatter import draw_scatter
+from .util import LabelMapping, generate_interval_mapping
 
 # draw gene level view
 # draw gene box
@@ -21,7 +23,7 @@ HEX_BLACK = '#000000'
 def draw_sv_summary_diagram(
     config,
     ann,
-    reference_genome=None,
+    reference_genome: Optional[ReferenceGenome] = None,
     templates=None,
     ignore_absent_templates=True,
     user_friendly_labels=True,
