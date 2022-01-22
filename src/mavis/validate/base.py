@@ -17,7 +17,6 @@ from ..constants import (
     COLUMNS,
     NA_MAPPING_QUALITY,
     ORIENT,
-    PROTOCOL,
     PYSAM_READ_FLAGS,
     STRAND,
     SVTYPE,

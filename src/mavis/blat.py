@@ -21,8 +21,14 @@ from .align import query_coverage_interval
 from .bam import cigar as _cigar
 from .bam.cigar import QUERY_ALIGNED_STATES
 from .bam.read import SamRead
-from .constants import (CIGAR, DNA_ALPHABET, NA_MAPPING_QUALITY,
-                        PYSAM_READ_FLAGS, STRAND, reverse_complement)
+from .constants import (
+    CIGAR,
+    DNA_ALPHABET,
+    NA_MAPPING_QUALITY,
+    PYSAM_READ_FLAGS,
+    STRAND,
+    reverse_complement,
+)
 from .interval import Interval
 from .util import LOG
 
