@@ -104,4 +104,6 @@ jobs:
           # get the SIMG filename
           export SNAKEMAKE_CONTAINER=$(ls *mavis*.simg)
           snakemake -j 2 --configfile tests/mini-tutorial.config.json --use-singularity
+      - name: Tail log files
+        run: x=$( ls -t1 output_dir/*/*.log* | head -n 1 ); tail -n 50 $x;
         if: always()
