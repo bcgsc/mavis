@@ -170,10 +170,18 @@ if not config['skip_stage.validate']:
                 + ' &> {log}'
 
 
+def get_annotate_input_file(wildcards):
+    if not config['skip_stage.validate']:
+        return expand(rules.validate.output, library=[wildcards.library], job_id=[wildcards.job_id])
+    return expand(CLUSTER_OUTPUT, library=[wildcards.library], job_id=[wildcards.job_id])
+
+
 rule annotate:
     input: rules.validate.output if not config['skip_stage.validate'] else rules.cluster.output
     output: stamp=output_dir('{library}/annotate/batch-{job_id}/MAVIS.COMPLETE'),
         result=output_dir('{library}/annotate/batch-{job_id}/annotations.tab')
+    params:
+        inputfile=get_annotate_input_file
     log: os.path.join(LOG_DIR, '{library}.annotate.snakemake.batch-{job_id}.log.txt')
     container: CONTAINER
     resources:
@@ -184,7 +192,7 @@ rule annotate:
     shell:
         'mavis annotate --config {rules.init_config.output}'
             + ' --library {wildcards.library}'
-            + ' --inputs {input}'
+            + ' --inputs {params.inputfile}'
             + ' --output ' + output_dir('{wildcards.library}/annotate/batch-{wildcards.job_id}')
             + ' &> {log}'
 

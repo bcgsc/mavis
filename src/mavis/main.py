@@ -265,7 +265,8 @@ def main(argv=None):
             )
         elif command == SUBCOMMAND.SETUP:
             # add bam stats to the config if missing
-            _config.add_bamstats_to_config(config)
+            if not config.get('skip_stage.validate'):
+                _config.add_bamstats_to_config(config)
             _util.LOG(f'writing: {args.outputfile}')
             with open(args.outputfile, 'w') as fh:
                 fh.write(json.dumps(config, sort_keys=True, indent='  '))

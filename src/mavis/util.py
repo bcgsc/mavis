@@ -398,10 +398,6 @@ def read_bpp_from_input_file(
         if col not in df and col not in add_default:
             raise KeyError(f'missing required column: {col}')
 
-    # run the custom functions
-    for col, func in apply.items():
-        df[col] = df[col].apply(func)
-
     if COLUMNS.opposing_strands in df:
         df[COLUMNS.opposing_strands] = df[COLUMNS.opposing_strands].apply(
             lambda x: None if x == '?' else soft_cast(x, cast_type=bool)
@@ -433,6 +429,10 @@ def read_bpp_from_input_file(
             df[col] = df[col].fillna(default_value)
         else:
             df[col] = default_value
+
+    # run the custom functions
+    for col, func in apply.items():
+        df[col] = df[col].apply(func)
 
     # set overwriting defaults
     for col, value in overwrite.items():
