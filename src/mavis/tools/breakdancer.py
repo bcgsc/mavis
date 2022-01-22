@@ -36,5 +36,5 @@ def convert_file(input_file):
         raise KeyError(f'missing required column: num_Reads_lib')
 
     for bam, lib in bam_to_lib.items():
-        df['num_Reads_lib'] = df['num_Reads_lib'].str.replace(bam, lib)
+        df['num_Reads_lib'] = df['num_Reads_lib'].str.replace(bam, lib, regex=False)
     return df.to_dict('records')
