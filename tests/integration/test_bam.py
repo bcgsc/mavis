@@ -29,10 +29,7 @@ def setUpModule():
     warnings.simplefilter('ignore')
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if (
-        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
-        != REFERENCE_GENOME['fake'].seq[0:50].upper()
-    ):
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'][0:50]:
         raise AssertionError('fake genome file does not have the expected contents')
 
 
@@ -206,7 +203,7 @@ class TestNsbAlign:
 
     @timeout_decorator.timeout(5)
     def test_long_ref_seq(self):
-        ref = str(REFERENCE_GENOME['test_bam_long_ref'].seq)
+        ref = str(REFERENCE_GENOME['test_bam_long_ref'])
         seq = (
             'TGAGGTCAGGAGTTTGAGACCAGCCTGGACAACATGGTGAAACCCCATCTCTACTAAAAATACAAAAAAATTAGCCAGGCATGGTGGTGGATGCCTGTAAT'
             'CGCAGCTACTCAGGAGATCGGAAG'

@@ -14,10 +14,7 @@ from ..util import get_data, glob_exists
 def setUpModule():
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if (
-        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
-        != REFERENCE_GENOME['fake'].seq[0:50].upper()
-    ):
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'][0:50]:
         raise AssertionError('fake genome file does not have the expected contents')
 
 

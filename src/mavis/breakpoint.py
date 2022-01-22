@@ -3,7 +3,9 @@ from __future__ import division
 from copy import copy as _copy
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-from .constants import CIGAR, COLUMNS, DNA_ALPHABET, ORIENT, STRAND, SVTYPE, reverse_complement
+import pyfaidx
+
+from .constants import COLUMNS, DNA_ALPHABET, ORIENT, STRAND, SVTYPE, reverse_complement
 from .error import InvalidRearrangement, NotSpecifiedError
 from .interval import Interval
 
@@ -429,7 +431,9 @@ class BreakpointPair:
             return False
         return True
 
-    def breakpoint_sequence_homology(self, reference_genome):
+    def breakpoint_sequence_homology(
+        self, reference_genome: Dict[str, pyfaidx.FastaRecord]
+    ) -> Tuple[str, str]:
         """
         for a given set of breakpoints matches the sequence opposite the partner breakpoint
         this sequence comparison is done with reference to a reference genome and does not
@@ -446,17 +450,17 @@ class BreakpointPair:
             -------TT-TT-------- second break homology
 
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
-            Tuple[str,str]: homologous sequence at the first breakpoint and second breakpoints
+            homologous sequence at the first breakpoint and second breakpoints
 
         Raises:
             AttributeError: for non specific breakpoints
         """
 
-        b1_refseq = reference_genome[self.break1.chr].seq
-        b2_refseq = reference_genome[self.break2.chr].seq
+        b1_refseq = str(reference_genome[self.break1.chr])
+        b2_refseq = str(reference_genome[self.break2.chr])
         if len(self.break1) > 1 or len(self.break2) > 1:
             raise AttributeError('cannot call shared sequence for non-specific breakpoints')
 
@@ -546,7 +550,7 @@ class BreakpointPair:
         break_shift = 0
         lutemp = len(untemplated_seq)
         if breakpoint.orient == ORIENT.LEFT:
-            break_seq = reference_genome[breakpoint.chr].seq[
+            break_seq = reference_genome[breakpoint.chr][
                 breakpoint.start - lutemp : breakpoint.start
             ]
             for i in range(1, lutemp + 1):
@@ -555,7 +559,7 @@ class BreakpointPair:
                 else:
                     break
         else:
-            break_seq = reference_genome[breakpoint.chr].seq[
+            break_seq = reference_genome[breakpoint.chr][
                 breakpoint.start - 1 : breakpoint.start + lutemp - 1
             ]
             for i in range(0, lutemp):

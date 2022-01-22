@@ -1,13 +1,12 @@
 import os
 
 from mavis.align import query_coverage_interval
-from mavis.annotate.genomic import Transcript, PreTranscript
 from mavis.annotate.file_io import load_annotations, load_reference_genome
+from mavis.annotate.genomic import PreTranscript, Transcript
 from mavis.annotate.protein import Translation
 from mavis.constants import CIGAR, NA_MAPPING_QUALITY
 
 from ..util import DATA_DIR
-
 
 ARGUMENT_ERROR = 2
 
@@ -30,7 +29,7 @@ def set_example_genes():
     for chr_genes in genes.values():
         for gene in chr_genes:
             if gene.name in seqs:
-                gene.seq = str(seqs[gene.name].seq)
+                gene.seq = str(seqs[gene.name])
             result[gene.name] = gene
             if gene.aliases:
                 for alias in gene.aliases:

@@ -284,8 +284,8 @@ def _match_ambiguous_dna(x, y):
     >>> _match_ambiguous_dna('A', 'A')
     True
     """
-    x = x.upper()
-    y = y.upper()
+    x = str(x).upper()
+    y = str(y).upper()
     xset = set(ambiguous_dna_values.get(x, x))
     yset = set(ambiguous_dna_values.get(y, y))
     if not xset.intersection(yset):

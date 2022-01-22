@@ -12,21 +12,17 @@
 import logging
 import math
 import re
+from typing import Any, Dict
 
 import pandas as pd
+import pyfaidx
 
 from .align import query_coverage_interval
 from .bam import cigar as _cigar
 from .bam.cigar import QUERY_ALIGNED_STATES
 from .bam.read import SamRead
-from .constants import (
-    CIGAR,
-    DNA_ALPHABET,
-    NA_MAPPING_QUALITY,
-    PYSAM_READ_FLAGS,
-    STRAND,
-    reverse_complement,
-)
+from .constants import (CIGAR, DNA_ALPHABET, NA_MAPPING_QUALITY,
+                        PYSAM_READ_FLAGS, STRAND, reverse_complement)
 from .interval import Interval
 from .util import LOG
 
@@ -206,15 +202,14 @@ class Blat:
         return header, final_rows
 
     @staticmethod
-    def pslx_row_to_pysam(row, bam_cache, reference_genome):
+    def pslx_row_to_pysam(row: Dict, bam_cache, reference_genome: Dict[str, pyfaidx.FastaRecord]):
         """
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
         Args:
-            row Dict[str]: a row object from the 'read_pslx' method
+            row: a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
-            reference_genome (Dict[str,Bio.SeqRecord]):
-              dict of reference sequence by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         """
         chrom = bam_cache.reference_id(row['tname'])
@@ -225,7 +220,7 @@ class Blat:
             temp = [len(query_sequence) - q for q in temp][::-1]
 
         # note: converting to inclusive range [] vs end-exclusive [)
-        reference_sequence = reference_genome[row['tname']].seq if reference_genome else None
+        reference_sequence = reference_genome[row['tname']] if reference_genome else None
         query_ranges = [Interval(x, x + y - 1) for x, y in zip(row['qstarts'], row['block_sizes'])]
         ref_ranges = [Interval(x, x + y - 1) for x, y in zip(row['tstarts'], row['block_sizes'])]
 

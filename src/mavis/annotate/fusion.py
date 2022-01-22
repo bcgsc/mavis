@@ -1,9 +1,13 @@
-from .genomic import Exon, Transcript, PreTranscript
-from .protein import calculate_orf, Domain, Translation
+from typing import Dict, List
+
+import pyfaidx
+
 from ..breakpoint import Breakpoint
-from ..constants import ORIENT, PRIME, PROTOCOL, reverse_complement, STRAND, SVTYPE
+from ..constants import ORIENT, PRIME, PROTOCOL, STRAND, SVTYPE, reverse_complement
 from ..error import NotSpecifiedError
 from ..interval import Interval, IntervalMapping
+from .genomic import Exon, PreTranscript, Transcript
+from .protein import Domain, Translation, calculate_orf
 
 
 def determine_prime(transcript, breakpoint):
@@ -101,13 +105,13 @@ class FusionTranscript(PreTranscript):
             window = Interval(ann.break1.end, ann.break2.end - 1)
         else:
             window = Interval(ann.break1.end + 1, ann.break2.end)
-        window_seq = reference_genome[ann.break1.chr].seq[window.start - 1 : window.end]
+        window_seq = reference_genome[ann.break1.chr][window.start - 1 : window.end]
         # now create 'pseudo-deletion' breakpoints
         b1 = Breakpoint(ann.break1.chr, window.start - 1, orient=ORIENT.LEFT)
         b2 = Breakpoint(ann.break2.chr, window.end + 1, orient=ORIENT.RIGHT)
 
-        seq1, ex1 = cls._pull_exons(ann.transcript1, b1, reference_genome[b1.chr].seq)
-        seq2, ex2 = cls._pull_exons(ann.transcript2, b2, reference_genome[b2.chr].seq)
+        seq1, ex1 = cls._pull_exons(ann.transcript1, b1, reference_genome[b1.chr])
+        seq2, ex2 = cls._pull_exons(ann.transcript2, b2, reference_genome[b2.chr])
         useq = ann.untemplated_seq
 
         if ann.transcript1.get_strand() == STRAND.POS:
@@ -214,12 +218,8 @@ class FusionTranscript(PreTranscript):
         assert ann.transcript1 == ann.transcript2
         fusion_pre_transcript = FusionTranscript()
 
-        seq1, ex1 = cls._pull_exons(
-            ann.transcript1, ann.break1, reference_genome[ann.break1.chr].seq
-        )
-        seq2, ex2 = cls._pull_exons(
-            ann.transcript2, ann.break2, reference_genome[ann.break2.chr].seq
-        )
+        seq1, ex1 = cls._pull_exons(ann.transcript1, ann.break1, reference_genome[ann.break1.chr])
+        seq2, ex2 = cls._pull_exons(ann.transcript2, ann.break2, reference_genome[ann.break2.chr])
         useq = ann.untemplated_seq
         front = Interval(ann.transcript1.start, ann.break2.start)
         back = Interval(ann.break1.start, ann.transcript1.end)
@@ -283,7 +283,7 @@ class FusionTranscript(PreTranscript):
     def build(
         cls,
         ann,
-        reference_genome,
+        reference_genome: Dict[str, pyfaidx.FastaRecord],
         min_orf_size=None,
         max_orf_cap=None,
         min_domain_mapping_match=None,
@@ -291,8 +291,7 @@ class FusionTranscript(PreTranscript):
         """
         Args:
             ann (Annotation): the annotation object we want to build a FusionTranscript for
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
             FusionTranscript: the newly built fusion transcript
@@ -331,10 +330,10 @@ class FusionTranscript(PreTranscript):
             if t1 == t2:
                 raise NotImplementedError('do not produce fusion transcript for anti-sense fusions')
             seq1, ex1 = cls._pull_exons(
-                ann.transcript1, ann.break1, reference_genome[ann.break1.chr].seq
+                ann.transcript1, ann.break1, reference_genome[ann.break1.chr]
             )
             seq2, ex2 = cls._pull_exons(
-                ann.transcript2, ann.break2, reference_genome[ann.break2.chr].seq
+                ann.transcript2, ann.break2, reference_genome[ann.break2.chr]
             )
             useq = ann.untemplated_seq
             if t1 == PRIME.FIVE:
@@ -486,12 +485,12 @@ class FusionTranscript(PreTranscript):
     def get_seq(self, reference_genome=None, ignore_cache=False):
         return PreTranscript.get_seq(self)
 
-    def get_cdna_seq(self, splicing_pattern, reference_genome=None, ignore_cache=False):
+    def get_cdna_seq(
+        self, splicing_pattern: List[int], reference_genome=None, ignore_cache=False
+    ) -> str:
         """
         Args:
-            splicing_pattern (List[int]): the list of splicing positions
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference seq
-                by template/chr name
+            splicing_pattern: the list of splicing positions
 
         Returns:
             str: the spliced cDNA seq
@@ -517,12 +516,12 @@ class FusionTranscript(PreTranscript):
                 intact_end_splice = True
                 if breakpoint.start < exon.start:  # =====----|----|----
                     if i > 0:  # add intron
-                        temp = reference_sequence[exons[i - 1].end : breakpoint.start]
+                        temp = str(reference_sequence[exons[i - 1].end : breakpoint.start])
                         s += temp
                     break
                 else:
                     if i > 0:  # add intron
-                        temp = reference_sequence[exons[i - 1].end : exon.start - 1]
+                        temp = str(reference_sequence[exons[i - 1].end : exon.start - 1])
                         s += temp
                     if breakpoint.start <= exon.end_splice_site.end:
                         intact_end_splice = False
@@ -536,8 +535,8 @@ class FusionTranscript(PreTranscript):
                         intact_end_splice=intact_end_splice,
                         strand=STRAND.POS,
                     )
-                    temp = reference_sequence[exon.start - 1 : t]
-                    e.seq = str(temp)
+                    temp = str(reference_sequence[exon.start - 1 : t])
+                    e.seq = temp
                     s += temp
                     new_exons.append((e, exon))
         elif breakpoint.orient == ORIENT.RIGHT:  # three prime
@@ -548,7 +547,7 @@ class FusionTranscript(PreTranscript):
                 if breakpoint.start < exon.start:  # --==|====|====
                     if i > 0:  # add last intron
                         t = max(exons[i - 1].end + 1, breakpoint.start)
-                        temp = reference_sequence[t - 1 : exon.start - 1]
+                        temp = str(reference_sequence[t - 1 : exon.start - 1])
                         s += temp
                     if Interval.overlaps(breakpoint, exon.start_splice_site):
                         intact_start_splice = False
@@ -560,15 +559,15 @@ class FusionTranscript(PreTranscript):
                         intact_end_splice=intact_end_splice,
                         strand=STRAND.POS,
                     )
-                    temp = reference_sequence[exon.start - 1 : exon.end]
-                    e.seq = str(temp)
+                    temp = str(reference_sequence[exon.start - 1 : exon.end])
+                    e.seq = temp
 
                     assert len(temp) == len(e)
                     s += temp
                     new_exons.append((e, exon))
                 elif breakpoint.start <= exon.end:  # --|-====|====
                     intact_start_splice = False
-                    temp = reference_sequence[breakpoint.start - 1 : exon.end]
+                    temp = str(reference_sequence[breakpoint.start - 1 : exon.end])
                     if Interval.overlaps(breakpoint, exon.end_splice_site):
                         intact_end_splice = False
                     # add the exon
@@ -579,7 +578,7 @@ class FusionTranscript(PreTranscript):
                         intact_end_splice=intact_end_splice,
                         strand=STRAND.POS,
                     )
-                    e.seq = str(temp)
+                    e.seq = temp
                     s += temp
                     new_exons.append((e, exon))
         else:

@@ -17,10 +17,7 @@ REF_CHR = 'fake'
 def setUpModule():
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if (
-        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
-        != REFERENCE_GENOME[REF_CHR].seq[0:50].upper()
-    ):
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME[REF_CHR][0:50]:
         raise AssertionError('fake genome file does not have the expected contents')
 
 

@@ -24,9 +24,7 @@ class TestNDUFA12:
     def test_annotate_events_synonymous(self):
         gene = get_example_genes()['NDUFA12']
         reference_annotations = {gene.chr: [gene]}
-        reference_genome = {
-            gene.chr: MockObject(seq=MockLongString(gene.seq, offset=gene.start - 1))
-        }
+        reference_genome = {gene.chr: MockLongString(gene.seq, offset=gene.start - 1)}
 
         for gene_list in reference_annotations.values():
             for gene in gene_list:
@@ -60,9 +58,7 @@ class TestARID1B:
     def test_small_duplication(self):
         gene = get_example_genes()['ARID1B']
         reference_annotations = {gene.chr: [gene]}
-        reference_genome = {
-            gene.chr: MockObject(seq=MockLongString(gene.seq, offset=gene.start - 1))
-        }
+        reference_genome = {gene.chr: MockLongString(gene.seq, offset=gene.start - 1)}
         best = get_best(gene)
 
         bpp = BreakpointPair(
@@ -104,9 +100,7 @@ class TestSVEP1:
     def test_annotate_small_intronic_inversion(self):
         gene = get_example_genes()['SVEP1']
         reference_annotations = {gene.chr: [gene]}
-        reference_genome = {
-            gene.chr: MockObject(seq=MockLongString(gene.seq, offset=gene.start - 1))
-        }
+        reference_genome = {gene.chr: MockLongString(gene.seq, offset=gene.start - 1)}
         best = get_best(gene)
 
         bpp = BreakpointPair(
@@ -134,9 +128,7 @@ class TestSVEP1:
     @long_running_test
     def test_build_single_transcript_inversion(self):
         gene = get_example_genes()['SVEP1']
-        reference_genome = {
-            gene.chr: MockObject(seq=MockLongString(gene.seq, offset=gene.start - 1))
-        }
+        reference_genome = {gene.chr: MockLongString(gene.seq, offset=gene.start - 1)}
         best = get_best(gene)
 
         bpp = BreakpointPair(
@@ -164,9 +156,7 @@ class TestSVEP1:
 class TestPRKCB:
     def test_retained_intron(self):
         gene = get_example_genes()['PRKCB']
-        reference_genome = {
-            gene.chr: MockObject(seq=MockLongString(gene.seq, offset=gene.start - 1))
-        }
+        reference_genome = {gene.chr: MockLongString(gene.seq, offset=gene.start - 1)}
         best = get_best(gene)
 
         bpp = BreakpointPair(
@@ -196,9 +186,7 @@ class TestDSTYK:
     def test_build_single_transcript_inversion_reverse_strand(self):
         print(get_example_genes().keys())
         gene = get_example_genes()['DSTYK']
-        reference_genome = {
-            gene.chr: MockObject(seq=MockLongString(gene.seq, offset=gene.start - 1))
-        }
+        reference_genome = {gene.chr: MockLongString(gene.seq, offset=gene.start - 1)}
         best = get_best(gene)
 
         # 1:205178631R 1:205178835R inversion

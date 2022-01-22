@@ -7,6 +7,7 @@ import re
 from typing import Callable, Dict, List, Optional
 
 import pandas as pd
+import pyfaidx
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from snakemake.utils import validate as snakemake_validate
@@ -204,7 +205,7 @@ def parse_annotations_json(
     return genes_by_chr
 
 
-def load_reference_genome(*filepaths: str) -> Dict[str, SeqRecord]:
+def load_reference_genome(*filepaths: str) -> Dict[str, pyfaidx.FastaRecord]:
     """
     Args:
         filepaths: the paths to the files containing the input fasta genomes
@@ -214,11 +215,11 @@ def load_reference_genome(*filepaths: str) -> Dict[str, SeqRecord]:
     """
     reference_genome = {}
     for filename in filepaths:
-        with open(filename, 'rU') as fh:
-            for chrom, seq in SeqIO.to_dict(SeqIO.parse(fh, 'fasta')).items():
-                if chrom in reference_genome:
-                    raise KeyError('Duplicate chromosome name', chrom, filename)
-                reference_genome[chrom] = seq
+        fasta = pyfaidx.Fasta(filename, rebuild=False, sequence_always_upper=True)
+        for chrom, seq in fasta.items():
+            if chrom in reference_genome:
+                raise KeyError('Duplicate chromosome name', chrom, filename)
+            reference_genome[chrom] = seq
 
     names = list(reference_genome.keys())
 
@@ -231,7 +232,7 @@ def load_reference_genome(*filepaths: str) -> Dict[str, SeqRecord]:
                     'template names {} and {} are considered equal but both have been defined in the reference'
                     'loaded'.format(template_name, truncated)
                 )
-            reference_genome.setdefault(truncated, reference_genome[template_name].upper())
+            reference_genome.setdefault(truncated, reference_genome[template_name])
         else:
             prefixed = 'chr' + template_name
             if prefixed in reference_genome:
@@ -239,8 +240,8 @@ def load_reference_genome(*filepaths: str) -> Dict[str, SeqRecord]:
                     'template names {} and {} are considered equal but both have been defined in the reference'
                     'loaded'.format(template_name, prefixed)
                 )
-            reference_genome.setdefault(prefixed, reference_genome[template_name].upper())
-        reference_genome[template_name] = reference_genome[template_name].upper()
+            reference_genome.setdefault(prefixed, reference_genome[template_name])
+        reference_genome[template_name] = reference_genome[template_name]
 
     return reference_genome
 

@@ -1,9 +1,12 @@
 import itertools
+from typing import Dict, List, Optional, Tuple
 
-from .base import BioInterval
+import pyfaidx
+
 from ..constants import CODON_SIZE, START_AA, STOP_AA, translate
 from ..error import NotSpecifiedError
 from ..interval import Interval
+from .base import BioInterval
 
 
 def calculate_orf(spliced_cdna_sequence, min_orf_size=None):
@@ -85,17 +88,18 @@ class Domain:
         """Tuple: a tuple representing the items expected to be unique. for hashing and comparing"""
         return tuple([self.name, self.translation])
 
-    def score_region_mapping(self, reference_genome=None):
+    def score_region_mapping(
+        self, reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None
+    ) -> Tuple[int, int]:
         """
         compares the sequence in each DomainRegion to the sequence collected for that domain region from the
         translation object
 
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
-            tuple of int and int: tuple contains
+            tuple contains
 
                 - int: the number of matching amino acids
                 - int: the total number of amino acids
@@ -116,17 +120,20 @@ class Domain:
         else:
             raise NotSpecifiedError('insufficient sequence information')
 
-    def get_seqs(self, reference_genome=None, ignore_cache=False):
+    def get_seqs(
+        self,
+        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        ignore_cache: bool = False,
+    ) -> List[str]:
         """
         returns the amino acid sequences for each of the domain regions associated with
         this domain in the order of the regions (sorted by start)
 
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
-            List[str]: list of amino acid sequences for each DomainRegion
+            list of amino acid sequences for each DomainRegion
 
         Raises:
             AttributeError: if there is not enough sequence information given to determine this
@@ -147,7 +154,12 @@ class Domain:
                 raise NotSpecifiedError('insufficient sequence information')
         return [sequences[r] for r in self.regions]
 
-    def align_seq(self, input_sequence, reference_genome=None, min_region_match=0.5):
+    def align_seq(
+        self,
+        input_sequence: str,
+        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        min_region_match: float = 0.5,
+    ) -> Tuple[int, int, List[DomainRegion]]:
         """
         align each region to the input sequence starting with the last one.
         then take the subset of sequence that remains to align the second last and so on
@@ -155,16 +167,14 @@ class Domain:
         then raise an error
 
         Args:
-            input_sequence (str): the sequence to be aligned to
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
-            min_region_match (float): percent between 0 and 1. Each region must have a score len(seq) * min_region_match
+            input_sequence: the sequence to be aligned to
+            reference_genome: dict of reference sequence by template/chr name
+            min_region_match: percent between 0 and 1. Each region must have a score len(seq) * min_region_match
 
         Returns:
-            Tuple[int,int,List[DomainRegion]]:
-                - the number of matches
-                - the total number of amino acids to be aligned
-                - the list of domain regions on the new input sequence
+            - the number of matches
+            - the total number of amino acids to be aligned
+            - the list of domain regions on the new input sequence
 
         Raises:
             AttributeError: if sequence information is not available
@@ -366,14 +376,17 @@ class Translation(BioInterval):
             return '*{}{}'.format(cds_pos - len(self), offset_suffix)
         return '{}{}'.format(cds_pos, offset_suffix)
 
-    def get_cds_seq(self, reference_genome=None, ignore_cache=False):
+    def get_cds_seq(
+        self,
+        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        ignore_cache: bool = False,
+    ) -> str:
         """
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
-            str: the cds sequence
+            the cds sequence
 
         Raises:
             AttributeError: if the reference sequence has not been given and is not set
@@ -385,24 +398,30 @@ class Translation(BioInterval):
             return seq[self.start - 1 : self.end]
         raise NotSpecifiedError('insufficient seq information')
 
-    def get_seq(self, reference_genome=None, ignore_cache=False):
+    def get_seq(
+        self,
+        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        ignore_cache: bool = False,
+    ) -> str:
         """
         wrapper for the sequence method
 
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
         """
         return self.get_cds_seq(reference_genome, ignore_cache)
 
-    def get_aa_seq(self, reference_genome=None, ignore_cache=False):
+    def get_aa_seq(
+        self,
+        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        ignore_cache: bool = False,
+    ) -> str:
         """
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
-            str: the amino acid sequence
+            the amino acid sequence
 
         Raises:
             AttributeError: if the reference sequence has not been given and is not set

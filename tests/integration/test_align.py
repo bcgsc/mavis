@@ -22,10 +22,7 @@ REFERENCE_GENOME = None
 def setUpModule():
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if (
-        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
-        != REFERENCE_GENOME['fake'].seq[0:50].upper()
-    ):
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'][0:50]:
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
     BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
@@ -654,14 +651,12 @@ class TestConvertToDuplication:
             opposing_strands=False,
         )
         reference_genome = {
-            '3': MockObject(
-                seq=MockLongString(
-                    'CAGGGTCTGAGCTCTTAACTCTATACTGCCTACATACATACATACATACATACATATATACATACATATATAAATT',
-                    offset=60204555,
-                )
+            '3': MockLongString(
+                'CAGGGTCTGAGCTCTTAACTCTATACTGCCTACATACATACATACATACATACATATATACATACATATATAAATT',
+                offset=60204555,
             )
         }
-        print(reference_genome['3'].seq[60204588 : 60204588 + 8], 'CATACATA')
+        print(reference_genome['3'][60204588 : 60204588 + 8], 'CATACATA')
         setattr(bpp, 'read1', MockObject(query_sequence='', query_name=None))
         setattr(bpp, 'read2', None)
         event = align.convert_to_duplication(bpp, reference_genome)
@@ -681,10 +676,8 @@ class TestConvertToDuplication:
             untemplated_seq='T',
             opposing_strands=False,
         )
-        reference_genome = {
-            '3': MockObject(seq=MockLongString('ATCGAGCTACGGATCTTTTTTCGATCGATCAATA', offset=100))
-        }
-        print(reference_genome['3'].seq[120 - 10 : 121])
+        reference_genome = {'3': MockLongString('ATCGAGCTACGGATCTTTTTTCGATCGATCAATA', offset=100)}
+        print(reference_genome['3'][120 - 10 : 121])
         setattr(bpp, 'read1', MockObject(query_sequence='', query_name=None))
         setattr(bpp, 'read2', None)
         event = align.convert_to_duplication(bpp, reference_genome)

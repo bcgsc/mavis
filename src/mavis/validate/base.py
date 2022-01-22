@@ -3,6 +3,7 @@ import logging
 from abc import abstractmethod
 from typing import Dict, List, Optional, Set, Tuple
 
+import pyfaidx
 import pysam
 from mavis_config import DEFAULTS
 
@@ -46,6 +47,7 @@ class Evidence(BreakpointPair):
     split_reads: Tuple[Set, Set]
     stdev_fragment_size: int
     strand_determining_read: int
+    reference_genome: Dict[str, pyfaidx.FastaRecord]
     # abstract properties
     inner_window1: Interval
     inner_window2: Interval
@@ -105,8 +107,7 @@ class Evidence(BreakpointPair):
         Args:
             breakpoint_pair (BreakpointPair): the breakpoint pair to collect evidence for
             bam_cache (BamCache): the bam cache (and assc file) to collect evidence from
-            reference_genome (Dict[str,Bio.SeqRecord]):
-              dict of reference sequence by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
             data (dict): a dictionary of data to associate with the evidence object
             classification (SVTYPE): the event type
             protocol (PROTOCOL): genome or transcriptome
@@ -127,26 +128,22 @@ class Evidence(BreakpointPair):
         )
         # check that the breakpoints are within the reference length
         if reference_genome:
-            if self.break1.start < 1 or self.break1.end > len(
-                reference_genome[self.break1.chr].seq
-            ):
+            if self.break1.start < 1 or self.break1.end > len(reference_genome[self.break1.chr]):
                 raise ValueError(
                     'Breakpoint {}-{} is outside the range of the reference sequence {} (1-{})'.format(
                         self.break1.start,
                         self.break1.end,
                         self.break1.chr,
-                        len(reference_genome[self.break1.chr].seq),
+                        len(reference_genome[self.break1.chr]),
                     )
                 )
-            if self.break2.start < 1 or self.break2.end > len(
-                reference_genome[self.break2.chr].seq
-            ):
+            if self.break2.start < 1 or self.break2.end > len(reference_genome[self.break2.chr]):
                 raise ValueError(
                     'Breakpoint {}-{} is outside the range of the reference sequence {} (1-{})'.format(
                         self.break2.start,
                         self.break2.end,
                         self.break2.chr,
-                        len(reference_genome[self.break2.chr].seq),
+                        len(reference_genome[self.break2.chr]),
                     )
                 )
         self.assembly_max_kmer_size = (
@@ -224,7 +221,7 @@ class Evidence(BreakpointPair):
         read.set_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR, 1, value_type='i')
         # recalculate the read cigar string to ensure M is replaced with = or X
         cigar = _cigar.recompute_cigar_mismatch(
-            read, self.reference_genome[self.bam_cache.get_read_reference_name(read)].seq
+            read, self.reference_genome[self.bam_cache.get_read_reference_name(read)]
         )
         prefix = 0
         try:
@@ -243,7 +240,7 @@ class Evidence(BreakpointPair):
 
         # makes sure all indels are called as far 'right' as possible
         read.cigar = _cigar.hgvs_standardize_cigar(
-            read, self.reference_genome[self.bam_cache.get_read_reference_name(read)].seq
+            read, self.reference_genome[self.bam_cache.get_read_reference_name(read)]
         )
         return read
 
@@ -669,9 +666,7 @@ class Evidence(BreakpointPair):
 
         # try mapping the soft-clipped portion to the other breakpoint
         w = (opposite_window[0], opposite_window[1])
-        opposite_breakpoint_ref = self.reference_genome[opposite_breakpoint.chr].seq[
-            w[0] - 1 : w[1]
-        ]
+        opposite_breakpoint_ref = self.reference_genome[opposite_breakpoint.chr][w[0] - 1 : w[1]]
 
         putative_alignments = None
         # figure out how much of the read must match when remaped

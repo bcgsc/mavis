@@ -31,10 +31,7 @@ def setUpModule():
     warnings.simplefilter('ignore')
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if (
-        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
-        != REFERENCE_GENOME['fake'].seq[0:50].upper()
-    ):
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'][0:50]:
         raise AssertionError('fake genome file does not have the expected contents')
 
 
@@ -326,7 +323,7 @@ class TestHgvsStandardizeCigars:
                 (CIGAR.EQ, 6),
             ],
         )
-        print(SamRead.deletion_sequences(read, {'1': MockObject(seq=ref)}))
+        print(SamRead.deletion_sequences(read, {'1': ref}))
         print(SamRead.insertion_sequences(read))
         print(read.query_sequence, len(read.query_sequence))
         assert [
@@ -411,7 +408,7 @@ class TestHgvsStandardizeCigars:
             cigar=convert_string_to_cigar('4S13=2D64='),
             query_sequence=qseq,
         )
-        reference_genome = {'1': MockObject(seq=rseq)}
+        reference_genome = {'1': rseq}
         exp = convert_string_to_cigar('4S24=2D53=')
         new_cigar = hgvs_standardize_cigar(read, rseq)
         print(SamRead.deletion_sequences(read, reference_genome))
@@ -436,7 +433,7 @@ class TestHgvsStandardizeCigars:
             cigar=convert_string_to_cigar('4S13=3D63='),
             query_sequence=qseq,
         )
-        reference_genome = {'1': MockObject(seq=rseq)}
+        reference_genome = {'1': rseq}
         exp = convert_string_to_cigar('4S24=3D52=')
         new_cigar = hgvs_standardize_cigar(read, rseq)
         print(SamRead.deletion_sequences(read, reference_genome))
@@ -568,7 +565,7 @@ class TestHgvsStandardizeCigars:
             (CIGAR.D, 27),
             (CIGAR.EQ, 74 - 30),
         ]
-        std_cigar = hgvs_standardize_cigar(read, REFERENCE_GENOME[read.reference_name].seq)
+        std_cigar = hgvs_standardize_cigar(read, REFERENCE_GENOME[read.reference_name])
         print(SamRead.deletion_sequences(read, REFERENCE_GENOME))
         read.cigar = std_cigar
         print(SamRead.deletion_sequences(read, REFERENCE_GENOME))
@@ -731,10 +728,7 @@ class TestGetSequences:
             query_sequence='',
             cigar=convert_string_to_cigar('2=3D8=4D9='),
         )
-        assert (
-            SamRead.deletion_sequences(read, {'1': MockObject(seq='abcdefghijklmnopqrstuvwxyz')})
-            == exp
-        )
+        assert SamRead.deletion_sequences(read, {'1': 'abcdefghijklmnopqrstuvwxyz'}) == exp
 
     def test_insertions(self):
         exp = ['kkk', 'kkkk']

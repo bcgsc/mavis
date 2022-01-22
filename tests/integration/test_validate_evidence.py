@@ -101,7 +101,7 @@ class TestTransStandardize:
         )
         evidence = TranscriptomeEvidence(
             annotations={},
-            reference_genome={'1': MockObject(seq='qwertyuiopasdfkkkkkdfghjklzxcvbnm')},
+            reference_genome={'1': 'qwertyuiopasdfkkkkkdfghjklzxcvbnm'},
             bam_cache=MockObject(get_read_reference_name=lambda r: r.reference_name),
             break1=Breakpoint('1', 1, orient='L', strand='+'),
             break2=Breakpoint('1', 10, orient='R', strand='+'),
@@ -129,7 +129,7 @@ class TestTransStandardize:
         )
         evidence = TranscriptomeEvidence(
             annotations={},
-            reference_genome={'1': MockObject(seq='qwertyuiopasdfkkkkkdfghjklzxcvbnmsbcdefhi')},
+            reference_genome={'1': 'qwertyuiopasdfkkkkkdfghjklzxcvbnmsbcdefhi'},
             bam_cache=MockObject(get_read_reference_name=lambda r: r.reference_name),
             break1=Breakpoint('1', 1, orient='L', strand='+'),
             break2=Breakpoint('1', 10, orient='R', strand='+'),
@@ -150,7 +150,7 @@ class TestTransStandardize:
         )
         evidence = TranscriptomeEvidence(
             annotations={},
-            reference_genome={'1': MockObject(seq='qwertyuiopasdfkkkkkdfghjklzxcvbnm')},
+            reference_genome={'1': 'qwertyuiopasdfkkkkkdfghjklzxcvbnm'},
             bam_cache=None,
             break1=Breakpoint('1', 1, orient='L', strand='+'),
             break2=Breakpoint('1', 10, orient='R', strand='+'),

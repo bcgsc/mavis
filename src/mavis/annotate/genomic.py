@@ -1,12 +1,14 @@
-from copy import copy
 import itertools
+from typing import Dict, Optional
 
+import pyfaidx
+
+from ..constants import ORIENT, STRAND, reverse_complement
+from ..error import NotSpecifiedError
+from ..interval import Interval
 from .base import BioInterval, ReferenceName
 from .constants import SPLICE_SITE_TYPE
 from .splicing import SpliceSite, SplicingPattern
-from ..constants import ORIENT, reverse_complement, STRAND
-from ..error import NotSpecifiedError
-from ..interval import Interval
 
 
 class Template(BioInterval):
@@ -126,14 +128,13 @@ class Gene(BioInterval):
         """see :func:`structural_variant.annotate.base.BioInterval.key`"""
         return BioInterval.key(self), self.strand
 
-    def get_seq(self, reference_genome, ignore_cache=False):
+    def get_seq(self, reference_genome: Dict[str, pyfaidx.FastaRecord], ignore_cache: bool = False):
         """
         gene sequence is always given wrt to the positive forward strand regardless of gene strand
 
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence by
-                template/chr name
-            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
+            reference_genome: dict of reference sequence by template/chr name
+            ignore_cache: if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
         Returns:
             str: the sequence of the gene
@@ -143,7 +144,7 @@ class Gene(BioInterval):
         elif reference_genome is None:
             raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         else:
-            return str(reference_genome[self.chr].seq[self.start - 1 : self.end]).upper()
+            return str(reference_genome[self.chr][self.start - 1 : self.end])
 
     @property
     def spliced_transcripts(self):
@@ -509,15 +510,18 @@ class PreTranscript(BioInterval):
                 raise NotSpecifiedError('strand must be pos or neg to calculate the exon number')
         raise AttributeError('can only calculate phase on associated exons')
 
-    def get_seq(self, reference_genome=None, ignore_cache=False):
+    def get_seq(
+        self,
+        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        ignore_cache: bool = False,
+    ) -> str:
         """
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
-            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
+            reference_genome : dict of reference sequence by template/chr name
+            ignore_cache: if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
         Returns:
-            str: the sequence of the transcript including introns (but relative to strand)
+            the sequence of the transcript including introns (but relative to strand)
         """
         if self.seq and not ignore_cache:
             return self.seq
@@ -532,20 +536,24 @@ class PreTranscript(BioInterval):
             raise NotSpecifiedError('reference genome is required to retrieve the gene sequence')
         if self.get_strand() == STRAND.NEG:
             return reverse_complement(
-                reference_genome[self.gene.chr].seq[self.start - 1 : self.end]
+                reference_genome[self.gene.chr][self.start - 1 : self.end]
             ).upper()
-        return str(reference_genome[self.gene.chr].seq[self.start - 1 : self.end]).upper()
+        return str(reference_genome[self.gene.chr][self.start - 1 : self.end]).upper()
 
-    def get_cdna_seq(self, splicing_pattern, reference_genome=None, ignore_cache=False):
+    def get_cdna_seq(
+        self,
+        splicing_pattern: SplicingPattern,
+        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        ignore_cache: bool = False,
+    ) -> str:
         """
         Args:
-            splicing_pattern (SplicingPattern): the list of splicing positions
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
-            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
+            splicing_pattern: the list of splicing positions
+            reference_genome: dict of reference sequence by template/chr name
+            ignore_cache: if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
         Returns:
-            str: the spliced cDNA sequence
+            the spliced cDNA sequence
         """
         temp = sorted([self.start] + [s.pos for s in splicing_pattern] + [self.end])
         cdna_start = min(temp)
@@ -635,15 +643,18 @@ class Transcript(BioInterval):
         """
         return self.unspliced_transcript.convert_cdna_to_genomic(pos, self.splicing_pattern)
 
-    def get_seq(self, reference_genome=None, ignore_cache=False):
+    def get_seq(
+        self,
+        reference_genome: Optional[Dict[str, pyfaidx.FastaRecord]] = None,
+        ignore_cache: bool = False,
+    ) -> str:
         """
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence by
-                template/chr name
-            ignore_cache (bool): if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
+            reference_genome: dict of reference sequence by  template/chr name
+            ignore_cache: if True then stored sequences will be ignored and the function will attempt to retrieve the sequence using the positions and the input reference_genome
 
         Returns:
-            str: the sequence corresponding to the spliced cdna
+            the sequence corresponding to the spliced cdna
         """
         if self.seq and not ignore_cache:
             return self.seq

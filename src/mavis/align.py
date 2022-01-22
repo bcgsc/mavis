@@ -210,10 +210,9 @@ def convert_to_duplication(alignment, reference_genome):
         for dup_len in reversed(
             range(len(alignment.untemplated_seq) // 2 + 1, len(alignment.untemplated_seq) + 1)
         ):
-            refseq = reference_genome[alignment.break1.chr].seq[
+            refseq = reference_genome[alignment.break1.chr][
                 alignment.break1.start - dup_len : alignment.break1.start
             ]
-            refseq = str(refseq).upper()
             if refseq != alignment.untemplated_seq[:dup_len]:
                 continue
 

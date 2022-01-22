@@ -24,10 +24,7 @@ REFERENCE_GENOME = None
 def setUpModule():
     global REFERENCE_GENOME
     REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if (
-        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
-        != REFERENCE_GENOME['fake'].seq[0:50].upper()
-    ):
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != REFERENCE_GENOME['fake'][0:50]:
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
     BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
@@ -56,9 +53,7 @@ class TestCallByContig:
     def test_EGFR_small_del_transcriptome(self):
         gene = get_example_genes()['EGFR']
         reference_annotations = {gene.chr: [gene]}
-        reference_genome = {
-            gene.chr: mock.Mock(seq=MockLongString(gene.seq, offset=gene.start - 1))
-        }
+        reference_genome = {gene.chr: MockLongString(gene.seq, offset=gene.start - 1)}
 
         read = SamRead(
             query_sequence='CTTGAAGGAAACTGAATTCAAAAAGATCAAAGTGCTGGGCTCCGGTGCGTTCGGCACGGTGTATAAGGGACTCTGGATCCCAGAAGGTGAGAAAGTTAAAATTCCCGTCGCTATCAAGACATCTCCGAAAGCCAACAAGGAAATCCTCGATGAAGCCTACGTGATGGCCAGCGTGGACAACCCCCACGTGTGCCGCCTGCTGGGCATCTGCCTCACCTCCACCGTGCAGCTCATCATGCAGCTCATGCCCTTCGGCTGCCTCCTGGACTATGTCCGGGAACACAAAGACAATATTGGCTCCCAGTACCTGCTCAACTGGTGTGTGCAGATCGCAAAGGGCATGAACTACTTGGAGGACCGTCGCTTGGTGCACCGCGACCTGGCAGCCAGGAACGTACTGGTGAAAACACCGCAGCATGTCAAGATCACAGATTTTGGGCTGGCCAAACTGCTGGGTGCGGAAGAGAAAGAATACCATGCAGAAGGAGGCAAAGTGCCTATCAAGTGGATGGCATTGGAATCAATTTTACACAGAATCTATACCCACCAGAGTGATGTCTGGAGCTACGGGGTGACCGTTTGGGAGTTGATGACCTTTGGATCCAA',
@@ -1683,17 +1678,15 @@ class TestCallBySpanningReads:
 class TestCharacterizeRepeatRegion:
     def test_bad_deletion_call(self):
         reference_genome = {
-            '19': mock.Mock(
-                seq=MockLongString(
-                    'AAATCTTTTTTCCATTATGGCTATACAAAGTGAATACATTTCCACAAGCAAATATGATAGATTAATTGGTGCATTGTATATATTTCTCAAACCATCAGCTCCTCTT'
-                    'TTTTTCAAAGTCTAGAATTTGTAATGGTGGATATCTCTGTTCTGTATTCTGTTGTCTAGATATCCAAGTTTAATGCAAAATTTTATGACATGGAACTTGACACTTT'
-                    'CTAGAAATGTTCACATATGGTTGTTTATTAAATTATCTCTCATGGAAATATTTAAATGACATGTTTATTGTCTGAAAAGGACAGATATTTAAGCTTTTTTTTTTTT'
-                    'TTTTTCTTTTTTTTTGAGAAAGAGTCTCGTTCTTTTGCCCAGGCTGGAGTGCAGTGGTACAATCTTGGCTCACTACAACCTTCACCTCGCAGGTTCAAGCGATTCT'
-                    'CCTGCCTCAGCCTCCCTAGTAGCTGGGATTACAGGTACACACCACCAGGCCCATCTAATTTTTCTATATTTAGTAGAGACAGGGTTTCACCATGTTGGCCAGGCTG'
-                    'TTCTCAAACTCCTGACCTCAGCCAATCCGCCCGCCTCAACCTCTTAAAGTGATGGGATTACAGGTGTGAGCCATTGTGCTTGGCCCCCTTTAACTATTTTATGTGA'
-                    'CTCTTCT',
-                    offset=23951075,
-                )
+            '19': MockLongString(
+                'AAATCTTTTTTCCATTATGGCTATACAAAGTGAATACATTTCCACAAGCAAATATGATAGATTAATTGGTGCATTGTATATATTTCTCAAACCATCAGCTCCTCTT'
+                'TTTTTCAAAGTCTAGAATTTGTAATGGTGGATATCTCTGTTCTGTATTCTGTTGTCTAGATATCCAAGTTTAATGCAAAATTTTATGACATGGAACTTGACACTTT'
+                'CTAGAAATGTTCACATATGGTTGTTTATTAAATTATCTCTCATGGAAATATTTAAATGACATGTTTATTGTCTGAAAAGGACAGATATTTAAGCTTTTTTTTTTTT'
+                'TTTTTCTTTTTTTTTGAGAAAGAGTCTCGTTCTTTTGCCCAGGCTGGAGTGCAGTGGTACAATCTTGGCTCACTACAACCTTCACCTCGCAGGTTCAAGCGATTCT'
+                'CCTGCCTCAGCCTCCCTAGTAGCTGGGATTACAGGTACACACCACCAGGCCCATCTAATTTTTCTATATTTAGTAGAGACAGGGTTTCACCATGTTGGCCAGGCTG'
+                'TTCTCAAACTCCTGACCTCAGCCAATCCGCCCGCCTCAACCTCTTAAAGTGATGGGATTACAGGTGTGAGCCATTGTGCTTGGCCCCCTTTAACTATTTTATGTGA'
+                'CTCTTCT',
+                offset=23951075,
             )
         }
         bpp = BreakpointPair(
@@ -1713,12 +1706,10 @@ class TestCharacterizeRepeatRegion:
             opposing_strands=False,
             event_type=SVTYPE.INS,
         )
-        reference_genome = {
-            '1': mock.Mock(seq=MockLongString('TCGATTCAGGATCAGATTTTGAACAAGTACATACG', offset=100))
-        }
+        reference_genome = {'1': MockLongString('TCGATTCAGGATCAGATTTTGAACAAGTACATACG', offset=100)}
         print(
             'upto and including the first breakpoint',
-            reference_genome['1'].seq[bpp.break1.start - 10 : bpp.break1.start],
+            reference_genome['1'][bpp.break1.start - 10 : bpp.break1.start],
         )
         assert call.EventCall.characterize_repeat_region(bpp, reference_genome) == (4, 'T')
 
@@ -1730,12 +1721,10 @@ class TestCharacterizeRepeatRegion:
             opposing_strands=False,
             event_type=SVTYPE.DEL,
         )
-        reference_genome = {
-            '1': mock.Mock(seq=MockLongString('TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100))
-        }
+        reference_genome = {'1': MockLongString('TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100)}
         print(
             'upto and including the first breakpoint',
-            reference_genome['1'].seq[bpp.break1.start - 10 : bpp.break1.start],
+            reference_genome['1'][bpp.break1.start - 10 : bpp.break1.start],
         )
         assert call.EventCall.characterize_repeat_region(bpp, reference_genome) == (4, 'T')
 
@@ -1747,12 +1736,10 @@ class TestCharacterizeRepeatRegion:
             opposing_strands=False,
             event_type=SVTYPE.DUP,
         )
-        reference_genome = {
-            '1': mock.Mock(seq=MockLongString('TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100))
-        }
+        reference_genome = {'1': MockLongString('TCGATTCAGGATCAGATTTTTGAACAAGTACATACG', offset=100)}
         print(
             'upto and including the first breakpoint',
-            reference_genome['1'].seq[bpp.break1.start - 10 : bpp.break1.start],
+            reference_genome['1'][bpp.break1.start - 10 : bpp.break1.start],
         )
         assert call.EventCall.characterize_repeat_region(bpp, reference_genome) == (4, 'T')
 
@@ -1765,13 +1752,11 @@ class TestCharacterizeRepeatRegion:
             event_type=SVTYPE.DUP,
         )
         reference_genome = {
-            '1': mock.Mock(
-                seq=MockLongString('TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100)
-            )
+            '1': MockLongString('TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100)
         }
         print(
             'upto and including the first breakpoint',
-            reference_genome['1'].seq[bpp.break1.start - 10 : bpp.break1.start],
+            reference_genome['1'][bpp.break1.start - 10 : bpp.break1.start],
         )
         assert call.EventCall.characterize_repeat_region(bpp, reference_genome) == (2, 'TAG')
 
@@ -1784,13 +1769,11 @@ class TestCharacterizeRepeatRegion:
             event_type=SVTYPE.INS,
         )
         reference_genome = {
-            '1': mock.Mock(
-                seq=MockLongString('TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100)
-            )
+            '1': MockLongString('TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100)
         }
         print(
             'upto and including the first breakpoint',
-            reference_genome['1'].seq[bpp.break1.start - 10 : bpp.break1.start],
+            reference_genome['1'][bpp.break1.start - 10 : bpp.break1.start],
         )
         assert call.EventCall.characterize_repeat_region(bpp, reference_genome) == (3, 'TAG')
 
@@ -1803,13 +1786,11 @@ class TestCharacterizeRepeatRegion:
             event_type=SVTYPE.DEL,
         )
         reference_genome = {
-            '1': mock.Mock(
-                seq=MockLongString('TCGATTCAGGATCAGATAGTAGTAGTAGGAACAAGTACATACG', offset=100)
-            )
+            '1': MockLongString('TCGATTCAGGATCAGATAGTAGTAGTAGGAACAAGTACATACG', offset=100)
         }
         print(
             'upto and including the second breakpoint',
-            reference_genome['1'].seq[bpp.break2.start - 10 : bpp.break2.start],
+            reference_genome['1'][bpp.break2.start - 10 : bpp.break2.start],
         )
         assert call.EventCall.characterize_repeat_region(bpp, reference_genome) == (3, 'TAG')
 
@@ -1822,13 +1803,11 @@ class TestCharacterizeRepeatRegion:
             event_type=SVTYPE.INS,
         )
         reference_genome = {
-            '1': mock.Mock(
-                seq=MockLongString('TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100)
-            )
+            '1': MockLongString('TCGATTCAGGATCAGATAGTAGTAGGAACAAGTACATACG', offset=100)
         }
         print(
             'upto and including the first breakpoint',
-            reference_genome['1'].seq[bpp.break1.start - 10 : bpp.break1.start],
+            reference_genome['1'][bpp.break1.start - 10 : bpp.break1.start],
         )
         assert call.EventCall.characterize_repeat_region(bpp, reference_genome) == (0, 'TTG')
 

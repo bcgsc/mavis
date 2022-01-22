@@ -16,8 +16,6 @@ from ..util import glob_exists, long_running_test, package_relative_file
 def blat_output_dir():
     temp_output = tempfile.mkdtemp()
 
-    os.makedirs(os.path.join(temp_output, 'mavis/schemas'))
-
     with open(package_relative_file('tests/mini-tutorial.config.json'), 'r') as fh:
         config = json.load(fh)
     config['output_dir'] = os.path.join(temp_output, 'output_dir')
@@ -31,8 +29,6 @@ def blat_output_dir():
 @pytest.fixture
 def bwa_output_dir():
     temp_output = tempfile.mkdtemp()
-
-    os.makedirs(os.path.join(temp_output, 'mavis/schemas'))
 
     with open(package_relative_file('tests/mini-tutorial.config.json'), 'r') as fh:
         config = json.load(fh)
@@ -48,8 +44,6 @@ def bwa_output_dir():
 @pytest.fixture
 def annotate_only_output_dir():
     temp_output = tempfile.mkdtemp()
-
-    os.makedirs(os.path.join(temp_output, 'mavis/schemas'))
 
     with open(package_relative_file('tests/mini-tutorial.annotate_only.config.json'), 'r') as fh:
         config = json.load(fh)

@@ -339,8 +339,8 @@ class TestPredictSpliceSites:
         gimap4 = EXAMPLE_GENES['GIMAP4']
         il7 = EXAMPLE_GENES['IL7']
         ref_genome = {
-            gimap4.chr: MockObject(seq=MockLongString(gimap4.seq, offset=gimap4.start - 1)),
-            il7.chr: MockObject(seq=MockLongString(il7.seq, offset=il7.start - 1)),
+            gimap4.chr: MockLongString(gimap4.seq, offset=gimap4.start - 1),
+            il7.chr: MockLongString(il7.seq, offset=il7.start - 1),
         }
         annotations = annotate_events([bpp], {gimap4.chr: [gimap4], il7.chr: [il7]}, ref_genome)
         assert len(annotations) == 1

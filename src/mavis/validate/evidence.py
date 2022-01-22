@@ -324,7 +324,7 @@ class TranscriptomeEvidence(Evidence):
             for exon in transcript.exons:
                 exon_starts.add(exon.start)
                 exon_ends.add(exon.end)
-        refseq = self.reference_genome[read.reference_name].seq
+        refseq = self.reference_genome[read.reference_name]
         for i, (state, freq) in enumerate(read.cigar):
             # shift to coincide with exon boundaries if possible
             if new_cigar and i < len(read.cigar) - 1 and exon_ends and exon_starts:

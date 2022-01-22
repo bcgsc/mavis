@@ -238,7 +238,7 @@ class TestDraw:
         )
         ann.add_gene(genomic.Gene('1', 1500, 1950, strand=STRAND.POS))
 
-        reference_genome = {'1': MockObject(seq=MockString('A'))}
+        reference_genome = {'1': MockString('A')}
         ft = variant.FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
         canvas, legend = draw_sv_summary_diagram(d, ann)
@@ -296,7 +296,7 @@ class TestDraw:
         ann.add_gene(genomic.Gene('1', 3000, 3980, strand=STRAND.POS))
         ann.add_gene(genomic.Gene('1', 3700, 4400, strand=STRAND.NEG))
 
-        reference_genome = {'1': MockObject(seq=MockString('A'))}
+        reference_genome = {'1': MockString('A')}
 
         ft = variant.FusionTranscript.build(ann, reference_genome)
         ann.fusion = ft
@@ -366,8 +366,8 @@ class TestDraw:
         ann.add_gene(genomic.Gene('2', 3700, 4400, strand=STRAND.NEG))
 
         reference_genome = {
-            '1': MockObject(seq=MockString('A')),
-            '2': MockObject(seq=MockString('A')),
+            '1': MockString('A'),
+            '2': MockString('A'),
         }
 
         ft = variant.FusionTranscript.build(ann, reference_genome)
@@ -458,8 +458,8 @@ class TestDraw:
         ann.add_gene(genomic.Gene('2', 3700, 4400, strand=STRAND.NEG))
 
         reference_genome = {
-            '1': MockObject(seq=MockString('A')),
-            '2': MockObject(seq=MockString('A')),
+            '1': MockString('A'),
+            '2': MockString('A'),
         }
 
         ft = variant.FusionTranscript.build(ann, reference_genome)

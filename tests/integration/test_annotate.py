@@ -308,7 +308,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 599, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME
         )
@@ -358,7 +358,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGTC')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t, transcript2=t, event_type=SVTYPE.INV, protocol=PROTOCOL.GENOME
         )
@@ -393,7 +393,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGTC')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t, transcript2=t, event_type=SVTYPE.INV, protocol=PROTOCOL.TRANS
         )
@@ -437,7 +437,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1300, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGTC')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t, transcript2=t, event_type=SVTYPE.INV, protocol=PROTOCOL.GENOME
         )
@@ -470,7 +470,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP, protocol=PROTOCOL.GENOME
         )
@@ -512,7 +512,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP, protocol=PROTOCOL.TRANS
         )
@@ -561,7 +561,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 1299, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGATCG')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t, transcript2=t, event_type=SVTYPE.DUP, protocol=PROTOCOL.GENOME
         )
@@ -612,7 +612,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGACTC')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.INV, protocol=PROTOCOL.GENOME
         )
@@ -649,7 +649,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='ATCGACTC')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.INV, protocol=PROTOCOL.GENOME
         )
@@ -684,7 +684,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGAC')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DUP, protocol=PROTOCOL.GENOME
         )
@@ -713,7 +713,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='ATCGAC')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DUP, protocol=PROTOCOL.GENOME
         )
@@ -748,7 +748,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2700, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='AACGTGT')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME
         )
@@ -786,7 +786,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1199, orient=ORIENT.LEFT)
         b2 = Breakpoint(REF_CHR, 2700, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='AACGTGT')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DEL, protocol=PROTOCOL.TRANS
         )
@@ -827,7 +827,7 @@ class TestFusionTranscript:
         b1 = Breakpoint(REF_CHR, 1200, orient=ORIENT.RIGHT)
         b2 = Breakpoint(REF_CHR, 2699, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='AACGAGTGT')
-        ref = {REF_CHR: MockObject(seq=intervals.reference_sequence)}
+        ref = {REF_CHR: intervals.reference_sequence}
         ann = Annotation(
             bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.DEL, protocol=PROTOCOL.GENOME
         )
@@ -874,8 +874,8 @@ class TestFusionTranscript:
         b2 = Breakpoint('ref2', 1200, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='GCAACATAT')
         ref = {
-            REF_CHR: MockObject(seq=intervals.reference_sequence),
-            'ref2': MockObject(seq=intervals.alternate_sequence),
+            REF_CHR: intervals.reference_sequence,
+            'ref2': intervals.alternate_sequence,
         }
         ann = Annotation(
             bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.TRANS, protocol=PROTOCOL.GENOME
@@ -926,8 +926,8 @@ class TestFusionTranscript:
         b2 = Breakpoint(ALT_REF_CHR, 1199, orient=ORIENT.LEFT)
         bpp = BreakpointPair(b1, b2, opposing_strands=False, untemplated_seq='TCTACATAT')
         ref = {
-            REF_CHR: MockObject(seq=intervals.reference_sequence),
-            ALT_REF_CHR: MockObject(seq=intervals.alternate_sequence),
+            REF_CHR: intervals.reference_sequence,
+            ALT_REF_CHR: intervals.alternate_sequence,
         }
         ann = Annotation(
             bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.TRANS, protocol=PROTOCOL.GENOME
@@ -976,8 +976,8 @@ class TestFusionTranscript:
         b2 = Breakpoint(ALT_REF_CHR, 1200, orient=ORIENT.RIGHT)
         bpp = BreakpointPair(b1, b2, opposing_strands=True, untemplated_seq='GATACATAT')
         ref = {
-            REF_CHR: MockObject(seq=intervals.reference_sequence),
-            ALT_REF_CHR: MockObject(seq=intervals.alternate_sequence),
+            REF_CHR: intervals.reference_sequence,
+            ALT_REF_CHR: intervals.alternate_sequence,
         }
         ann = Annotation(
             bpp, transcript1=t1, transcript2=t2, event_type=SVTYPE.TRANS, protocol=PROTOCOL.GENOME
@@ -1040,7 +1040,7 @@ def mock_ann_obj():
 
 class TestSequenceFetching:
     def test_fetch_gene_seq_from_ref(self, mock_ann_obj):
-        expt = str(REFERENCE_GENOME[REF_CHR][0:900].seq).upper()
+        expt = str(REFERENCE_GENOME[REF_CHR][0:900].seq)
         assert mock_ann_obj.gene.get_seq(REFERENCE_GENOME) == expt
         # gene seq should be the same if gene in on reverse strand b/c gene seq always given on pos
         mock_ann_obj.gene.strand = STRAND.NEG
@@ -1052,17 +1052,17 @@ class TestSequenceFetching:
         assert mock_ann_obj.gene.get_seq(REFERENCE_GENOME) == expt
 
     def test_fetch_gene_seq_force_uncached(self, mock_ann_obj):
-        expt = str(REFERENCE_GENOME[REF_CHR][0:900].seq).upper()
+        expt = str(REFERENCE_GENOME[REF_CHR][0:900].seq)
         mock_ann_obj.gene.seq = 'AAA'
         assert mock_ann_obj.gene.get_seq(REFERENCE_GENOME, ignore_cache=True) == expt
 
     def test_fetch_us_transcript_seq_from_ref(self, mock_ann_obj):
-        expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper()
+        expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq)
         assert mock_ann_obj.pre_transcript.get_seq(REFERENCE_GENOME) == expt
 
     def test_fetch_us_transcript_seq_from_ref_revcomp(self, mock_ann_obj):
         mock_ann_obj.gene.strand = STRAND.NEG
-        expt = reverse_complement(str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper())
+        expt = reverse_complement(str(REFERENCE_GENOME[REF_CHR][100:800].seq))
         assert mock_ann_obj.pre_transcript.get_seq(REFERENCE_GENOME) == expt
 
     def test_fetch_us_transcript_seq_from_stored(self, mock_ann_obj):
@@ -1080,7 +1080,7 @@ class TestSequenceFetching:
         assert mock_ann_obj.pre_transcript.get_seq() == 'T' * len(mock_ann_obj.pre_transcript)
 
     def test_fetch_us_transcript_seq_force_uncached(self, mock_ann_obj):
-        expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq).upper()
+        expt = str(REFERENCE_GENOME[REF_CHR][100:800].seq)
         mock_ann_obj.pre_transcript.seq = 'AAA'
         assert mock_ann_obj.pre_transcript.get_seq(REFERENCE_GENOME, ignore_cache=True) == expt
 
@@ -1353,7 +1353,7 @@ class TestDomain:
             Domain('name', [(1, 3), (4, 3)])
 
     def test_get_seq_from_ref(self):
-        ref = {'1': MockObject(seq='CCCTAATCCCCTTT')}
+        ref = {'1': 'CCCTAATCCCCTTT'}
         g = Gene('1', 1, 16, strand=STRAND.NEG)
         t = PreTranscript(exons=[(2, 5), (7, 15)], gene=g)
         tl = Translation(4, 11, t, [])
@@ -1465,7 +1465,7 @@ class TestGene:
         assert g1 != None  # noqa: E711
 
     def test_get_seq(self):
-        ref = {'1': MockObject(seq='AACCCTTTGGG')}
+        ref = {'1': 'AACCCTTTGGG'}
         g = Gene('1', 3, 8, strand=STRAND.POS)
         assert g.get_seq(ref) == 'CCCTTT'
         g = Gene(REF_CHR, 2836, 4144, strand=STRAND.POS)

@@ -406,12 +406,12 @@ class EventCall(BreakpointPair):
         expected_sequence = None
         rightmost = None
         if event.event_type == SVTYPE.DEL:
-            expected_sequence = reference_genome[event.break1.chr].seq[
+            expected_sequence = reference_genome[event.break1.chr][
                 event.break1.start : event.break2.end - 1
             ]
             rightmost = event.break1.start
         elif event.event_type == SVTYPE.DUP:
-            expected_sequence = reference_genome[event.break1.chr].seq[
+            expected_sequence = reference_genome[event.break1.chr][
                 event.break1.start - 1 : event.break2.end
             ]
             rightmost = event.break1.start - 1
@@ -421,11 +421,7 @@ class EventCall(BreakpointPair):
 
         repeat_count = 0
         while rightmost - len(expected_sequence) > 0 and expected_sequence:
-            ref = (
-                reference_genome[event.break1.chr]
-                .seq[rightmost - len(expected_sequence) : rightmost]
-                .upper()
-            )
+            ref = reference_genome[event.break1.chr][rightmost - len(expected_sequence) : rightmost]
             if ref != expected_sequence:
                 break
             repeat_count += 1
