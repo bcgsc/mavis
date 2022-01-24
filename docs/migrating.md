@@ -19,3 +19,13 @@ config file
 ### Scheduling
 
 MAVIS is now integrated with snakemake instead of handling its own scheduling
+
+## Reference Annotation Files
+
+MAVIS no longer supports the previously deprecated tab-delimited format of the annotations file. If you are still using these files in your project we have provided a script to automatically convert them to the newer format in the tools directory
+
+```bash
+python src/tools/migrate_mavis_annotations_to_jsonl.py \
+    /path/to/tab/file.tab \
+    /path/to/new/json/file.json
+```

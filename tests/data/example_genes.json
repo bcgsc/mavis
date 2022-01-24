@@ -7991,6 +7991,8 @@
             "transcripts": [{
                 "name": "ENST00000346085",
                 "is_best_transcript": true,
+                "start": 157099063,
+                "end": 157529495,
                 "cdna_coding_end": 6751,
                 "cdna_coding_start": 2,
                 "exons": [

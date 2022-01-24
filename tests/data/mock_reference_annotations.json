@@ -4,7 +4,7 @@
             "chr": "fake",
             "start": 1,
             "end": 1000,
-            "strand": "1",
+            "strand": "+",
             "name": "ENSG0001",
             "aliases": [],
             "transcripts": [

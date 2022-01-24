@@ -5,9 +5,9 @@ from mavis.bam.cache import BamCache
 from mavis.bam.read import SamRead
 from mavis.breakpoint import Breakpoint
 from mavis.constants import NA_MAPPING_QUALITY, ORIENT, PYSAM_READ_FLAGS
-from mavis.schemas import DEFAULTS
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence
+from mavis_config import DEFAULTS
 
 from ..util import get_data, long_running_test
 from . import MockLongString, MockObject, MockRead, mock_read_pair

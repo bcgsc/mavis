@@ -9,9 +9,9 @@ from mavis.bam.read import SamRead
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import ORIENT, STRAND
 from mavis.interval import Interval
-from mavis.schemas import DEFAULTS
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+from mavis_config import DEFAULTS
 
 from . import MockBamFileHandle, MockObject, MockRead, mock_read_pair
 

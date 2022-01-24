@@ -4,11 +4,12 @@ import os
 import time
 from typing import Dict, List
 
-from ..constants import COLUMNS, PRIME, PROTOCOL, sort_columns
+from mavis_config import get_by_prefix
+
+from ..constants import COLUMNS, PRIME, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.diagram import draw_sv_summary_diagram
-from ..schemas import DEFAULTS, get_by_prefix
 from ..util import LOG, generate_complete_stamp, mkdirp, read_inputs
 from .constants import PASS_FILENAME
 from .file_io import ReferenceFile
