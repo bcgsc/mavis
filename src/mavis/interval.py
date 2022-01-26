@@ -30,7 +30,7 @@ class Interval:
 
         self.start = self.number_type(self.start)
         self.end = self.number_type(self.end)
-        if self.start == 0 and self.end == 1: 
+        if self.start == 0 and self.end == 1:
             self.start = 1
         if self.start > self.end:
             raise AttributeError('interval start > end is not allowed', self.start, self.end)
