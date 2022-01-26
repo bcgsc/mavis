@@ -5,7 +5,6 @@ import timeout_decorator
 from mavis.assemble import Contig, assemble, filter_contigs
 from mavis.constants import reverse_complement
 from mavis.interval import Interval
-from mavis.util import LOG
 from mavis_config import DEFAULTS
 
 from ..util import get_data, long_running_test
@@ -363,7 +362,6 @@ class TestAssemble:
             min_edge_trim_weight=DEFAULTS['validate.assembly_min_edge_trim_weight'],
             assembly_max_paths=DEFAULTS['validate.assembly_max_paths'],
             min_contig_length=150,
-            log=LOG,
             remap_min_exact_match=30,
             assembly_min_uniq=DEFAULTS['validate.assembly_min_uniq'],
         )
@@ -615,7 +613,6 @@ class TestAssemble:
             assembly_min_uniq=0.1,
             min_contig_length=125,
             remap_min_exact_match=15,
-            log=LOG,
         )
 
         target = 'GGGCACGGCTGCAGCGTCGCGGTGCATCAAGCTTGCTATGGCATTGTTCAAGTACCCACTGGACCGTGGTTTTGCAGGAAATGTGAATCTCAGGAGAGAGCAGCCAGAGTGATACAGTTTATGTAACTTGATGGAAGAA'
@@ -627,7 +624,7 @@ class TestAssemble:
     @timeout_decorator.timeout(120)
     @long_running_test
     def test_long_filter_bug(self, long_filter_seq):
-        contigs = assemble(long_filter_seq, 111, 3, 8, 0.1, 0.1, log=LOG)
+        contigs = assemble(long_filter_seq, 111, 3, 8, 0.1, 0.1)
         for c in contigs:
             print(c.seq, c.remap_score())
         assert len(contigs)

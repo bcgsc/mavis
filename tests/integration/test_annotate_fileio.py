@@ -7,5 +7,5 @@ JSON = get_data('annotations_subsample.json')
 
 class TestAnnotationLoading:
     def test_load_json(self):
-        result = load_annotations(JSON, warn=print)
+        result = load_annotations(JSON)
         assert len(result.keys()) == 12

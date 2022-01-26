@@ -9,10 +9,10 @@ from ..annotate.file_io import ReferenceFile
 from ..breakpoint import BreakpointPair
 from ..constants import COLUMNS, SUBCOMMAND
 from ..util import (
-    LOG,
     filter_on_overlap,
     filter_uninformative,
     generate_complete_stamp,
+    logger,
     mkdirp,
     output_tabbed_file,
     read_inputs,
@@ -27,12 +27,11 @@ def split_clusters(
     clusters: List[BreakpointPair],
     outputdir: str,
     total_batches: int,
-    min_clusters_per_file: int = 0,
     write_bed_summary: bool = True,
 ):
     """
     For a set of clusters creates a bed file representation of all clusters.
-    Also splits the clusters evenly into multiple files based on the user parameters (min_clusters_per_file, max_files)
+    Also splits the clusters evenly into multiple files based on the user parameters (max_files)
 
     Returns:
         list: of output file names (not including the bed file)
@@ -119,7 +118,7 @@ def main(
     other_chr = set()
     unfiltered_breakpoint_pairs = []
     filtered_pairs = []
-    LOG('filtering by library and chr name')
+    logger.info('filtering by library and chr name')
     for bpp in breakpoint_pairs:
         if bpp.library is None:
             bpp.library = library
@@ -140,41 +139,38 @@ def main(
         other_chr -= set(config[f'{SECTION}.limit_to_chr'])
     breakpoint_pairs = unfiltered_breakpoint_pairs
     if other_libs:
-        LOG(
-            'warning: ignoring breakpoints found for other libraries:',
-            sorted([lib for lib in other_libs]),
+        logger.info(
+            f'warning: ignoring breakpoints found for other libraries: {sorted([lib for lib in other_libs])}',
         )
     if other_chr:
-        LOG('warning: filtered events on chromosomes', other_chr)
+        logger.info(f'warning: filtered events on chromosomes {other_chr}')
     # filter by masking file
     breakpoint_pairs, masked_pairs = filter_on_overlap(breakpoint_pairs, masking.content)
     for bpp in masked_pairs:
         filtered_pairs.append(bpp)
     # filter by informative
     if config[f'{SECTION}.uninformative_filter']:
-        LOG('filtering from', len(breakpoint_pairs), 'breakpoint pairs using informative filter')
+        logger.info(
+            f'filtering from {len(breakpoint_pairs)} breakpoint pairs using informative filter'
+        )
         pass_clusters, uninformative_clusters = filter_uninformative(
             annotations.content, breakpoint_pairs, max_proximity=config[f'{SECTION}.max_proximity']
         )
-        LOG(
-            'filtered from',
-            len(breakpoint_pairs),
-            'down to',
-            len(pass_clusters),
-            '(removed {})'.format(len(uninformative_clusters)),
+        logger.info(
+            f'filtered from {len(breakpoint_pairs)} down to {len(pass_clusters)} (removed {uninformative_clusters})'
         )
         breakpoint_pairs = pass_clusters
         for bpp in uninformative_clusters:
             bpp.data[COLUMNS.filter_comment] = 'Uninformative'
             filtered_pairs.append(bpp)
     else:
-        LOG('did not apply uninformative filter')
+        logger.info('did not apply uninformative filter')
 
     mkdirp(output)
     output_tabbed_file(filtered_pairs, filtered_output)
 
     if not config[f'{SECTION}.split_only']:
-        LOG('computing clusters')
+        logger.info('computing clusters')
         clusters = merge_breakpoint_pairs(
             breakpoint_pairs,
             cluster_radius=config[f'{SECTION}.cluster_radius'],
@@ -211,9 +207,9 @@ def main(
                 common_data = set(common_data)
                 if len(common_data) == 1:
                     cluster.data[item] = list(common_data)[0]
-        LOG('computed', len(clusters), 'clusters', time_stamp=False)
-        LOG('cluster input pairs distribution', sorted(hist.items()), time_stamp=False)
-        LOG('cluster intervals lengths', sorted(length_hist.items()), time_stamp=False)
+        logger.info(f'computed {len(clusters)} clusters')
+        logger.info(f'cluster input pairs distribution {sorted(hist.items())}')
+        logger.info(f'cluster intervals lengths {sorted(length_hist.items())}')
         # map input pairs to cluster ids
         # now create the mapping from the original input files to the cluster(s)
 
@@ -234,9 +230,8 @@ def main(
         breakpoint_pairs,
         output,
         total_batches=lib_config['total_batches'],
-        min_clusters_per_file=config[f'{SECTION}.min_clusters_per_file'],
         write_bed_summary=True,
     )
 
-    generate_complete_stamp(output, LOG, start_time=start_time)
+    generate_complete_stamp(output, start_time=start_time)
     return output_files

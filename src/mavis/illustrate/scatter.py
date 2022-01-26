@@ -2,7 +2,7 @@ import os
 
 from ..bam.read import pileup, sequenced_strand
 from ..interval import Interval
-from ..util import DEVNULL, LOG
+from ..util import logger
 
 
 def bam_to_scatter(
@@ -40,7 +40,7 @@ def bam_to_scatter(
     if not axis_name:
         axis_name = os.path.basename(bam_file)
     # one plot per bam
-    LOG('reading:', bam_file)
+    logger.info(f'reading: {bam_file}')
     plot = None
     samfile = pysam.AlignmentFile(bam_file, 'rb')
 
@@ -63,7 +63,7 @@ def bam_to_scatter(
         except ValueError:  # chrom not in bam
             pass
 
-        LOG('scatter plot {} has {} points'.format(axis_name, len(points)))
+        logger.info(f'scatter plot {axis_name} has {len(points)} points')
         plot = ScatterPlot(
             points,
             axis_name,
@@ -123,7 +123,7 @@ class ScatterPlot:
         self.density = density
 
 
-def draw_scatter(ds, canvas, plot, xmapping, log=DEVNULL):
+def draw_scatter(ds, canvas, plot, xmapping):
     """
     given a xmapping, draw the scatter plot svg group
 
@@ -163,10 +163,7 @@ def draw_scatter(ds, canvas, plot, xmapping, log=DEVNULL):
             )
         except IndexError:
             pass
-    log(
-        'drew {} of {} points (density={})'.format(len(circles), len(plot.points), plot.density),
-        time_stamp=False,
-    )
+    logger.info(f'drew {len(circles)} of {len(plot.points)} points (density={plot.density})')
 
     for x_px, y_px, color in px_points:
         if x_px.length() > ds.scatter_marker_radius:

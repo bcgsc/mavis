@@ -7,7 +7,7 @@ from shortuuid import uuid
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from ..error import InvalidRearrangement
-from ..util import DEVNULL, read_bpp_from_input_file
+from ..util import logger, read_bpp_from_input_file
 from .breakdancer import convert_file as _convert_breakdancer_file
 from .chimerascan import convert_row as _parse_chimerascan
 from .cnvnator import convert_row as _parse_cnvnator
@@ -21,7 +21,6 @@ def convert_tool_output(
     fnames: List[str],
     file_type: str = SUPPORTED_TOOL.MAVIS,
     stranded: bool = False,
-    log: Callable = DEVNULL,
     collapse: bool = True,
     assume_no_untemplated: bool = True,
 ) -> List[BreakpointPair]:
@@ -32,14 +31,14 @@ def convert_tool_output(
     for fname in fnames:
         result.extend(
             _convert_tool_output(
-                fname, file_type, stranded, log, assume_no_untemplated=assume_no_untemplated
+                fname, file_type, stranded, assume_no_untemplated=assume_no_untemplated
             )
         )
     if collapse:
         collapse_mapping: Dict[BreakpointPair, List[BreakpointPair]] = {}
         for bpp in result:
             collapse_mapping.setdefault(bpp, []).append(bpp)
-        log('collapsed', len(result), 'to', len(collapse_mapping), 'calls')
+        logger.debug(f'collapsed {len(result)} to {len(collapse_mapping)} calls')
         result = []
         temp_sets = set()
         for bpp, bpp_list in collapse_mapping.items():
@@ -217,7 +216,7 @@ def _convert_tool_row(
                 untemplated_seq=untemplated_seq,
                 event_type=event_type,
                 stranded=stranded,
-                **{COLUMNS.tools: file_type, COLUMNS.tracking_id: std_row[COLUMNS.tracking_id]}
+                **{COLUMNS.tools: file_type, COLUMNS.tracking_id: std_row[COLUMNS.tracking_id]},
             )
 
             for col, value in std_row.items():
@@ -242,10 +241,9 @@ def _convert_tool_output(
     input_file: str,
     file_type: str = SUPPORTED_TOOL.MAVIS,
     stranded: bool = False,
-    log: Callable = DEVNULL,
     assume_no_untemplated: bool = True,
 ) -> List[BreakpointPair]:
-    log('reading:', input_file)
+    logger.info(f'reading: {input_file}')
     result = []
     rows = None
     if file_type == SUPPORTED_TOOL.MAVIS:
@@ -288,7 +286,7 @@ def _convert_tool_output(
         SUPPORTED_TOOL.BREAKSEQ,
         SUPPORTED_TOOL.STRELKA,
     ]:
-        rows = read_vcf(input_file, file_type, log)
+        rows = read_vcf(input_file)
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
         rows = _convert_breakdancer_file(input_file)
     else:
@@ -296,16 +294,16 @@ def _convert_tool_output(
         df.columns = [c[1:] if c.startswith('#') else c for c in df.columns]
         rows = df.where(df.notnull(), None).to_dict('records')
     if rows:
-        log('found', len(rows), 'rows')
+        logger.info('found', len(rows), 'rows')
         for row in rows:
             try:
                 std_rows = _convert_tool_row(
                     row, file_type, stranded, assume_no_untemplated=assume_no_untemplated
                 )
             except Exception as err:
-                log('Error in converting row', row)
+                logger.error(f'Error in converting row {row}')
                 raise err
             else:
                 result.extend(std_rows)
-    log('generated', len(result), 'breakpoint pairs')
+    logger.info(f'generated {len(result)} breakpoint pairs')
     return result

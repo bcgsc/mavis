@@ -1,11 +1,11 @@
-from typing import Callable, Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 from ..annotate.variant import determine_prime
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, ORIENT, PRIME, PROTOCOL, STRAND
 from ..error import NotSpecifiedError
 from ..interval import Interval
-from ..util import DEVNULL
+from ..util import logger
 from .constants import PAIRING_DISTANCES
 
 
@@ -183,7 +183,7 @@ def equivalent(event1: BreakpointPair, event2: BreakpointPair, distances=None) -
 
 
 def pair_by_distance(
-    calls: List[BreakpointPair], distances, log: Callable = DEVNULL, against_self: bool = False
+    calls: List[BreakpointPair], distances, against_self: bool = False
 ) -> Dict[str, Set[str]]:
     """
     for a set of input calls, pair by distance
@@ -195,14 +195,8 @@ def pair_by_distance(
     max_distance = max(distances.values())
     max_useq = max([len(c.untemplated_seq) if c.untemplated_seq else 0 for c in calls] + [0])
     max_distance += max_useq * 2
-    log(
-        'lowest_resolution',
-        lowest_resolution,
-        'max_distance',
-        max_distance,
-        'possible comparisons',
-        len(break1_sorted) * len(break1_sorted),
-        time_stamp=False,
+    logger.debug(
+        f'lowest_resolution:{lowest_resolution} max_distance:{max_distance} possible comparisons:{len(break1_sorted) * len(break1_sorted)}'
     )
 
     comparisons = 0
@@ -241,7 +235,7 @@ def pair_by_distance(
             if equivalent(current, other, distances=distances):
                 distance_pairings.setdefault(product_key(current), set()).add(product_key(other))
                 distance_pairings.setdefault(product_key(other), set()).add(product_key(current))
-    log('computed {} comparisons'.format(comparisons), time_stamp=False)
+    logger.debug(f'computed {comparisons} comparisons')
     return distance_pairings
 
 

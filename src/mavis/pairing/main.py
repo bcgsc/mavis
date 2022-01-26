@@ -8,7 +8,7 @@ import pandas as pd
 from ..annotate.file_io import ReferenceFile
 from ..breakpoint import BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SPLICE_TYPE, SVTYPE
-from ..util import LOG, generate_complete_stamp, output_tabbed_file, read_inputs
+from ..util import generate_complete_stamp, logger, output_tabbed_file, read_inputs
 from .pairing import inferred_equivalent, pair_by_distance, product_key
 
 
@@ -55,7 +55,7 @@ def main(
             expand_svtype=False,
         )
     )
-    LOG('read {} breakpoint pairs'.format(len(bpps)))
+    logger.info(f'read {len(bpps)} breakpoint pairs')
 
     # load all transcripts
     reference_transcripts = dict()
@@ -99,20 +99,16 @@ def main(
 
     distance_pairings: Dict[str, Set[str]] = {}
     product_pairings: Dict[str, Set[str]] = {}
-    LOG('computing distance based pairings')
+    logger.info('computing distance based pairings')
     # pairwise comparison of breakpoints between all libraries
     for set_num, (category, calls) in enumerate(
         sorted(calls_by_cat.items(), key=lambda x: (len(x[1]), x[0]), reverse=True)
     ):
-        LOG(
-            'comparing set {} of {} with {} items'.format(
-                set_num + 1, len(calls_by_cat), len(calls)
-            )
-        )
+        logger.info(f'comparing set {set_num + 1} of {len(calls_by_cat)} with {len(calls)} items')
         for node, adj_list in pair_by_distance(calls, distances, against_self=False).items():
             distance_pairings.setdefault(node, set()).update(adj_list)
 
-    LOG('computing inferred (by product) pairings')
+    logger.info('computing inferred (by product) pairings')
     for calls in calls_by_ann.values():
         calls_by_lib: Dict[str, List[BreakpointPair]] = {}
         for call in calls:
@@ -140,4 +136,4 @@ def main(
 
     fname = os.path.join(output, 'mavis_paired.tab')
     output_tabbed_file(bpps, fname)
-    generate_complete_stamp(output, LOG)
+    generate_complete_stamp(output)

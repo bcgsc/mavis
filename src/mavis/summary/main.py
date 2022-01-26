@@ -9,7 +9,7 @@ import pandas as pd
 from ..annotate.file_io import ReferenceFile
 from ..breakpoint import BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SPLICE_TYPE, SVTYPE
-from ..util import LOG, generate_complete_stamp, output_tabbed_file, read_inputs, soft_cast
+from ..util import generate_complete_stamp, logger, output_tabbed_file, read_inputs, soft_cast
 from .constants import HOMOPOLYMER_MIN_LENGTH
 from .summary import (
     annotate_dgv,
@@ -282,12 +282,12 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
 
     rows = []
     for lib in bpps_by_library:
-        LOG('annotating dgv for', lib)
+        logger.info(f'annotating dgv for {lib}')
         if not dgv_annotation.is_empty():
             annotate_dgv(
                 bpps_by_library[lib], dgv_annotation.content, distance=10
             )  # TODO make distance a parameter
-        LOG('adding pairing states for', lib)
+        logger.info(f'adding pairing states for {lib}')
         for row in bpps_by_library[lib]:
             # in case no pairing was done, add default (applicable to single library summaries)
             row.data.setdefault(COLUMNS.inferred_pairing, '')
@@ -312,7 +312,7 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
                         other_protocol=other_protocol,
                         other_disease_state=other_disease_state,
                         is_matched=other_lib in paired_libraries,
-                        inferred_is_matched=other_lib in inferred_paired_libraries
+                        inferred_is_matched=other_lib in inferred_paired_libraries,
                     )
                 else:
                     pairing_state = 'Not Applicable'
@@ -324,7 +324,7 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
         output, 'mavis_summary_all_{}.tab'.format('_'.join(sorted(list(libraries.keys()))))
     )
     output_tabbed_file(rows, fname, header=output_columns)
-    LOG('wrote {} structural variants to {}'.format(len(rows), fname))
+    logger.info(f'wrote {len(rows)} structural variants to {fname}')
     output_tabbed_file(filtered_pairs, os.path.join(output, 'filtered_pairs.tab'))
     # output by library non-synon protein-product
     for lib in bpps_by_library:
@@ -344,4 +344,4 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
             ):
                 lib_rows.append(row)
         output_tabbed_file(lib_rows, filename, header=output_columns)
-    generate_complete_stamp(output, LOG)
+    generate_complete_stamp(output)

@@ -13,7 +13,7 @@ from snakemake.utils import validate as snakemake_validate
 
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, translate
 from ..interval import Interval
-from ..util import DEVNULL, LOG
+from ..util import logger
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, PreTranscript, Template, Transcript
 from .protein import Domain, Translation
@@ -60,7 +60,6 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
 
 def load_annotations(
     *filepaths: str,
-    warn: Callable = DEVNULL,
     reference_genome: Optional[Dict[str, SeqRecord]] = None,
     best_transcripts_only: bool = False,
 ) -> Dict[str, List[Gene]]:
@@ -86,7 +85,6 @@ def load_annotations(
             data,
             reference_genome=reference_genome,
             best_transcripts_only=best_transcripts_only,
-            warn=warn,
         )
 
         for chrom in current_annotations:
@@ -99,7 +97,6 @@ def parse_annotations_json(
     data,
     reference_genome: Optional[Dict[str, SeqRecord]] = None,
     best_transcripts_only=False,
-    warn=DEVNULL,
 ) -> Dict[str, List[Gene]]:
     """
     parses a json of annotation information into annotation objects
@@ -159,7 +156,9 @@ def parse_annotations_json(
                 tx_length = transcript['cdna_coding_end'] - transcript['cdna_coding_start'] + 1
                 # check that the translation makes sense before including it
                 if tx_length % CODON_SIZE != 0:
-                    warn('Ignoring translation. The translated region is not a multiple of three')
+                    logger.warning(
+                        'Ignoring translation. The translated region is not a multiple of three'
+                    )
                     continue
                 tx_length = tx_length // CODON_SIZE
                 domains = []
@@ -180,7 +179,7 @@ def parse_annotations_json(
                             )
                         )
                     except AssertionError as err:
-                        warn(repr(err))
+                        logger.warning(repr(err))
                 translation = Translation(
                     transcript['cdna_coding_start'],
                     transcript['cdna_coding_end'],
@@ -193,9 +192,8 @@ def parse_annotations_json(
                     met = seq[translation.start - 1 : translation.start + 2]
                     stop = seq[translation.end - CODON_SIZE : translation.end]
                     if translate(met) != START_AA or translate(stop) != STOP_AA:
-                        warn(
-                            'Sequence error. The sequence computed from the reference does look like '
-                            'a valid translation'
+                        logger.warning(
+                            'Sequence error. The sequence computed from the reference does look like a valid translation'
                         )
                         continue
                 spl_tx.translations.append(translation)
@@ -375,12 +373,12 @@ class ReferenceFile:
             return self
         if self.key in ReferenceFile.CACHE and not ignore_cache:
             if verbose:
-                LOG('cached content:', self.name)
+                logger.info(f'cached content: {self.name}')
             self.content = ReferenceFile.CACHE[self.key].content
             return self
         self.files_exist()
         try:
-            LOG('loading:', self.name, time_stamp=True)
+            logger.info(f'loading: {self.name}')
             self.content = self.loader(*self.name, **self.opt)
             ReferenceFile.CACHE[self.key] = self
         except Exception as err:

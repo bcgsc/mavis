@@ -1,12 +1,12 @@
 #!/projects/tumour_char/analysis_scripts/python/centos06/anaconda3_v2.3.0/bin/python
 import math
+import os
 import statistics as stats
 import warnings
 
-import os
-
-from .read import sequenced_strand
 from ..constants import STRAND
+from ..util import logger
+from .read import sequenced_strand
 
 os.environ["OMP_NUM_THREADS"] = "4"  # export OMP_NUM_THREADS=4
 os.environ["OPENBLAS_NUM_THREADS"] = "4"  # export OPENBLAS_NUM_THREADS=4
@@ -140,10 +140,8 @@ def compute_transcriptome_bam_stats(
         randoms = [int(n * len(total_annotations)) for n in np.random.rand(sample_size)]
         genes = [total_annotations[r] for r in randoms]
     else:
-        warnings.warn(
-            'insufficient annotations to match requested sample size. requested {}, but only {} annotations'.format(
-                sample_size, len(total_annotations)
-            )
+        logger.warning(
+            f'insufficient annotations to match requested sample size. requested {sample_size}, but only {len(total_annotations)} annotations'
         )
 
     fragment_hist = Histogram()

@@ -24,7 +24,7 @@ from ..constants import (
 )
 from ..error import NotSpecifiedError
 from ..interval import Interval
-from ..util import DEVNULL
+from ..util import logger
 
 
 class Evidence(BreakpointPair):
@@ -836,7 +836,7 @@ class Evidence(BreakpointPair):
                 strand_calls,
             )
 
-    def assemble_contig(self, log=DEVNULL):
+    def assemble_contig(self):
         """
         uses the split reads and the partners of the half mapped reads to create a contig
         representing the sequence across the breakpoints
@@ -875,7 +875,7 @@ class Evidence(BreakpointPair):
             rqs_comp = reverse_complement(mate.query_sequence)
             assembly_sequences.setdefault(rqs_comp, set()).add(mate)
 
-        log('assembly size of {} sequences'.format(len(assembly_sequences) // 2))
+        logger.info(f'assembly size of {len(assembly_sequences) // 2} sequences')
 
         kmer_size = self.read_length * self.config['validate.assembly_kmer_size']
         remap_min_overlap = max(
@@ -888,7 +888,6 @@ class Evidence(BreakpointPair):
             min_edge_trim_weight=self.config['validate.assembly_min_edge_trim_weight'],
             assembly_max_paths=self.config['validate.assembly_max_paths'],
             min_contig_length=self.read_length,
-            log=log,
             remap_min_overlap=remap_min_overlap,
             remap_min_exact_match=self.config['validate.assembly_min_exact_match_to_remap'],
             assembly_min_uniq=self.config['validate.assembly_min_uniq'],
@@ -919,11 +918,8 @@ class Evidence(BreakpointPair):
                 not self.interchromosomal and len(self.break1 | self.break2) < self.read_length
             ):
                 filtered_contigs.append(ctg)
-        log(
-            'filtered contigs from {} to {} based on remapped reads from both breakpoints'.format(
-                len(contigs), len(filtered_contigs)
-            ),
-            time_stamp=False,
+        logger.info(
+            f'filtered contigs from {len(contigs)} to {len(filtered_contigs)} based on remapped reads from both breakpoints'
         )
         contigs = filtered_contigs
 
@@ -985,7 +981,7 @@ class Evidence(BreakpointPair):
             list(filtered_contigs.values()), key=lambda x: (x.remap_score() * -1, x.seq)
         )
 
-    def load_evidence(self, log=DEVNULL):
+    def load_evidence(self):
         """
         open the associated bam file and read and store the evidence
         does some preliminary read-quality filtering
@@ -1117,7 +1113,7 @@ class Evidence(BreakpointPair):
                 mates = self.bam_cache.get_mate(flanking_read, allow_file_access=False)
                 for mate in mates:
                     if mate.is_unmapped:
-                        log('ignoring unmapped mate', mate.query_name, level=logging.DEBUG)
+                        logger.debug(f'ignoring unmapped mate {mate.query_name}')
                         continue
                     self.collect_flanking_pair(flanking_read, mate)
             except KeyError:
@@ -1163,7 +1159,7 @@ class Evidence(BreakpointPair):
                     mates = self.bam_cache.get_mate(flanking_read, allow_file_access=False)
                     for mate in mates:
                         if mate.is_unmapped:
-                            log('ignoring unmapped mate', mate.query_name, level=logging.DEBUG)
+                            logger.debug(f'ignoring unmapped mate {mate.query_name}')
                             continue
                         try:
                             self.collect_compatible_flanking_pair(
@@ -1175,11 +1171,8 @@ class Evidence(BreakpointPair):
                     pass
 
         # now collect the half mapped reads
-        log(
-            'collected',
-            len(half_mapped_partners1 | half_mapped_partners2),
-            'putative half mapped reads',
-            time_stamp=False,
+        logger.info(
+            f'collected {len(half_mapped_partners1 | half_mapped_partners2)} putative half mapped reads',
         )
         mates_found = 0
         for read in half_mapped_partners1 | half_mapped_partners2:
@@ -1191,7 +1184,7 @@ class Evidence(BreakpointPair):
                     self.collect_half_mapped(read, mate)
             except KeyError:
                 pass
-        log(mates_found, 'half-mapped mates found')
+        logger.info(f'{mates_found} half-mapped mates found')
 
     def copy(self):
         raise NotImplementedError('not appropriate for copy of evidence')

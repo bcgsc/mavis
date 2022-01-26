@@ -4,13 +4,11 @@ This is the primary module responsible for generating svg visualizations
 """
 from svgwrite import Drawing
 
-from .elements import draw_exon_track, draw_genes, draw_template, draw_ustranscript, draw_vmarker
-from .scatter import draw_scatter
-from .util import generate_interval_mapping, LabelMapping
-
 from ..annotate.genomic import IntergenicRegion
 from ..interval import Interval
-from ..util import DEVNULL
+from .elements import draw_exon_track, draw_genes, draw_template, draw_ustranscript, draw_vmarker
+from .scatter import draw_scatter
+from .util import LabelMapping, generate_interval_mapping
 
 # draw gene level view
 # draw gene box
@@ -382,9 +380,7 @@ def draw_sv_summary_diagram(
     return canvas, legend
 
 
-def draw_multi_transcript_overlay(
-    config, gene, vmarkers=None, window_buffer=0, plots=None, log=DEVNULL
-):
+def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, plots=None):
     vmarkers = [] if vmarkers is None else vmarkers
     plots = [] if plots is None else plots
 
@@ -434,7 +430,7 @@ def draw_multi_transcript_overlay(
 
     for plot in plots:
         if plot.points:
-            plot_group = draw_scatter(config, canvas, plot, mapping, log=log)
+            plot_group = draw_scatter(config, canvas, plot, mapping)
             main_group.add(plot_group)
             plot_group.translate(x, y)
             y += plot.height + config.padding * 2
