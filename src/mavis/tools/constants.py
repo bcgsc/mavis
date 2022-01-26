@@ -51,6 +51,10 @@ TOOL_SVTYPE_MAPPING.update(
         'dup': [SVTYPE.DUP],
         'ITD': [SVTYPE.DUP],
         'IDP': [SVTYPE.INS],
+        'DEL/INV': [SVTYPE.DEL, SVTYPE.INV],
+        'DUP/INS': [SVTYPE.DUP, SVTYPE.INS],
+        'INVDUP': [SVTYPE.INV, SVTYPE.DUP, SVTYPE.INS],
+        'INV/INVDUP': [SVTYPE.INV, SVTYPE.DUP, SVTYPE.INS],
     }
 )
 

@@ -2,7 +2,6 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-from copy import deepcopy
 
 import pandas as pd
 
@@ -17,19 +16,19 @@ from ..util import DEVNULL
 from .constants import SUPPORTED_TOOL
 
 PANDAS_DEFAULT_NA_VALUES = [
-    "-1.#IND",
-    "1.#QNAN",
-    "1.#IND",
-    "-1.#QNAN",
-    "#N/A",
-    "N/A",
-    "NA",
-    "#NA",
-    "NULL",
-    "NaN",
-    "-NaN",
-    "nan",
-    "-nan",
+    '-1.#IND',
+    '1.#QNAN',
+    '1.#IND',
+    '-1.#QNAN',
+    '#N/A',
+    'N/A',
+    'NA',
+    '#NA',
+    'NULL',
+    'NaN',
+    '-NaN',
+    'nan',
+    '-nan',
 ]
 
 
@@ -54,7 +53,7 @@ class VcfRecordType:
 
     @property
     def stop(self) -> Optional[int]:
-        return self.info.get("END", self.pos)
+        return self.info.get('END', self.pos)
 
 
 def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
@@ -76,51 +75,51 @@ def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
     | ru]p]        | LL      |
     """
     # ru[p[
-    match = re.match(r"^(?P<ref>\w)(?P<useq>\w*)\[(?P<chr>[^:]+):(?P<pos>\d+)\[$", alt)
+    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)\[(?P<chr>[^:]+):(?P<pos>\d+)\[$', alt)
     if match:
         return (
-            match.group("chr"),
-            int(match.group("pos")),
+            match.group('chr'),
+            int(match.group('pos')),
             ORIENT.LEFT,
             ORIENT.RIGHT,
-            match.group("ref"),
-            match.group("useq"),
+            match.group('ref'),
+            match.group('useq'),
         )
     # [p[ur
-    match = re.match(r"^\[(?P<chr>[^:]+):(?P<pos>\d+)\[(?P<useq>\w*)(?P<ref>\w)$", alt)
+    match = re.match(r'^\[(?P<chr>[^:]+):(?P<pos>\d+)\[(?P<useq>\w*)(?P<ref>\w)$', alt)
     if match:
         return (
-            match.group("chr"),
-            int(match.group("pos")),
+            match.group('chr'),
+            int(match.group('pos')),
             ORIENT.RIGHT,
             ORIENT.RIGHT,
-            match.group("ref"),
-            match.group("useq"),
+            match.group('ref'),
+            match.group('useq'),
         )
     # ]p]ur
-    match = re.match(r"^\](?P<chr>[^:]+):(?P<pos>\d+)\](?P<useq>\w*)(?P<ref>\w)$", alt)
+    match = re.match(r'^\](?P<chr>[^:]+):(?P<pos>\d+)\](?P<useq>\w*)(?P<ref>\w)$', alt)
     if match:
         return (
-            match.group("chr"),
-            int(match.group("pos")),
+            match.group('chr'),
+            int(match.group('pos')),
             ORIENT.RIGHT,
             ORIENT.LEFT,
-            match.group("ref"),
-            match.group("useq"),
+            match.group('ref'),
+            match.group('useq'),
         )
     # ru]p]
-    match = re.match(r"^(?P<ref>\w)(?P<useq>\w*)\](?P<chr>[^:]+):(?P<pos>\d+)\]$", alt)
+    match = re.match(r'^(?P<ref>\w)(?P<useq>\w*)\](?P<chr>[^:]+):(?P<pos>\d+)\]$', alt)
     if match:
         return (
-            match.group("chr"),
-            int(match.group("pos")),
+            match.group('chr'),
+            int(match.group('pos')),
             ORIENT.LEFT,
             ORIENT.LEFT,
-            match.group("ref"),
-            match.group("useq"),
+            match.group('ref'),
+            match.group('useq'),
         )
     else:
-        raise NotImplementedError("alt specification in unexpected format", alt)
+        raise NotImplementedError('alt specification in unexpected format', alt)
 
 
 def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
@@ -144,7 +143,7 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
             try:
                 value = record.info[key]
             except UnicodeDecodeError as err:
-                log("Ignoring invalid INFO field {} with error: {}".format(key, err))
+                log('Ignoring invalid INFO field {} with error: {}'.format(key, err))
             else:
                 try:
                     value = value[0] if len(value) == 1 else value
@@ -153,27 +152,27 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
             info[key] = value
 
         std_row = {}
-        if record.id and record.id != "N":  # to account for NovoBreak N in the ID field
-            std_row["id"] = record.id
+        if record.id and record.id != 'N':  # to account for NovoBreak N in the ID field
+            std_row['id'] = record.id
 
-        if info.get("SVTYPE") == "BND":
+        if info.get('SVTYPE') == 'BND':
             chr2, end, orient1, orient2, ref, alt = parse_bnd_alt(alt)
             std_row[COLUMNS.break1_orientation] = orient1
             std_row[COLUMNS.break2_orientation] = orient2
             std_row[COLUMNS.untemplated_seq] = alt
             if record.ref != ref:
                 raise AssertionError(
-                    "Expected the ref specification in the vcf record to match the sequence "
-                    "in the alt string: {} vs {}".format(record.ref, ref)
+                    'Expected the ref specification in the vcf record to match the sequence '
+                    'in the alt string: {} vs {}'.format(record.ref, ref)
                 )
         else:
-            chr2 = info.get("CHR2", record.chrom)
+            chr2 = info.get('CHR2', record.chrom)
             end = record.stop
             if (
                 alt
                 and record.ref
-                and re.match(r"^[A-Z]+$", alt)
-                and re.match(r"^[A-Z]+", record.ref)
+                and re.match(r'^[A-Z]+$', alt)
+                and re.match(r'^[A-Z]+', record.ref)
             ):
                 std_row[COLUMNS.untemplated_seq] = alt[1:]
                 size = len(alt) - len(record.ref)
@@ -183,7 +182,7 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
                     std_row[COLUMNS.event_type] = SVTYPE.DEL
         std_row.update({COLUMNS.break1_chromosome: record.chrom, COLUMNS.break2_chromosome: chr2})
         if info.get(
-            "PRECISE", False
+            'PRECISE', False
         ):  # DELLY CI only apply when split reads were not used to refine the breakpoint which is then flagged
             std_row.update(
                 {
@@ -197,97 +196,65 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
             std_row.update(
                 {
                     COLUMNS.break1_position_start: max(
-                        1, record.pos + info.get("CIPOS", (0, 0))[0]
+                        1, record.pos + info.get('CIPOS', (0, 0))[0]
                     ),
-                    COLUMNS.break1_position_end: record.pos + info.get("CIPOS", (0, 0))[1],
-                    COLUMNS.break2_position_start: max(1, end + info.get("CIEND", (0, 0))[0]),
-                    COLUMNS.break2_position_end: end + info.get("CIEND", (0, 0))[1],
+                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
+                    COLUMNS.break2_position_start: max(1, end + info.get('CIEND', (0, 0))[0]),
+                    COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1],
                 }
             )
 
-        std_row2 = {}
-
-        if "SVTYPE" in info:
-            if info["SVTYPE"] in dir(SVTYPE):
-                std_row[COLUMNS.event_type] = info["SVTYPE"]
-            elif "/" in info["SVTYPE"]:
-                std_row2 = deepcopy(std_row)
-                std_row[COLUMNS.event_type] = info["SVTYPE"].split("/")[0]
-                std_row2[COLUMNS.event_type] = info["SVTYPE"].split("/")[1]
+        if 'SVTYPE' in info:
+            std_row[COLUMNS.event_type] = info['SVTYPE']
 
         try:
-            orient1, orient2 = info["CT"].split("to")
-            connection_type = {"3": ORIENT.LEFT, "5": ORIENT.RIGHT, "N": ORIENT.NS}
+            orient1, orient2 = info['CT'].split('to')
+            connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
             std_row[COLUMNS.break1_orientation] = connection_type[orient1]
             std_row[COLUMNS.break2_orientation] = connection_type[orient2]
-            if bool(std_row2):
-                std_row2[COLUMNS.break1_orientation] = connection_type[orient1]
-                std_row2[COLUMNS.break2_orientation] = connection_type[orient2]
         except KeyError:
             pass
-        if bool(std_row2):
-            std_row2.update(
-                {
-                    k: v
-                    for k, v in info.items()
-                    if k not in {"CHR2", "SVTYPE", "CIPOS", "CIEND", "CT"}
-                }
-            )
-            std_row.update(
-                {
-                    k: v
-                    for k, v in info.items()
-                    if k not in {"CHR2", "SVTYPE", "CIPOS", "CIEND", "CT"}
-                }
-            )
-            records.append(std_row)
-            records.append(std_row2)
-        else:
-            std_row.update(
-                {
-                    k: v
-                    for k, v in info.items()
-                    if k not in {"CHR2", "SVTYPE", "CIPOS", "CIEND", "CT"}
-                }
-            )
-            records.append(std_row)
+        std_row.update(
+            {k: v for k, v in info.items() if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CT'}}
+        )
+        records.append(std_row)
     return records
 
 
 def convert_pandas_rows_to_variants(df):
     def parse_info(info_field):
         info = {}
-        for pair in info_field.split(";"):
-            if "=" in pair:
-                key, value = pair.split("=", 1)
+        for pair in info_field.split(';'):
+            if '=' in pair:
+                key, value = pair.split('=', 1)
                 info[key] = value
             else:
                 info[pair] = True
 
         # convert info types
         for key in info:
-            if key in {"CIPOS", "CIEND"}:
-                ci_start, ci_end = info[key].split(",")
+            if key in {'CIPOS', 'CIEND'}:
+                ci_start, ci_end = info[key].split(',')
                 info[key] = (int(ci_start), int(ci_end))
-            elif key == "END":
+            elif key == 'END':
                 info[key] = int(info[key])
 
         return info
 
-    df["info"] = df["INFO"].apply(parse_info)
-    df["alts"] = df["ALT"].apply(lambda a: a.split(","))
+    df['info'] = df['INFO'].apply(parse_info)
+    df['alts'] = df['ALT'].apply(lambda a: a.split(','))
 
     rows = []
     for _, row in df.iterrows():
 
         rows.append(
             VcfRecordType(
-                id=row["ID"],
-                pos=row["POS"],
-                info=VcfInfoType(row["info"]),
-                chrom=row["CHROM"],
-                ref=row["REF"],
-                alts=row["alts"],
+                id=row['ID'],
+                pos=row['POS'],
+                info=VcfInfoType(row['info']),
+                chrom=row['CHROM'],
+                ref=row['REF'],
+                alts=row['alts'],
             )
         )
     return rows
@@ -299,9 +266,9 @@ def pandas_vcf(input_file) -> Tuple[List[str], pd.DataFrame]:
     """
     # read the comment/header information
     header_lines = []
-    with open(input_file, "r") as fh:
-        line = "##"
-        while line.startswith("##"):
+    with open(input_file, 'r') as fh:
+        line = '##'
+        while line.startswith('##'):
             header_lines.append(line)
             line = fh.readline().strip()
         header_lines = header_lines[1:]
@@ -311,21 +278,21 @@ def pandas_vcf(input_file) -> Tuple[List[str], pd.DataFrame]:
         sep="\t",
         skiprows=len(header_lines),
         dtype={
-            "CHROM": str,
-            "POS": int,
-            "ID": str,
-            "INFO": str,
-            "FORMAT": str,
-            "REF": str,
-            "ALT": str,
+            'CHROM': str,
+            'POS': int,
+            'ID': str,
+            'INFO': str,
+            'FORMAT': str,
+            'REF': str,
+            'ALT': str,
         },
         na_values=PANDAS_DEFAULT_NA_VALUES + ["."],
     )
-    df = df.rename(columns={df.columns[0]: df.columns[0].replace("#", "")})
-    required_columns = ["CHROM", "INFO", "POS", "REF", "ALT", "ID"]
+    df = df.rename(columns={df.columns[0]: df.columns[0].replace('#', '')})
+    required_columns = ['CHROM', 'INFO', 'POS', 'REF', 'ALT', 'ID']
     for col in required_columns:
         if col not in df.columns:
-            raise KeyError(f"Missing required column: {col}")
+            raise KeyError(f'Missing required column: {col}')
     # convert the format fields using the header
     return header_lines, df
 
