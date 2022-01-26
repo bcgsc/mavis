@@ -5,10 +5,11 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from mavis.constants import ORIENT, SUBCOMMAND, SVTYPE
+from mavis.constants import ORIENT, SVTYPE
 from mavis.main import main
 from mavis.tools import SUPPORTED_TOOL
 from mavis.util import read_bpp_from_input_file
+from mavis_config.constants import SUBCOMMAND
 
 from ..util import get_data, glob_exists
 

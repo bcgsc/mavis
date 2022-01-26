@@ -1,8 +1,8 @@
 import sys
 from unittest.mock import patch
 
-from mavis.constants import SUBCOMMAND
 from mavis.main import main
+from mavis_config.constants import SUBCOMMAND
 
 
 class TestHelpMenu:

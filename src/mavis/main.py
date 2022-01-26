@@ -9,6 +9,7 @@ import time
 from typing import Dict
 
 from mavis_config import validate_config
+from mavis_config.constants import SUBCOMMAND
 
 from . import __version__
 from . import config as _config
@@ -16,7 +17,6 @@ from . import util as _util
 from .align import get_aligner_version
 from .annotate import main as annotate_main
 from .cluster import main as cluster_main
-from .constants import SUBCOMMAND
 from .overlay import check_overlay_args
 from .overlay import main as overlay_main
 from .pairing import main as pairing_main

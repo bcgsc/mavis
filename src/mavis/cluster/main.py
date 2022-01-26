@@ -3,11 +3,12 @@ import os
 import time
 from typing import Dict, List
 
+from mavis_config.constants import SUBCOMMAND
 from shortuuid import uuid
 
 from ..annotate.file_io import ReferenceFile
 from ..breakpoint import BreakpointPair
-from ..constants import COLUMNS, SUBCOMMAND
+from ..constants import COLUMNS
 from ..util import (
     filter_on_overlap,
     filter_uninformative,
