@@ -136,4 +136,4 @@ def main(
 
     fname = os.path.join(output, 'mavis_paired.tab')
     output_tabbed_file(bpps, fname)
-    generate_complete_stamp(output)
+    generate_complete_stamp(output, start_time=start_time)

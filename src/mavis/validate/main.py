@@ -163,7 +163,7 @@ def main(
                 else f' (tracking_id: {evidence.tracking_id})'
             ),
         )
-        logger.info(repr(evidence))
+        logger.info(str(evidence))
         logger.info(f'possible event type(s): {BreakpointPair.classify(evidence)}')
         logger.info(
             f'outer window regions: {evidence.break1.chr}:{evidence.outer_window1[0]}-{evidence.outer_window1[1]}  {evidence.break2.chr}:{evidence.outer_window2[0]}-{evidence.outer_window2[1]}'

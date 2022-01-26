@@ -343,4 +343,4 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
             ):
                 lib_rows.append(row)
         output_tabbed_file(lib_rows, filename, header=output_columns)
-    generate_complete_stamp(output)
+    generate_complete_stamp(output, start_time=start_time)

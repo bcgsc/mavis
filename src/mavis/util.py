@@ -179,7 +179,7 @@ def read_inputs(inputs, required_columns=[], **kwargs):
     bpps = []
 
     for finput in bash_expands(*inputs):
-        logger.info('loading: {finput}')
+        logger.info(f'loading: {finput}')
         bpps.extend(
             read_bpp_from_input_file(
                 finput, required_columns=[COLUMNS.protocol, *required_columns], **kwargs
@@ -255,7 +255,7 @@ def generate_complete_stamp(output_dir, prefix='MAVIS.', start_time=None):
         'some_output_dir/MAVIS.COMPLETE'
     """
     stamp = os.path.join(output_dir, str(prefix) + 'COMPLETE')
-    logger.info('complete: {stamp}')
+    logger.info(f'complete: {stamp}')
     with open(stamp, 'w') as fh:
         if start_time is not None:
             duration = int(time.time()) - start_time

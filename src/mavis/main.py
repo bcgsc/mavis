@@ -176,7 +176,11 @@ def main(argv=None):
     if args.command == SUBCOMMAND.OVERLAY:
         args = check_overlay_args(args, parser)
 
-    log_conf = {'format': '{message}', 'style': '{', 'level': args.log_level}
+    log_conf = {
+        'format': '{asctime} [{levelname}] {message}',
+        'style': '{',
+        'level': args.log_level,
+    }
 
     original_logging_handlers = logging.root.handlers[:]
     for handler in logging.root.handlers:
