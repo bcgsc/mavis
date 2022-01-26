@@ -2,7 +2,7 @@ from typing import Dict
 
 from mavis_config import DEFAULTS
 
-from ..constants import CALL_METHOD, MavisNamespace
+from ..constants import CALL_METHOD
 
 PAIRING_DISTANCES: Dict[str, int] = {
     CALL_METHOD.FLANK: DEFAULTS['pairing.flanking_call_distance'],

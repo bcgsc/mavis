@@ -7,7 +7,7 @@ import pandas as pd
 
 from ..annotate.file_io import ReferenceFile
 from ..breakpoint import BreakpointPair
-from ..constants import CALL_METHOD, COLUMNS, PROTOCOL, SPLICE_TYPE, SVTYPE
+from ..constants import CALL_METHOD, COLUMNS, SPLICE_TYPE, SVTYPE
 from ..util import generate_complete_stamp, logger, output_tabbed_file, read_inputs
 from .pairing import inferred_equivalent, pair_by_distance, product_key
 

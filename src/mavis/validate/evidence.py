@@ -241,7 +241,6 @@ class TranscriptomeEvidence(Evidence):
         mixed = []
         inter = []
         transcripts = self._select_transcripts(chrom, strand)
-        genomic_distance = Evidence.distance(start, end).end
         # try to calculate assuming the positions are exonic
         for transcript in itertools.chain.from_iterable([t.transcripts for t in transcripts]):
             if not transcript.reference_object.position & Interval(start, end):

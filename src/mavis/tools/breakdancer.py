@@ -1,5 +1,4 @@
 import re
-from argparse import Namespace
 
 import pandas as pd
 
@@ -34,7 +33,7 @@ def convert_file(input_file):
         },
     )
     if 'num_Reads_lib' not in df:
-        raise KeyError(f'missing required column: num_Reads_lib')
+        raise KeyError('missing required column: num_Reads_lib')
 
     for bam, lib in bam_to_lib.items():
         df['num_Reads_lib'] = df['num_Reads_lib'].str.replace(bam, lib)

@@ -3,7 +3,6 @@ import itertools
 import os
 import re
 import time
-import warnings
 from typing import Dict, List
 
 import pysam

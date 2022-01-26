@@ -1,5 +1,5 @@
 import itertools
-from typing import Callable, Dict, List
+from typing import Dict, List
 
 import pandas as pd
 from shortuuid import uuid

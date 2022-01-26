@@ -2,7 +2,6 @@
 import math
 import os
 import statistics as stats
-import warnings
 
 from ..constants import STRAND
 from ..util import logger

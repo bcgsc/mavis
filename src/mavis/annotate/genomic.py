@@ -1,12 +1,11 @@
-from copy import copy
 import itertools
 
+from ..constants import ORIENT, STRAND, reverse_complement
+from ..error import NotSpecifiedError
+from ..interval import Interval
 from .base import BioInterval, ReferenceName
 from .constants import SPLICE_SITE_TYPE
 from .splicing import SpliceSite, SplicingPattern
-from ..constants import ORIENT, reverse_complement, STRAND
-from ..error import NotSpecifiedError
-from ..interval import Interval
 
 
 class Template(BioInterval):

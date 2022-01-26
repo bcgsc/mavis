@@ -2,20 +2,19 @@
 This is the primary module responsible for generating svg visualizations
 
 """
-import itertools
 import re
 
-from .util import (
-    dynamic_label_color,
-    generate_interval_mapping,
-    LabelMapping,
-    split_intervals_into_tracks,
-    Tag,
-)
 from ..annotate.variant import FusionTranscript
 from ..constants import CODON_SIZE, GIEMSA_STAIN, ORIENT, STRAND
 from ..error import DrawingFitError, NotSpecifiedError
 from ..interval import Interval
+from .util import (
+    LabelMapping,
+    Tag,
+    dynamic_label_color,
+    generate_interval_mapping,
+    split_intervals_into_tracks,
+)
 
 # draw gene level view
 # draw gene box
