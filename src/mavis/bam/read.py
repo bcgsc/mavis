@@ -1,11 +1,20 @@
-from copy import copy
 import itertools
 import re
-import subprocess
+from copy import copy
 
 import pysam
 from Bio.Data import IUPACData as iupac
 
+from ..constants import (
+    CIGAR,
+    DNA_ALPHABET,
+    NA_MAPPING_QUALITY,
+    ORIENT,
+    READ_PAIR_TYPE,
+    STRAND,
+    SVTYPE,
+)
+from ..interval import Interval
 from . import cigar as _cigar
 from .cigar import (
     EVENT_STATES,
@@ -13,16 +22,6 @@ from .cigar import (
     REFERENCE_ALIGNED_STATES,
     convert_cigar_to_string,
 )
-from ..constants import (
-    CIGAR,
-    DNA_ALPHABET,
-    ORIENT,
-    READ_PAIR_TYPE,
-    STRAND,
-    SVTYPE,
-    NA_MAPPING_QUALITY,
-)
-from ..interval import Interval
 
 
 class SamRead(pysam.AlignedSegment):

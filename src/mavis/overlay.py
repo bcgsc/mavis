@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple
 
 from . import annotate as _annotate
 from . import util as _util
@@ -92,10 +92,8 @@ def main(
         for gene in annotations.content[chrom]:
             if gene_name in gene.aliases or gene_name == gene.name:
                 gene_to_draw = gene
-                _util.LOG(
-                    'Found target gene: {}(aka. {}) {}:{}-{}'.format(
-                        gene.name, gene.aliases, gene.chr, gene.start, gene.end
-                    )
+                _util.logger.info(
+                    f'Found target gene: {gene.name}(aka. {gene.aliases}) {gene.chr}:{gene.start}-{gene.end}'
                 )
                 break
     if gene_to_draw is None:
@@ -141,17 +139,16 @@ def main(
                 vmarkers=vmarkers,
                 plots=plots,
                 window_buffer=buffer_length,
-                log=_util.LOG,
             )
             break
         except DrawingFitError as err:
             if attempts > max_drawing_retries:
                 raise err
-            _util.LOG('Drawing fit: extending window', drawing_width_iter_increase)
+            _util.logger.info(f'Drawing fit: extending window {drawing_width_iter_increase}')
             settings.width += drawing_width_iter_increase
             attempts += 1
 
     svg_output_file = os.path.join(output, '{}_{}_overlay.svg'.format(gene_to_draw.name, gene_name))
-    _util.LOG('writing:', svg_output_file)
+    _util.logger.info(f'writing: {svg_output_file}')
 
     canvas.saveas(svg_output_file)

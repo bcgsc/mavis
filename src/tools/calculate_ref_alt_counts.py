@@ -9,8 +9,7 @@ import statistics as stats
 import pysam
 from mavis.annotate.file_io import load_reference_genome
 from mavis.constants import SVTYPE
-from mavis.util import LOG as log
-from mavis.util import output_tabbed_file, read_inputs
+from mavis.util import logger, output_tabbed_file, read_inputs
 from mavis.validate.call import EventCall
 
 
@@ -122,7 +121,7 @@ class RefAltCalculator:
 
     def __init__(self, input_bams, reference_genome, max_event_size=6, buffer=1):
         if isinstance(reference_genome, str):
-            log('loading:', reference_genome, time_stamp=True)
+            logger.info(f'loading: {reference_genome}')
             self.reference_genome = load_reference_genome(reference_genome)
         else:
             self.reference_genome = reference_genome
@@ -154,19 +153,17 @@ class RefAltCalculator:
             raise ValueError("Cannot determine ref and alt count for non precise breakpoint pairs")
 
         if bpp not in self.bpp_cache:
-            log("processing {}".format(bpp))
+            logger.info(f'processing {bpp}')
             data = dict()
             for name, read_length, bam in self.input_bams:
                 ref, alt, ign, mul, ref_sequence, alt_sequence = calculate_ref_count(
                     bpp, read_length, self.reference_genome, bam, self.buffer
                 )
-                log(bpp, name)
-                log(
-                    'Calculated counts: Ref: {}, Alt: {}, Mul: {}, Ignored: {} '.format(
-                        len(ref), len(alt), len(mul), len(ign)
-                    )
+                logger.info(f'{bpp} {name}')
+                logger.info(
+                    f'Calculated counts: Ref: {len(ref)}, Alt: {len(alt)}, Mul: {len(mul)}, Ignored: {len(ign)}'
                 )
-                log('Ref_probe: {}, Alt_probe: {}'.format(ref_sequence, alt_sequence))
+                logger.info(f'Ref_probe: {ref_sequence}, Alt_probe: {alt_sequence}')
                 info = {
                     '{}_ref_count'.format(name): len(ref),
                     '{}_alt_count'.format(name): len(alt),
@@ -201,7 +198,7 @@ class RefAltCalculator:
                 filtered_events.append(bpp)
                 continue
 
-        log('filtered {} events'.format(len(filtered_events)))
+        logger.info(f'filtered {len(filtered_events)} events')
 
         output_tabbed_file(processed_bpps.values(), output_file)
         return processed_bpps, filtered_events

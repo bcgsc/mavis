@@ -1,6 +1,6 @@
 import re
 
-from ..constants import MavisNamespace, float_fraction
+from ..constants import MavisNamespace
 
 PASS_FILENAME = 'annotations.tab'
 

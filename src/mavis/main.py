@@ -9,6 +9,7 @@ import time
 from typing import Dict
 
 from mavis_config import validate_config
+from mavis_config.constants import SUBCOMMAND
 
 from . import __version__
 from . import config as _config
@@ -16,7 +17,6 @@ from . import util as _util
 from .align import get_aligner_version
 from .annotate import main as annotate_main
 from .cluster import main as cluster_main
-from .constants import SUBCOMMAND
 from .overlay import check_overlay_args
 from .overlay import main as overlay_main
 from .pairing import main as pairing_main
@@ -31,7 +31,6 @@ def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no
         inputs,
         file_type,
         strand_specific,
-        _util.LOG,
         True,
         assume_no_untemplated=assume_no_untemplated,
     )
@@ -177,7 +176,11 @@ def main(argv=None):
     if args.command == SUBCOMMAND.OVERLAY:
         args = check_overlay_args(args, parser)
 
-    log_conf = {'format': '{message}', 'style': '{', 'level': args.log_level}
+    log_conf = {
+        'format': '{asctime} [{levelname}] {message}',
+        'style': '{',
+        'level': args.log_level,
+    }
 
     original_logging_handlers = logging.root.handlers[:]
     for handler in logging.root.handlers:
@@ -186,8 +189,8 @@ def main(argv=None):
         log_conf['filename'] = args.log
     logging.basicConfig(**log_conf)
 
-    _util.LOG('MAVIS: {}'.format(__version__))
-    _util.LOG('hostname:', platform.node(), time_stamp=False)
+    _util.logger.info(f'MAVIS: {__version__}')
+    _util.logger.info(f'hostname: {platform.node()}')
     _util.log_arguments(args)
 
     config: Dict = dict()
@@ -267,7 +270,7 @@ def main(argv=None):
             # add bam stats to the config if missing
             if not config.get('skip_stage.validate'):
                 _config.add_bamstats_to_config(config)
-            _util.LOG(f'writing: {args.outputfile}')
+            _util.logger.info(f'writing: {args.outputfile}')
             with open(args.outputfile, 'w') as fh:
                 fh.write(json.dumps(config, sort_keys=True, indent='  '))
         else:
@@ -284,11 +287,10 @@ def main(argv=None):
         hours = duration - duration % 3600
         minutes = duration - hours - (duration - hours) % 60
         seconds = duration - hours - minutes
-        _util.LOG(
-            'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds),
-            time_stamp=False,
+        _util.logger.info(
+            'run time (hh/mm/ss): {}:{:02d}:{:02d}'.format(hours // 3600, minutes // 60, seconds)
         )
-        _util.LOG('run time (s): {}'.format(duration), time_stamp=False)
+        _util.logger.info(f'run time (s): {duration}')
     except Exception as err:
         raise err
     finally:

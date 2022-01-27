@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 import shutil
@@ -10,6 +11,19 @@ import pytest
 from snakemake import main as snakemake_main
 
 from ..util import glob_exists, long_running_test, package_relative_file
+
+
+def tail_logfiles(dirname, n_lines=10):
+    """
+    Prints the tail of txt files in this dir. This is useful for debugging snakemake tests since
+    the logs are deleted with the temp dir when the test fails
+    """
+    for filename in glob.glob(os.path.join(dirname, '*.log.txt')):
+        with open(filename, 'r') as fh:
+            lines = fh.readlines()
+            start_line = max([0, len(lines) - n_lines])
+            print(f'TAIL: {filename}')
+            print('\n'.join(lines[start_line:]))
 
 
 @pytest.fixture
@@ -85,6 +99,7 @@ def test_workflow(output_dir):
 
         except SystemExit as err:
             if err.code != 0:
+                tail_logfiles(os.path.join(output_dir, 'output_dir', 'logs'))
                 raise err
 
     for expected_file in [
@@ -121,6 +136,7 @@ def test_no_validate_worflow(output_dir):
 
         except SystemExit as err:
             if err.code != 0:
+                tail_logfiles(os.path.join(output_dir, 'output_dir', 'logs'))
                 raise err
 
     for expected_file in [

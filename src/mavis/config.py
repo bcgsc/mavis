@@ -1,17 +1,11 @@
 import argparse
-import os
 from copy import copy as _copy
-from typing import Dict, Optional
-
-import snakemake
-from mavis_config import bash_expands
-from snakemake.exceptions import WorkflowError
-from snakemake.utils import validate as snakemake_validate
+from typing import Dict
 
 from .annotate.file_io import ReferenceFile
 from .bam import stats
 from .bam.cache import BamCache
-from .constants import INTEGER_COLUMNS, PROTOCOL, SUBCOMMAND, float_fraction
+from .constants import PROTOCOL, float_fraction
 from .util import cast_boolean, filepath
 
 
