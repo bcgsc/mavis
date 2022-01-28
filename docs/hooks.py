@@ -1,11 +1,9 @@
 import json
 import os
-import re
 from textwrap import dedent
 
+import pkg_resources
 from markdown_refdocs.main import extract_to_markdown
-from mavis.schemas import DEFAULTS
-from mavis.util import ENV_VAR_PREFIX
 
 
 def json_to_pytype(record):
@@ -130,7 +128,7 @@ def generate_settings_doc(schema_file):
 
 
 def build_package_docs(config):
-    schema_file = os.path.join(os.path.dirname(__file__), '../src/mavis/schemas/config.json')
+    schema_file = pkg_resources.resource_filename('mavis_config', 'config.json')
     generate_settings_doc(schema_file)
     package_dir = os.path.join(os.path.dirname(__file__), '../src/mavis')
     output_dir = os.path.join(os.path.dirname(__file__), 'package')
@@ -142,5 +140,5 @@ def build_package_docs(config):
         hide_private=True,
         hide_undoc=True,
         hide_undoc_args=True,
-        namespace_headers=True,
+        namespace_headers=False,
     )

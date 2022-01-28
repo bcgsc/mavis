@@ -2,12 +2,18 @@
 This is the primary module responsible for generating svg visualizations
 
 """
+from typing import Iterable, List, Optional
+
+from mavis.annotate.genomic import Gene, Template
+from mavis.annotate.variant import Annotation
+from mavis.types import ReferenceGenome
 from svgwrite import Drawing
 
 from ..annotate.genomic import IntergenicRegion
 from ..interval import Interval
+from .constants import DiagramSettings
 from .elements import draw_exon_track, draw_genes, draw_template, draw_ustranscript, draw_vmarker
-from .scatter import draw_scatter
+from .scatter import ScatterPlot, draw_scatter
 from .util import LabelMapping, generate_interval_mapping
 
 # draw gene level view
@@ -17,18 +23,18 @@ HEX_BLACK = '#000000'
 
 
 def draw_sv_summary_diagram(
-    config,
-    ann,
-    reference_genome=None,
-    templates=None,
-    ignore_absent_templates=True,
-    user_friendly_labels=True,
-    template_display_label_prefix='',
-    draw_reference_transcripts=True,
-    draw_reference_genes=True,
-    draw_reference_templates=True,
-    draw_fusion_transcript=True,
-    stack_reference_transcripts=False,
+    config: DiagramSettings,
+    ann: Annotation,
+    reference_genome: ReferenceGenome = None,
+    templates: List[Template] = None,
+    ignore_absent_templates: bool = True,
+    user_friendly_labels: bool = True,
+    template_display_label_prefix: str = '',
+    draw_reference_transcripts: bool = True,
+    draw_reference_genes: bool = True,
+    draw_reference_templates: bool = True,
+    draw_fusion_transcript: bool = True,
+    stack_reference_transcripts: bool = False,
 ):
     """
     this is the main drawing function. It decides between layouts
@@ -43,17 +49,17 @@ def draw_sv_summary_diagram(
         - fusion transcript/translation
 
     Args:
-        ann (Annotation): the annotation object to be illustrated
-        reference_genome (Dict[str,str]): reference sequences
-        templates (List[Template]): list of templates, used in drawing the template-level view
-        ignore_absent_templates (bool):
+        ann: the annotation object to be illustrated
+        reference_genome: reference sequences
+        templates: list of templates, used in drawing the template-level view
+        ignore_absent_templates:
             if true then will not raise an error if the template information is not given but will
             not draw the template instead
-        show_template (bool): if false the template-level view is not drawn
-        user_friendly_labels (bool):
+        show_template: if false the template-level view is not drawn
+        user_friendly_labels:
             if True, genes are labelled by their aliases (where possible) and domains are labeled by their
             names (where possible)
-        template_display_label_prefix (str): the character to precede the template label
+        template_display_label_prefix: the character to precede the template label
     """
     if not any(
         [
@@ -380,7 +386,18 @@ def draw_sv_summary_diagram(
     return canvas, legend
 
 
-def draw_multi_transcript_overlay(config, gene, vmarkers=None, window_buffer=0, plots=None):
+def draw_multi_transcript_overlay(
+    config: DiagramSettings,
+    gene: Gene,
+    vmarkers: Iterable[Interval] = None,
+    window_buffer: int = 0,
+    plots: Optional[List[ScatterPlot]] = None,
+):
+    """
+    Args:
+        vmarkers: vertical line markers
+        plots: scatter plots to plot on top of the gene diagram
+    """
     vmarkers = [] if vmarkers is None else vmarkers
     plots = [] if plots is None else plots
 

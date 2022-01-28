@@ -1,20 +1,27 @@
 import itertools
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
-from .base import BioInterval
 from ..constants import CODON_SIZE, START_AA, STOP_AA, translate
 from ..error import NotSpecifiedError
 from ..interval import Interval
+from ..types import ReferenceGenome
+from .base import BioInterval
+
+if TYPE_CHECKING:
+    from .genomic import Transcript
 
 
-def calculate_orf(spliced_cdna_sequence, min_orf_size=None):
+def calculate_orf(
+    spliced_cdna_sequence: str, min_orf_size: Optional[Union[float, int]] = None
+) -> List[Interval]:
     """
     calculate all possible open reading frames given a spliced cdna sequence (no introns)
 
     Args:
-        spliced_cdna_sequence (str): the sequence
+        spliced_cdna_sequence: the sequence
 
     Returns:
-        List[Interval]: list of open reading frame positions on the input sequence
+        list of open reading frame positions on the input sequence
     """
     # do not revcomp
     assert START_AA != STOP_AA
@@ -48,16 +55,22 @@ class DomainRegion(BioInterval):
 
 
 class Domain:
-    def __init__(self, name, regions, translation=None, data=None):
+    def __init__(
+        self,
+        name: str,
+        regions: List[DomainRegion],
+        translation: Optional['Translation'] = None,
+        data=None,
+    ):
         """
         Args:
-            name (str): the name of the domain i.e. PF00876
-            regions (List[DomainRegion]): the amino acid ranges that are part of the domain
-            transcript (Transcript): the 'parent' transcript this domain belongs to
+            name: the name of the domain i.e. PF00876
+            regions: the amino acid ranges that are part of the domain
+            translation: the 'parent' translation this domain belongs to
         Raises:
             AttributeError: if the end of any region is less than the start
         Example:
-            >>> Domain('DNA binding domain', [(1, 4), (10, 24)], transcript)
+            >>> Domain('DNA binding domain', [(1, 4), (10, 24)], translation)
         """
         self.reference_object = translation
         self.name = name
@@ -77,28 +90,27 @@ class Domain:
                 self.regions[i] = DomainRegion(curr[0], curr[1])
 
     @property
-    def translation(self):
-        """mavis.annotate.Translation: the Translation this domain belongs to"""
+    def translation(self) -> Optional['Translation']:
+        """the Translation this domain belongs to"""
         return self.reference_object
 
     def key(self):
         """Tuple: a tuple representing the items expected to be unique. for hashing and comparing"""
         return tuple([self.name, self.translation])
 
-    def score_region_mapping(self, reference_genome=None):
+    def score_region_mapping(
+        self, reference_genome: Optional[ReferenceGenome] = None
+    ) -> Tuple[int, int]:
         """
         compares the sequence in each DomainRegion to the sequence collected for that domain region from the
         translation object
 
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
-            tuple of int and int: tuple contains
-
-                - int: the number of matching amino acids
-                - int: the total number of amino acids
+            - int: the number of matching amino acids
+            - int: the total number of amino acids
         """
         if self.translation:
             aa_seq = self.translation.get_aa_seq(reference_genome)
@@ -116,17 +128,18 @@ class Domain:
         else:
             raise NotSpecifiedError('insufficient sequence information')
 
-    def get_seqs(self, reference_genome=None, ignore_cache=False):
+    def get_seqs(
+        self, reference_genome: ReferenceGenome = None, ignore_cache: bool = False
+    ) -> List[str]:
         """
         returns the amino acid sequences for each of the domain regions associated with
         this domain in the order of the regions (sorted by start)
 
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
-            List[str]: list of amino acid sequences for each DomainRegion
+            list of amino acid sequences for each DomainRegion
 
         Raises:
             AttributeError: if there is not enough sequence information given to determine this
@@ -147,7 +160,12 @@ class Domain:
                 raise NotSpecifiedError('insufficient sequence information')
         return [sequences[r] for r in self.regions]
 
-    def align_seq(self, input_sequence, reference_genome=None, min_region_match=0.5):
+    def align_seq(
+        self,
+        input_sequence: str,
+        reference_genome: Optional[ReferenceGenome] = None,
+        min_region_match: float = 0.5,
+    ) -> Tuple[int, int, List[DomainRegion]]:
         """
         align each region to the input sequence starting with the last one.
         then take the subset of sequence that remains to align the second last and so on
@@ -155,16 +173,14 @@ class Domain:
         then raise an error
 
         Args:
-            input_sequence (str): the sequence to be aligned to
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
-            min_region_match (float): percent between 0 and 1. Each region must have a score len(seq) * min_region_match
+            input_sequence: the sequence to be aligned to
+            reference_genome: dict of reference sequence by template/chr name
+            min_region_match: percent between 0 and 1. Each region must have a score len(seq) * min_region_match
 
         Returns:
-            Tuple[int,int,List[DomainRegion]]:
-                - the number of matches
-                - the total number of amino acids to be aligned
-                - the list of domain regions on the new input sequence
+            - the number of matches
+            - the total number of amino acids to be aligned
+            - the list of domain regions on the new input sequence
 
         Raises:
             AttributeError: if sequence information is not available
@@ -234,7 +250,15 @@ class Domain:
 
 
 class Translation(BioInterval):
-    def __init__(self, start, end, transcript=None, domains=None, seq=None, name=None):
+    def __init__(
+        self,
+        start: int,
+        end: int,
+        transcript: Optional['Transcript'] = None,
+        domains: Optional[List[Domain]] = None,
+        seq=None,
+        name=None,
+    ):
         """
         describes the splicing pattern and cds start and end with reference to a particular transcript
 
@@ -262,27 +286,27 @@ class Translation(BioInterval):
             domain.reference_object = self
 
     @property
-    def transcript(self):
-        """mavis.annotate.genomic.Transcript: the spliced transcript this translation belongs to"""
+    def transcript(self) -> 'Transcript':
+        """the spliced transcript this translation belongs to"""
         return self.reference_object
 
-    def convert_aa_to_cdna(self, pos):
+    def convert_aa_to_cdna(self, pos: int) -> Interval:
         """
         Args:
-            pos (int): the amino acid position
+            pos: the amino acid position
 
         Returns:
             Interval: the cdna equivalent (with CODON_SIZE uncertainty)
         """
         return Interval(self.start - 1 + (pos - 1) * 3 + 1, self.start - 1 + pos * 3)
 
-    def convert_cdna_to_aa(self, pos):
+    def convert_cdna_to_aa(self, pos: int) -> int:
         """
         Args:
-            pos (int): the cdna position
+            pos: the cdna position
 
         Returns:
-            int: the protein/amino-acid position
+            the protein/amino-acid position
 
         Raises:
             AttributeError: the cdna position is not translated
@@ -295,32 +319,31 @@ class Translation(BioInterval):
             aa_pos += 1
         return aa_pos
 
-    def convert_genomic_to_cds(self, pos):
+    def convert_genomic_to_cds(self, pos: int) -> int:
         """
         converts a genomic position to its cds (coding sequence) equivalent
 
         Args:
-            pos (int): the genomic position
+            pos: the genomic position
 
         Returns:
-            int: the cds position (negative if before the initiation start site)
+            the cds position (negative if before the initiation start site)
         """
         cds, shift = self.convert_genomic_to_nearest_cds(pos)
         if shift != 0:
             raise IndexError('conversion failed. position is outside the exonic region')
         return cds
 
-    def convert_genomic_to_nearest_cds(self, pos):
+    def convert_genomic_to_nearest_cds(self, pos: str) -> Tuple[int, int]:
         """
         converts a genomic position to its cds equivalent or (if intronic) the nearest cds and shift
 
         Args:
-            pos (int): the genomic position
+            pos: the genomic position
 
         Returns:
-            tuple of int and int:
-                * *int* - the cds position
-                * *int* - the intronic shift
+            - the cds position
+            - the intronic shift
 
         """
         cds_pos, shift = self.transcript.convert_genomic_to_nearest_cdna(pos)
@@ -330,16 +353,16 @@ class Translation(BioInterval):
             cds_pos -= self.start
         return cds_pos, shift
 
-    def convert_genomic_to_cds_notation(self, pos):
+    def convert_genomic_to_cds_notation(self, pos: int) -> str:
         """
         converts a genomic position to its cds (coding sequence) equivalent using
         `hgvs <http://www.hgvs.org/mutnomen/recs-DNA.html>`_ cds notation
 
         Args:
-            pos (int): the genomic position
+            pos: the genomic position
 
         Returns:
-            str: the cds position notation
+            the cds position notation
 
         Example:
             >>> tl = Translation(...)
@@ -366,14 +389,15 @@ class Translation(BioInterval):
             return '*{}{}'.format(cds_pos - len(self), offset_suffix)
         return '{}{}'.format(cds_pos, offset_suffix)
 
-    def get_cds_seq(self, reference_genome=None, ignore_cache=False):
+    def get_cds_seq(
+        self, reference_genome: Optional[ReferenceGenome] = None, ignore_cache: bool = False
+    ) -> str:
         """
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
-            str: the cds sequence
+            the cds sequence
 
         Raises:
             AttributeError: if the reference sequence has not been given and is not set
@@ -385,24 +409,26 @@ class Translation(BioInterval):
             return seq[self.start - 1 : self.end]
         raise NotSpecifiedError('insufficient seq information')
 
-    def get_seq(self, reference_genome=None, ignore_cache=False):
+    def get_seq(
+        self, reference_genome: Optional[ReferenceGenome] = None, ignore_cache: bool = False
+    ):
         """
         wrapper for the sequence method
 
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
         """
         return self.get_cds_seq(reference_genome, ignore_cache)
 
-    def get_aa_seq(self, reference_genome=None, ignore_cache=False):
+    def get_aa_seq(
+        self, reference_genome: Optional[ReferenceGenome] = None, ignore_cache: bool = False
+    ) -> str:
         """
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
-                by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
-            str: the amino acid sequence
+            the amino acid sequence
 
         Raises:
             AttributeError: if the reference sequence has not been given and is not set

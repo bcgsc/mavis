@@ -1,10 +1,11 @@
-from typing import Optional
+from typing import Dict, List, Optional, Tuple
 
 
 class Interval:
     start: int
     end: int
     freq: int = 1
+    forward_to_reverse: Optional[bool] = None
 
     def __init__(self, start: int, end: Optional[int] = None, freq: int = 1, number_type=None):
         """
@@ -133,7 +134,7 @@ class Interval:
         """
         return Interval.length(self)
 
-    def length(self):
+    def length(self) -> int:
         try:
             if self.number_type == float:
                 return self[1] - self[0]
@@ -166,7 +167,7 @@ class Interval:
             return '{}({}, {}{})'.format(cls, self.start, self.end, number_type)
 
     @property
-    def center(self):
+    def center(self) -> float:
         """
         the middle of the interval
 
@@ -193,7 +194,7 @@ class Interval:
         return False
 
     @classmethod
-    def dist(cls, first, other):
+    def dist(cls, first, other) -> int:
         """returns the minimum distance between intervals
 
         Example:
@@ -215,7 +216,7 @@ class Interval:
         return hash((self[0], self[1], self.freq))
 
     @classmethod
-    def position_in_range(cls, segments, pos):
+    def position_in_range(cls, segments, pos) -> Tuple[int, bool]:
         if len(segments) == 0:
             raise AttributeError('cannot compute on an empty list')
 
@@ -245,7 +246,7 @@ class Interval:
         return num, found_inbetween_segment
 
     @classmethod
-    def convert_pos(cls, mapping, pos, forward_to_reverse=None):
+    def convert_pos(cls, mapping: 'IntervalMapping', pos: int, forward_to_reverse=None) -> int:
         i = cls.convert_ratioed_pos(mapping, pos, forward_to_reverse)
         if i.forward_to_reverse:
             return i.end
@@ -253,15 +254,17 @@ class Interval:
             return i.start
 
     @classmethod
-    def convert_ratioed_pos(cls, mapping, pos, forward_to_reverse=None):
+    def convert_ratioed_pos(
+        cls, mapping: 'IntervalMapping', pos: int, forward_to_reverse=None
+    ) -> 'Interval':
         """convert any given position given a mapping of intervals to another range
 
         Args:
-            mapping (Dict[Interval,Interval]): a mapping of a set of continuous intervals
-            pos (int): a position in the first coordinate system
+            mapping: a mapping of a set of continuous intervals
+            pos: a position in the first coordinate system
 
         Returns:
-            Interval: the position in the alternate coordinate system given the input mapping
+            the position in the alternate coordinate system given the input mapping
 
         Raises:
             AttributeError: if the input position is outside the set of input segments
@@ -301,31 +304,31 @@ class Interval:
                     elif not forward_to_reverse:
                         raise AttributeError('direction of mapped intervals is not consistent')
 
-        i, previous_flag = Interval.position_in_range(
+        index, previous_flag = Interval.position_in_range(
             input_intervals, (pos, pos)
         )  # get the input position
-        if i == len(input_intervals) or previous_flag:
+        if index == len(input_intervals) or previous_flag:
             raise IndexError(pos, 'is outside mapped range', mapping)
         else:
             # fell into a mapped region
-            curr = input_intervals[i]
+            curr = input_intervals[index]
             nexxt = mapping[curr]
             if curr[1] - curr[0] == 0:
-                i = Interval(nexxt[0], nexxt[1])
+                result = Interval(nexxt[0], nexxt[1])
             else:
                 ratio = (nexxt[1] - nexxt[0]) / (curr[1] - curr[0])
                 shift = round((pos - curr[0]) * ratio, 0)
                 shift2 = round((pos - curr[0]) * ratio + ratio, 0)
                 number_type = int if ratio == 1 else float
                 if forward_to_reverse:
-                    i = Interval(nexxt[1] - shift2, nexxt[1] - shift, number_type=number_type)
+                    result = Interval(nexxt[1] - shift2, nexxt[1] - shift, number_type=number_type)
                 else:
-                    i = Interval(nexxt[0] + shift, nexxt[0] + shift2, number_type=number_type)
-            setattr(i, 'forward_to_reverse', forward_to_reverse)
-            return i
+                    result = Interval(nexxt[0] + shift, nexxt[0] + shift2, number_type=number_type)
+            result.forward_to_reverse = forward_to_reverse
+            return result
 
     @classmethod
-    def union(cls, *intervals):
+    def union(cls, *intervals) -> 'Interval':
         """
         returns the union of the set of input intervals
 
@@ -338,7 +341,7 @@ class Interval:
         return Interval(min([i[0] for i in intervals]), max([i[1] for i in intervals]))
 
     @classmethod
-    def intersection(cls, *intervals):
+    def intersection(cls, *intervals) -> Optional['Interval']:
         """
         returns None if there is no intersection
 
@@ -357,7 +360,7 @@ class Interval:
         return Interval(low, high)
 
     @classmethod
-    def min_nonoverlapping(cls, *intervals):
+    def min_nonoverlapping(cls, *intervals: 'Interval') -> List['Interval']:
         """
         for a list of intervals, orders them and merges any overlap to return a list of non-overlapping intervals
         O(nlogn)
@@ -368,9 +371,9 @@ class Interval:
         """
         if len(intervals) == 0:
             return []
-        intervals = sorted(list(intervals), key=lambda x: (x[0], x[1]))
-        new_intervals = [Interval(intervals[0][0], intervals[0][1])]
-        for i in intervals[1:]:
+        sorted_intervals = sorted(list(intervals), key=lambda x: (x[0], x[1]))
+        new_intervals = [Interval(sorted_intervals[0][0], sorted_intervals[0][1])]
+        for i in sorted_intervals[1:]:
             if Interval.overlaps(new_intervals[-1], i):
                 new_intervals[-1] = new_intervals[-1] | i
             else:
@@ -463,26 +466,17 @@ class IntervalMapping:
         self.mapping[src_interval] = tgt_interval
         self.opposing_directions[src_interval] = opposing_directions
 
-    def convert_ratioed_pos(self, pos):
-        """convert any given position given a mapping of intervals to another range
+    def convert_ratioed_pos(self, pos: int) -> Interval:
+        """convert any given position given a mapping of intervals to the mapped range
 
         Args:
-            pos (Interval): a position in the first coordinate system
+            pos: a position in the first coordinate system
 
         Returns:
-            the position in the alternate coordinate system given the input mapping
-            - int: if simplify is True
-            - Interval: if simplify is False
+            the Interval the position lands in in the new coordinate system
 
         Raises:
             IndexError: if the input position is not in any of the mapped intervals
-
-        Example:
-            >>> mapping = IntervalMapping(mapping={(1, 10): (101, 110), (11, 20): (555, 564)})
-            >>> mapping.convert_pos(5)
-            5
-            >>> mapping.convert_pos(15)
-            559
         """
         for src_interval, tgt_interval in self.mapping.items():
             if pos in src_interval:
@@ -499,16 +493,14 @@ class IntervalMapping:
                     return tgt_interval
         raise IndexError(pos, 'position not found in mapping', self.mapping.keys())
 
-    def convert_pos(self, pos):
+    def convert_pos(self, pos: int) -> int:
         """convert any given position given a mapping of intervals to another range
 
         Args:
-            pos (int): a position in the first coordinate system
+            pos: a position in the first coordinate system
 
         Returns:
             the position in the alternate coordinate system given the input mapping
-            - int: if simplify is True
-            - Interval: if simplify is False
 
         Raises:
             IndexError: if the input position is not in any of the mapped intervals
