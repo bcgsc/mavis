@@ -5,7 +5,7 @@ import itertools
 import os
 import re
 import subprocess
-from typing import Dict
+from typing import Dict, List
 
 import pysam
 
@@ -470,7 +470,7 @@ def align_sequences(
             with pysam.AlignmentFile(
                 aligner_output_file, 'r', check_sq=bool(len(sequences))
             ) as samfile:
-                reads_by_query = {}
+                reads_by_query: Dict[str, List[_read.SamRead]] = {}
                 for read in samfile.fetch():
                     if read.is_unmapped:
                         continue

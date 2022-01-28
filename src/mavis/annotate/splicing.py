@@ -4,7 +4,8 @@ from typing import Iterable, List, Optional
 from ..constants import SPLICE_TYPE, STRAND, reverse_complement
 from ..interval import Interval
 from .base import BioInterval
-from .constants import ACCEPTOR_SEQ, DONOR_SEQ, SPLICE_SITE_RADIUS, SPLICE_SITE_TYPE
+from .constants import (ACCEPTOR_SEQ, DONOR_SEQ, SPLICE_SITE_RADIUS,
+                        SPLICE_SITE_TYPE)
 
 
 class SplicingPattern(list):
@@ -121,7 +122,7 @@ class SpliceSite(BioInterval):
         self,
         ref: BioInterval,
         pos: int,
-        site_type: str,
+        site_type: int,
         intact: bool = True,
         start: Optional[int] = None,
         end: Optional[int] = None,

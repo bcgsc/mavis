@@ -244,7 +244,7 @@ class Exon(BioInterval):
         return self.reference_object
 
     @property
-    def donor_splice_site(self) -> Interval:
+    def donor_splice_site(self) -> SpliceSite:
         """the genomic range describing the splice site"""
         if self.is_reverse:
             return self.start_splice_site
@@ -252,7 +252,7 @@ class Exon(BioInterval):
             return self.end_splice_site
 
     @property
-    def acceptor_splice_site(self) -> Interval:
+    def acceptor_splice_site(self) -> SpliceSite:
         """the genomic range describing the splice site"""
         if self.is_reverse:
             return self.end_splice_site
