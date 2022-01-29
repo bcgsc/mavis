@@ -211,7 +211,7 @@ def convert_record(record, record_mapping={}) -> List[Dict]:
 
         if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
             std_row.update({'break1_position_end': 1})
-        elif std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
+        if std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
             std_row.update({'break2_position_end': 1})
         if 'SVTYPE' in info:
             std_row[COLUMNS.event_type] = info['SVTYPE']
@@ -284,7 +284,7 @@ def pandas_vcf(input_file) -> Tuple[List[str], pd.DataFrame]:
     # read the data
     df = pd.read_csv(
         input_file,
-        sep="\t",
+        sep='\t',
         skiprows=len(header_lines),
         dtype={
             'CHROM': str,
@@ -295,7 +295,7 @@ def pandas_vcf(input_file) -> Tuple[List[str], pd.DataFrame]:
             'REF': str,
             'ALT': str,
         },
-        na_values=PANDAS_DEFAULT_NA_VALUES + ["."],
+        na_values=PANDAS_DEFAULT_NA_VALUES + ['.'],
     )
     df = df.rename(columns={df.columns[0]: df.columns[0].replace('#', '')})
     required_columns = ['CHROM', 'INFO', 'POS', 'REF', 'ALT', 'ID']

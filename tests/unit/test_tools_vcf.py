@@ -12,8 +12,8 @@ def test_read_vcf():
 
 def test_convert_record():
     variant = VcfRecordType(
-        9000,
-        12000,
+        1,
+        0,
         'chr14_KI270722v1_random',
         alts=['N[chr17_GL000205v2_random:0['],
         ref='N',
@@ -32,6 +32,8 @@ def test_convert_record():
     records = convert_record(variant)
     assert len(records) == 1
     record = records[0]
+    assert record.get('break1_position_start') == 1
+    assert record.get('break1_position_end') == 1
     assert record.get('break2_position_start') == 1
     assert record.get('break2_position_end') == 1
     assert record.get('break2_chromosome') == 'chr17_GL000205v2_random'
