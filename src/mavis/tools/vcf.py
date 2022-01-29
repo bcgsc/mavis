@@ -204,6 +204,16 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
                 }
             )
 
+        '''
+        As per VCF 4.2 specifications (https://samtools.github.io/hts-specs/VCFv4.2.pdf): 
+        A start_position = 1, end_position = 0 linkage indicates connections to telomeres
+        Change 0 a 1 since coordinates are 1-based and we cannot start before the start of a sequence
+        '''
+
+        if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
+            std_row.update({'break1_position_end': 1})
+        elif std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
+            std_row.update({'break2_position_end': 1})
         if 'SVTYPE' in info:
             std_row[COLUMNS.event_type] = info['SVTYPE']
 
