@@ -3,13 +3,11 @@ from typing import Optional
 
 import pysam
 
-from ..align import SplitAlignment, call_read_events
 from ..annotate.variant import overlapping_transcripts
 from ..bam import cigar as _cigar
 from ..breakpoint import Breakpoint
 from ..constants import CIGAR, COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE
 from ..interval import Interval
-from ..schemas import DEFAULTS
 from .base import Evidence
 
 
@@ -243,7 +241,6 @@ class TranscriptomeEvidence(Evidence):
         mixed = []
         inter = []
         transcripts = self._select_transcripts(chrom, strand)
-        genomic_distance = Evidence.distance(start, end).end
         # try to calculate assuming the positions are exonic
         for transcript in itertools.chain.from_iterable([t.transcripts for t in transcripts]):
             if not transcript.reference_object.position & Interval(start, end):

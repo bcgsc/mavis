@@ -1,7 +1,7 @@
 from colour import Color
+from mavis_config import DEFAULTS, get_by_prefix
 
 from ..constants import GIEMSA_STAIN
-from ..schemas import DEFAULTS, get_by_prefix
 
 
 class DiagramSettings:

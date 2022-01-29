@@ -54,7 +54,7 @@ class TestBamCache:
         b.add_read(r)
         assert len(b.cache.values()) == 1
 
-    @mock.patch('mavis.util.LOG')
+    @mock.patch('mavis.util.logger')
     def test_add_invalid_read(self, log_patcher):
         bad_read = mock.Mock(
             is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ'
@@ -62,9 +62,9 @@ class TestBamCache:
         cache = BamCache(MockBamFileHandle())
         cache.add_read(bad_read)
         assert len(cache.cache) == 0
-        log_patcher.assert_called_with('ignoring invalid read', 'BAD_READ', level=logging.DEBUG)
+        log_patcher.method_calls[0].assert_called_with('ignoring invalid read: BAD_READ')
 
-    @mock.patch('mavis.util.LOG')
+    @mock.patch('mavis.util.logger')
     def test_fetch_invalid_read(self, log_patcher):
         bad_read = mock.Mock(
             is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ'
@@ -74,9 +74,9 @@ class TestBamCache:
         cache = BamCache(fh)
         cache.fetch('chr', 1, 10)
         assert len(cache.cache) == 0
-        log_patcher.assert_called_with('ignoring invalid read', 'BAD_READ', level=logging.DEBUG)
+        log_patcher.method_calls[0].assert_called_with('ignoring invalid read: BAD_READ')
 
-    @mock.patch('mavis.util.LOG')
+    @mock.patch('mavis.util.logger')
     def test_bin_fetch_invalid_read(self, log_patcher):
         bad_read = mock.Mock(
             is_unmapped=False, reference_start=0, reference_end=0, query_name='BAD_READ'
@@ -86,7 +86,7 @@ class TestBamCache:
         cache = BamCache(fh)
         cache.fetch_from_bins('chr', 1, 10)
         assert len(cache.cache) == 0
-        log_patcher.assert_called_with('ignoring invalid read', 'BAD_READ', level=logging.DEBUG)
+        log_patcher.method_calls[0].assert_called_with('ignoring invalid read: BAD_READ')
 
     def test_reference_id(self):
         fh = MockBamFileHandle({'1': 0})

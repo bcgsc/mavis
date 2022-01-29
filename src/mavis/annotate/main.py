@@ -4,12 +4,13 @@ import os
 import time
 from typing import Dict, List
 
-from ..constants import COLUMNS, PRIME, PROTOCOL, sort_columns
+from mavis_config import get_by_prefix
+
+from ..constants import COLUMNS, PRIME, sort_columns
 from ..error import DrawingFitError, NotSpecifiedError
 from ..illustrate.constants import DiagramSettings
 from ..illustrate.diagram import draw_sv_summary_diagram
-from ..schemas import DEFAULTS, get_by_prefix
-from ..util import LOG, generate_complete_stamp, mkdirp, read_inputs
+from ..util import generate_complete_stamp, logger, mkdirp, read_inputs
 from .constants import PASS_FILENAME
 from .file_io import ReferenceFile
 from .fusion import determine_prime
@@ -53,12 +54,8 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
     )
 
     for i, (curr_width, other_settings) in enumerate(drawing_attempts):
-        LOG(
-            'drawing attempt:',
-            i + 1,
-            str(curr_width) + 'px',
-            other_settings if other_settings else '',
-            time_stamp=False,
+        logger.info(
+            f'drawing attempt: {i + 1} {curr_width}px {other_settings if other_settings else ""}'
         )
         try:
             drawing_config.width = curr_width
@@ -67,7 +64,7 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
                 ann,
                 reference_genome=reference_genome,
                 templates=template_metadata,
-                **other_settings
+                **other_settings,
             )
 
             gene_aliases1 = 'NA'
@@ -98,10 +95,10 @@ def draw(drawing_config, ann, reference_genome, template_metadata, drawings_dire
 
             drawing = os.path.join(drawings_directory, name + '.svg')
             legend = os.path.join(drawings_directory, name + '.legend.json')
-            LOG('generating svg:', drawing, time_stamp=False)
+            logger.info(f'generating svg: {drawing}')
             canvas.saveas(drawing)
 
-            LOG('generating legend:', legend, time_stamp=False)
+            logger.info(f'generating legend: {legend}')
             with open(legend, 'w') as fh:
                 json.dump(legend_json, fh)
             break
@@ -117,7 +114,7 @@ def main(
     library: str,
     config: Dict,
     start_time=int(time.time()),
-    **kwargs
+    **kwargs,
 ):
     """
     Args:
@@ -147,7 +144,7 @@ def main(
         expand_orient=True,
         expand_svtype=True,
     )
-    LOG('read {} breakpoint pairs'.format(len(bpps)))
+    logger.info(f'read {len(bpps)} breakpoint pairs')
 
     annotations.load()
     reference_genome.load()
@@ -160,7 +157,6 @@ def main(
         min_domain_mapping_match=config['annotate.min_domain_mapping_match'],
         max_proximity=config['cluster.max_proximity'],
         max_orf_cap=config['annotate.max_orf_cap'],
-        log=LOG,
         filters=annotation_filters,
     )
 
@@ -186,9 +182,9 @@ def main(
         COLUMNS.protein_synon,
     }
     header = None
-    LOG('opening for write:', tabbed_output_file)
+    logger.info(f'opening for write: {tabbed_output_file}')
     tabbed_fh = open(tabbed_output_file, 'w')
-    LOG('opening for write:', fa_output_file)
+    logger.info(f'opening for write: {fa_output_file}')
     fasta_fh = open(fa_output_file, 'w')
 
     try:
@@ -200,14 +196,10 @@ def main(
                 header_req.update(ann_row.keys())
                 header = sort_columns(header_req)
                 tabbed_fh.write('\t'.join([str(c) for c in header]) + '\n')
-            LOG(
-                '({} of {}) current annotation'.format(i + 1, total),
-                ann.annotation_id,
-                ann.transcript1,
-                ann.transcript2,
-                ann.event_type,
+            logger.info(
+                f'({i + 1} of {total}) current annotation {ann.annotation_id} {ann.transcript1} {ann.transcript2} {ann.event_type}'
             )
-            LOG(ann, time_stamp=False)
+            logger.info(str(ann))
             # get the reference sequences for either transcript
             ref_cdna_seq = {}
             ref_protein_seq = {}
@@ -288,9 +280,9 @@ def main(
                 rows = [ann_row]
             for row in rows:
                 tabbed_fh.write('\t'.join([str(row.get(k, None)) for k in header]) + '\n')
-        generate_complete_stamp(output, LOG, start_time=start_time)
+        generate_complete_stamp(output, start_time=start_time)
     finally:
-        LOG('closing:', tabbed_output_file)
+        logger.info(f'closing: {tabbed_output_file}')
         tabbed_fh.close()
-        LOG('closing:', fa_output_file)
+        logger.info(f'closing: {fa_output_file}')
         fasta_fh.close()

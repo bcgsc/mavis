@@ -8,7 +8,7 @@ from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import COLUMNS, GENE_PRODUCT_TYPE, PROTOCOL, STOP_AA, STRAND, SVTYPE
 from ..error import NotSpecifiedError
 from ..interval import Interval
-from ..util import DEVNULL
+from ..util import logger
 from .fusion import FusionTranscript, determine_prime
 from .genomic import Gene, IntergenicRegion, PreTranscript, Transcript
 
@@ -62,7 +62,7 @@ class Annotation(BreakpointPair):
             stranded=bpp.stranded,
             untemplated_seq=bpp.untemplated_seq,
             **bpp.data,
-            **kwargs
+            **kwargs,
         )
 
         # match transcript to breakpoint if reveresed
@@ -850,7 +850,6 @@ def annotate_events(
     min_orf_size: int = 200,
     min_domain_mapping_match: float = 0.95,
     max_orf_cap: int = 3,
-    log: Callable = DEVNULL,
     filters: List[Callable] = None,
 ) -> List[Annotation]:
     """
@@ -873,7 +872,7 @@ def annotate_events(
     results = []
     total = len(bpps)
     for i, bpp in enumerate(bpps):
-        log('({} of {}) gathering annotations for'.format(i + 1, total), bpp)
+        logger.info(f'({i + 1} of {total}) gathering annotations for {repr(bpp)}')
         bpp.data[COLUMNS.validation_id] = bpp.data.get(COLUMNS.validation_id, str(uuid()))
         ann_list = _gather_annotations(annotations, bpp, proximity=max_proximity)
         for f in filters:
@@ -904,6 +903,6 @@ def annotate_events(
             except NotImplementedError:
                 pass  # anti-sense fusions will throw this error
             except KeyError as e:
-                log('warning. could not build fusion product', repr(e))
-        log('generated', len(ann_list), 'annotations', time_stamp=False)
+                logger.warning(f'warning. could not build fusion product: {repr(e)}')
+        logger.info(f'generated {len(ann_list)} annotations')
     return results

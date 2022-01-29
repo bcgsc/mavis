@@ -2,7 +2,6 @@
 module responsible for small utility functions and constants used throughout the structural_variant package
 """
 import argparse
-import os
 import re
 from typing import List
 
@@ -10,7 +9,7 @@ from Bio.Alphabet import Gapped
 from Bio.Alphabet.IUPAC import ambiguous_dna
 from Bio.Data.IUPACData import ambiguous_dna_values
 from Bio.Seq import Seq
-from mavis_config.constants import SUBCOMMAND, MavisNamespace
+from mavis_config.constants import MavisNamespace
 
 PROGNAME: str = 'mavis'
 EXIT_OK: int = 0

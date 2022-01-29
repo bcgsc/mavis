@@ -3,7 +3,6 @@ import itertools
 import os
 import re
 import time
-import warnings
 from typing import Dict, List
 
 import pysam
@@ -16,11 +15,10 @@ from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
 from ..breakpoint import BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL
-from ..schemas import get_by_prefix
 from ..util import (
-    LOG,
     filter_on_overlap,
     generate_complete_stamp,
+    logger,
     mkdirp,
     output_tabbed_file,
     read_inputs,
@@ -110,13 +108,11 @@ def main(
                     read_length=config['libraries'][library]['read_length'],
                     median_fragment_size=config['libraries'][library]['median_fragment_size'],
                     config=config,
-                    **bpp.data
+                    **bpp.data,
                 )
                 evidence_clusters.append(evidence)
             except ValueError as err:
-                warnings.warn(
-                    'Dropping breakpoint pair ({}) as bad input {}'.format(str(bpp), str(err))
-                )
+                logger.warning(f'Dropping breakpoint pair ({bpp}) as bad input {err}')
         elif bpp.data[COLUMNS.protocol] == PROTOCOL.TRANS:
             try:
                 evidence = TranscriptomeEvidence(
@@ -133,11 +129,11 @@ def main(
                     median_fragment_size=config['libraries'][library]['median_fragment_size'],
                     strand_determining_read=config['libraries'][library]['strand_determining_read'],
                     config=config,
-                    **bpp.data
+                    **bpp.data,
                 )
                 evidence_clusters.append(evidence)
             except ValueError as err:
-                warnings.warn('Dropping ({}) as bad input {}'.format(str(bpp), str(err)))
+                logger.warning(f'Dropping ({bpp}) as bad input {err}')
         else:
             raise ValueError('protocol error', bpp.data[COLUMNS.protocol])
 
@@ -159,66 +155,40 @@ def main(
     )
     contig_sequences = {}
     for i, evidence in enumerate(evidence_clusters):
-        LOG()
-        LOG(
-            '({} of {})'.format(i + 1, len(evidence_clusters)),
-            'gathered evidence for:',
-            evidence.cluster_id,
-            ''
-            if COLUMNS.tracking_id not in evidence.data
-            else '(tracking_id: {})'.format(evidence.tracking_id),
-            time_stamp=True,
-        )
-        LOG(evidence, time_stamp=False)
-        LOG('possible event type(s):', BreakpointPair.classify(evidence), time_stamp=False)
-        LOG(
-            'outer window regions:  {}:{}-{}  {}:{}-{}'.format(
-                evidence.break1.chr,
-                evidence.outer_window1[0],
-                evidence.outer_window1[1],
-                evidence.break2.chr,
-                evidence.outer_window2[0],
-                evidence.outer_window2[1],
+        logger.info(
+            f'({i + 1} of {len(evidence_clusters)}) gathered evidence for: {evidence.cluster_id}'
+            + (
+                ''
+                if COLUMNS.tracking_id not in evidence.data
+                else f' (tracking_id: {evidence.tracking_id})'
             ),
-            time_stamp=False,
         )
-        LOG(
-            'inner window regions:  {}:{}-{}  {}:{}-{}'.format(
-                evidence.break1.chr,
-                evidence.inner_window1[0],
-                evidence.inner_window1[1],
-                evidence.break2.chr,
-                evidence.inner_window2[0],
-                evidence.inner_window2[1],
-            ),
-            time_stamp=False,
+        logger.info(str(evidence))
+        logger.info(f'possible event type(s): {BreakpointPair.classify(evidence)}')
+        logger.info(
+            f'outer window regions: {evidence.break1.chr}:{evidence.outer_window1[0]}-{evidence.outer_window1[1]}  {evidence.break2.chr}:{evidence.outer_window2[0]}-{evidence.outer_window2[1]}'
         )
-        evidence.load_evidence(log=LOG)
-        LOG(
-            'flanking pairs: {};'.format(len(evidence.flanking_pairs)),
-            'split reads: {}, {};'.format(*[len(a) for a in evidence.split_reads]),
-            'half-mapped reads: {}, {};'.format(*[len(a) for a in evidence.half_mapped]),
-            'spanning-reads: {};'.format(len(evidence.spanning_reads)),
-            'compatible flanking pairs:',
-            len(evidence.compatible_flanking_pairs),
-            time_stamp=False,
+        logger.info(
+            f'inner window regions: {evidence.break1.chr}:{evidence.inner_window1[0]}-{evidence.inner_window1[1]}  {evidence.break2.chr}:{evidence.inner_window2[0]}-{evidence.inner_window2[1]}'
         )
-        evidence.assemble_contig(log=LOG)
-        LOG('assembled {} contigs'.format(len(evidence.contigs)), time_stamp=False)
+        evidence.load_evidence()
+        logger.info(
+            f'flanking pairs: {len(evidence.flanking_pairs)}'
+            + '; split reads: {}, {}'.format(*[len(a) for a in evidence.split_reads])
+            + '; half-mapped reads: {}, {}'.format(*[len(a) for a in evidence.half_mapped])
+            + f'; spanning-reads: {len(evidence.spanning_reads)}; compatible flanking pairs: {len(evidence.compatible_flanking_pairs)}',
+        )
+        evidence.assemble_contig()
+        logger.info(f'assembled {len(evidence.contigs)} contigs')
         for contig in evidence.contigs:
             name = 'seq-{}'.format(hashlib.md5(contig.seq.encode('utf-8')).hexdigest())
-            LOG(
-                '>',
-                name,
-                '(size={}; reads={:.0f}; coverage={:.2f})'.format(
-                    len(contig.seq), contig.remap_score(), contig.remap_coverage()
-                ),
-                time_stamp=False,
+            logger.info(
+                f'> {name} (size={len(contig.seq)}; reads={contig.remap_score():.0f}; coverage={contig.remap_coverage():.2f})'
             )
-            LOG(contig.seq[:140], time_stamp=False)
+            logger.info(contig.seq[:140])
             contig_sequences[name] = contig.seq
 
-    LOG('will output:', contig_aligner_fa, contig_aligner_output)
+    logger.info(f'will output: {contig_aligner_fa} ${contig_aligner_output}')
     raw_contig_alignments = align_sequences(
         contig_sequences,
         input_bam_cache,
@@ -231,11 +201,10 @@ def main(
         aligner_output_log=contig_aligner_log,
         blat_min_identity=config['validate.blat_min_identity'],
         blat_limit_top_aln=config['validate.blat_limit_top_aln'],
-        log=LOG,
     )
     for evidence in evidence_clusters:
         select_contig_alignments(evidence, raw_contig_alignments)
-    LOG('alignment complete', time_stamp=True)
+    logger.info('alignment complete')
     event_calls = []
     total_pass = 0
     write_bed_file(
@@ -244,25 +213,17 @@ def main(
     )
     validation_counts = {}
     for index, evidence in enumerate(evidence_clusters):
-        LOG()
-        LOG(
-            '({} of {}) calling events for: {} {} (tracking_id: {})'.format(
-                index + 1,
-                len(evidence_clusters),
-                evidence.cluster_id,
-                evidence.putative_event_types(),
-                evidence.tracking_id,
-            ),
-            time_stamp=True,
+        logger.info(
+            f'({index + 1} of {len(evidence_clusters)}) calling events for: {evidence.cluster_id} {evidence.putative_event_types()} (tracking_id: {evidence.tracking_id})'
         )
-        LOG('source:', evidence)
+        logger.info(f'source: {evidence}')
         calls = []
         failure_comment = None
         try:
             calls = call_events(evidence)
             event_calls.extend(calls)
         except UserWarning as err:
-            LOG('warning: error in calling events', repr(err))
+            logger.warning('error in calling events {repr(err)}')
             failure_comment = str(err)
 
         if not calls:
@@ -274,34 +235,26 @@ def main(
         else:
             total_pass += 1
 
-        LOG('called {} event(s)'.format(len(calls)), time_stamp=True)
+        logger.info(f'called {len(calls)} event(s)')
         for call in calls:
-            LOG(call)
+            logger.info(call)
             if call.call_method == CALL_METHOD.CONTIG:
-                LOG(
-                    '\t{} {} [{}] contig_alignment_score: {}, contig_alignment_mq: {} contig_alignment_rank: {}'.format(
-                        call.event_type,
-                        call.call_method,
-                        call.contig_alignment.query_name,
-                        round(call.contig_alignment.score(), 2),
-                        tuple(call.contig_alignment.mapping_quality()),
-                        tuple(call.contig_alignment.alignment_rank()),
-                    )
+                logger.info(
+                    f'{call.event_type} {call.call_method} [{call.contig_alignment.query_name}] contig_alignment_score: {round(call.contig_alignment.score(), 2)}, contig_alignment_mq: {tuple(call.contig_alignment.mapping_quality())} contig_alignment_rank: {tuple(call.contig_alignment.alignment_rank())}'
                 )
-                LOG('\talignment:', call.contig_alignment.alignment_id())
+                logger.info(f'alignment: {call.contig_alignment.alignment_id()}')
             elif call.contig_alignment:
-                LOG(
-                    '\t{} {} alignment:'.format(call.event_type, call.call_method),
-                    call.contig_alignment.alignment_id(),
+                logger.info(
+                    f'{call.event_type} {call.call_method} alignment: {call.contig_alignment.alignment_id()}'
                 )
             else:
-                LOG('\t{} {}'.format(call.event_type, call.call_method), time_stamp=False)
+                logger.info('{call.event_type} {call.call_method}')
             validation_counts[call.cluster_id] = validation_counts.get(call.cluster_id, 0) + 1
             call.data[COLUMNS.validation_id] = '{}-v{}'.format(
                 call.cluster_id, validation_counts[call.cluster_id]
             )
-            LOG(
-                '\tremapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}]'
+            logger.info(
+                'remapped reads: {}; spanning reads: {}; split reads: [{} ({}), {} ({}), {}]'
                 ', flanking pairs: {}{}'.format(
                     0 if not call.contig else len(call.contig.input_reads),
                     len(call.spanning_reads),
@@ -328,11 +281,8 @@ def main(
         call.data.update(
             {COLUMNS.break1_homologous_seq: b1_homseq, COLUMNS.break2_homologous_seq: b2_homseq}
         )
-    LOG(
-        '{} putative calls resulted in {} events with 1 or more event call'.format(
-            len(evidence_clusters), total_pass
-        ),
-        time_stamp=True,
+    logger.info(
+        f'{len(evidence_clusters)} putative calls resulted in {total_pass} events with 1 or more event call'
     )
     output_tabbed_file(event_calls, passed_output_file)
     output_tabbed_file(filtered_evidence_clusters, failed_output_file)
@@ -343,7 +293,7 @@ def main(
 
     if config['validate.write_evidence_files']:
         with pysam.AlignmentFile(contig_bam, 'wb', template=input_bam_cache.fh) as fh:
-            LOG('writing:', contig_bam, time_stamp=True)
+            logger.info(f'writing: {contig_bam}')
             for evidence in evidence_clusters:
                 for contig in evidence.contigs:
                     for aln in contig.alignments:
@@ -355,7 +305,7 @@ def main(
 
         # write the evidence
         with pysam.AlignmentFile(raw_evidence_bam, 'wb', template=input_bam_cache.fh) as fh:
-            LOG('writing:', raw_evidence_bam, time_stamp=True)
+            logger.info(f'writing: {raw_evidence_bam}')
             reads = set()
             for evidence in evidence_clusters:
                 reads.update(evidence.supporting_reads())
@@ -364,23 +314,23 @@ def main(
                 fh.write(read)
         # now sort the contig bam
         sort = re.sub(r'.bam$', '.sorted.bam', contig_bam)
-        LOG('sorting the bam file:', contig_bam, time_stamp=True)
+        logger.info(f'sorting the bam file: {contig_bam}')
         pysam.sort('-o', sort, contig_bam)
         contig_bam = sort
-        LOG('indexing the sorted bam:', contig_bam)
+        logger.info(f'indexing the sorted bam: {contig_bam}')
         pysam.index(contig_bam)
 
         # then sort the evidence bam file
         sort = re.sub(r'.bam$', '.sorted.bam', raw_evidence_bam)
-        LOG('sorting the bam file:', raw_evidence_bam, time_stamp=True)
+        logger.info(f'sorting the bam file: {raw_evidence_bam}')
         pysam.sort('-o', sort, raw_evidence_bam)
         raw_evidence_bam = sort
-        LOG('indexing the sorted bam:', raw_evidence_bam)
+        logger.info(f'indexing the sorted bam: {raw_evidence_bam}')
         pysam.index(raw_evidence_bam)
 
         # write the igv batch file
         with open(igv_batch_file, 'w') as fh:
-            LOG('writing:', igv_batch_file, time_stamp=True)
+            logger.info(f'writing: {igv_batch_file}')
 
             fh.write('load {} name="{}"\n'.format(passed_bed_file, 'passed events'))
             fh.write('load {} name="{}"\n'.format(contig_bam, 'aligned contigs'))
@@ -393,4 +343,4 @@ def main(
                     config['libraries'][library]['protocol'],
                 )
             )
-        generate_complete_stamp(output, LOG, start_time=start_time)
+        generate_complete_stamp(output, start_time=start_time)

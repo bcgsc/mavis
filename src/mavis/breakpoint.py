@@ -3,7 +3,7 @@ from __future__ import division
 from copy import copy as _copy
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-from .constants import CIGAR, COLUMNS, DNA_ALPHABET, ORIENT, STRAND, SVTYPE, reverse_complement
+from .constants import COLUMNS, DNA_ALPHABET, ORIENT, STRAND, SVTYPE, reverse_complement
 from .error import InvalidRearrangement, NotSpecifiedError
 from .interval import Interval
 

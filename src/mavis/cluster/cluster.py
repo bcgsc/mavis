@@ -1,13 +1,13 @@
 from __future__ import division
 
+import itertools
 from collections import namedtuple
 from copy import copy
-import itertools
 
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import ORIENT, STRAND
 from ..interval import Interval
-from ..util import LOG
+from ..util import logger
 
 
 class BreakpointPairGroupKey(
@@ -285,7 +285,7 @@ def merge_breakpoint_pairs(
     for group_key in sorted(set(list(groups) + list(phase2_groups))):
         count = len(groups.get(group_key, [])) + len(phase2_groups.get(group_key, []))
         if verbose:
-            LOG(group_key, 'pairs:', count)
+            logger.info(f'{group_key} pairs: {count}')
         nodes = merge_by_union(
             groups.get(group_key, []),
             group_key,
@@ -375,7 +375,7 @@ def merge_breakpoint_pairs(
                 )
                 nodes.setdefault(new_bpp, []).append(pair)
         if verbose:
-            LOG('merged', count, 'down to', len(nodes))
+            logger.info(f'merged {count} down to {len(nodes)}')
         for node, pairs in nodes.items():
             if node in mapping:
                 raise KeyError('duplicate merge node', str(node), node, pair_key(node))

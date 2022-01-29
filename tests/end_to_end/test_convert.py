@@ -5,10 +5,11 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from mavis.constants import ORIENT, SUBCOMMAND, SVTYPE
+from mavis.constants import ORIENT, SVTYPE
 from mavis.main import main
 from mavis.tools import SUPPORTED_TOOL
 from mavis.util import read_bpp_from_input_file
+from mavis_config.constants import SUBCOMMAND
 
 from ..util import get_data, glob_exists
 
@@ -114,14 +115,14 @@ class TestConvert:
         record = results['vcf-30259'][0]
         print(record, record.data)
         assert record.data['event_type'] == 'translocation'
-    
+
     def test_cuteSV(self):
         results = self.run_main(get_data('cuteSV.vcf'), SUPPORTED_TOOL.VCF, False)
         print(results.keys())
         record = results['vcf-cuteSV.BND.0'][0]
         print(record, record.data)
         assert record.data['event_type'] == 'inverted translocation'
-    
+
     def test_breakseq2(self):
         self.run_main(get_data('breakseq.vcf'), SUPPORTED_TOOL.BREAKSEQ, False)
 

@@ -3,13 +3,8 @@ import itertools
 import logging
 import os
 import re
-import sys
 import time
-from argparse import Namespace
-from datetime import datetime
-from functools import partial
-from glob import glob
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Set
 
 import pandas as pd
 from mavis_config import bash_expands
@@ -25,7 +20,6 @@ from .constants import (
     STRAND,
     SUMMARY_LIST_COLUMNS,
     SVTYPE,
-    MavisNamespace,
     sort_columns,
 )
 from .error import InvalidRearrangement
@@ -33,43 +27,7 @@ from .interval import Interval
 
 ENV_VAR_PREFIX = 'MAVIS_'
 
-
-class Log:
-    """
-    wrapper aroung the builtin logging to make it more readable
-    """
-
-    def __init__(self, indent_str='  ', indent_level=0, level=logging.INFO):
-        self.indent_str = indent_str
-        self.indent_level = indent_level
-        self.level = level
-
-    def __call__(self, *pos, time_stamp=False, level=None, indent_level=0, **kwargs):
-        if level is None and self.level is None:
-            return
-        elif self.level is not None:
-            level = self.level
-
-        stamp = datetime.now().strftime('[%Y-%m-%d %H:%M:%S]') if time_stamp else ' ' * 21
-        indent_prefix = self.indent_str * (self.indent_level + indent_level)
-        message = '{} {}{}'.format(stamp, indent_prefix, ' '.join([str(p) for p in pos]))
-        logging.log(level, message, **kwargs)
-
-    def indent(self):
-        return Log(self.indent_str, self.indent_level + 1, self.level)
-
-    def dedent(self):
-        return Log(self.indent_str, max(0, self.indent_level - 1), self.level)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *pos):
-        pass
-
-
-LOG = Log()
-DEVNULL = Log(level=None)
+logger = logging.getLogger('mavis')
 
 
 def filepath(path):
@@ -151,30 +109,30 @@ def log_arguments(args):
     Args:
         args (Namespace): the namespace to print arguments for
     """
-    LOG('arguments', time_stamp=True)
-    with LOG.indent() as log:
-        for arg, val in sorted(args.__dict__.items()):
-            if isinstance(val, list):
-                if len(val) <= 1:
-                    log(arg, '= {}'.format(val))
-                    continue
-                log(arg, '= [')
-                for v in val:
-                    log(repr(v), indent_level=1)
-                log(']')
-            elif (
-                any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None
-            ):
-                log(arg, '=', repr(val))
-            else:
-                log(arg, '=', object.__repr__(val))
+    logger.info('arguments')
+
+    indent = ' '
+
+    for arg, val in sorted(args.__dict__.items()):
+        if isinstance(val, list):
+            if len(val) <= 1:
+                logger.info(f'{indent}{arg} = {val}')
+                continue
+            logger.info(f'{indent}{arg} = [')
+            for v in val:
+                logger.info(f'{indent * 2}{repr(v)}')
+            logger.info(f'{indent}]')
+        elif any([isinstance(val, typ) for typ in [str, int, float, bool, tuple]]) or val is None:
+            logger.info(f'{indent}{arg}= {repr(val)}')
+        else:
+            logger.info(f'{arg} = {object.__repr__(val)}')
 
 
 def mkdirp(dirname):
     """
     Make a directory or path of directories. Suppresses the error that is normally raised when the directory already exists
     """
-    LOG("creating output directory: '{}'".format(dirname))
+    logger.info(f"creating output directory: '{dirname}'")
     try:
         os.makedirs(dirname)
     except OSError as exc:  # Python >2.5: http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
@@ -193,7 +151,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
         bpps (List[mavis.breakpoint.BreakpointPair]): list of breakpoint pairs to be filtered
         regions_by_reference_name (Dict[str,List[mavis.annotate.base.BioInterval]]): regions to filter against
     """
-    LOG('filtering from', len(bpps), 'using overlaps with regions filter')
+    logger.info(f'filtering from {len(bpps)} using overlaps with regions filter')
     failed = []
     passed = []
     for bpp in bpps:
@@ -213,7 +171,7 @@ def filter_on_overlap(bpps, regions_by_reference_name):
             failed.append(bpp)
         else:
             passed.append(bpp)
-    LOG('filtered from', len(bpps), 'down to', len(passed), '(removed {})'.format(len(failed)))
+    logger.info(f'filtered from {len(bpps)} down to {len(passed)} (removed {len(failed)})')
     return passed, failed
 
 
@@ -221,13 +179,13 @@ def read_inputs(inputs, required_columns=[], **kwargs):
     bpps = []
 
     for finput in bash_expands(*inputs):
-        LOG('loading:', finput)
+        logger.info(f'loading: {finput}')
         bpps.extend(
             read_bpp_from_input_file(
                 finput, required_columns=[COLUMNS.protocol, *required_columns], **kwargs
             )
         )
-    LOG('loaded', len(bpps), 'breakpoint pairs')
+    logger.info(f'loaded {len(bpps)} breakpoint pairs')
     return bpps
 
 
@@ -245,14 +203,14 @@ def output_tabbed_file(bpps: List[BreakpointPair], filename: str, header=None):
         if not custom_header:
             header.update(row.keys())  # type: ignore
     header = sort_columns(header)
-    LOG('writing:', filename)
+    logger.info(f'writing: {filename}')
     df = pd.DataFrame.from_records(rows, columns=header)
     df = df.fillna('None')
     df.to_csv(filename, columns=header, index=False, sep='\t')
 
 
 def write_bed_file(filename, bed_rows):
-    LOG('writing:', filename)
+    logger.info(f'writing: {filename}')
     with open(filename, 'w') as fh:
         for bed in bed_rows:
             fh.write('\t'.join([str(c) for c in bed]) + '\n')
@@ -279,7 +237,7 @@ def get_connected_components(adj_matrix):
     return components
 
 
-def generate_complete_stamp(output_dir, log=DEVNULL, prefix='MAVIS.', start_time=None):
+def generate_complete_stamp(output_dir, prefix='MAVIS.', start_time=None):
     """
     writes a complete stamp, optionally including the run time if start_time is given
 
@@ -297,7 +255,7 @@ def generate_complete_stamp(output_dir, log=DEVNULL, prefix='MAVIS.', start_time
         'some_output_dir/MAVIS.COMPLETE'
     """
     stamp = os.path.join(output_dir, str(prefix) + 'COMPLETE')
-    log('complete:', stamp)
+    logger.info(f'complete: {stamp}')
     with open(stamp, 'w') as fh:
         if start_time is not None:
             duration = int(time.time()) - start_time

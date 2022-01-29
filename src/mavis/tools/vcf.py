@@ -12,8 +12,7 @@ except ImportError:
     from typing_extensions import TypedDict
 
 from ..constants import COLUMNS, ORIENT, SVTYPE
-from ..util import DEVNULL
-from .constants import SUPPORTED_TOOL
+from ..util import logger
 
 PANDAS_DEFAULT_NA_VALUES = [
     '-1.#IND',
@@ -122,7 +121,7 @@ def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
+def convert_record(record, record_mapping={}) -> List[Dict]:
     """
     converts a vcf record
 
@@ -143,7 +142,7 @@ def convert_record(record, record_mapping={}, log=DEVNULL) -> List[Dict]:
             try:
                 value = record.info[key]
             except UnicodeDecodeError as err:
-                log('Ignoring invalid INFO field {} with error: {}'.format(key, err))
+                logger.warning(f'Ignoring invalid INFO field {key} with error: {err}')
             else:
                 try:
                     value = value[0] if len(value) == 1 else value
@@ -307,12 +306,11 @@ def pandas_vcf(input_file) -> Tuple[List[str], pd.DataFrame]:
     return header_lines, df
 
 
-def convert_file(input_file: str, file_type: str, log):
+def convert_file(input_file: str):
     """process a VCF file
 
     Args:
         input_file: the input file name
-        file_type: the input type
 
     Raises:
         err: [description]
@@ -323,7 +321,7 @@ def convert_file(input_file: str, file_type: str, log):
 
     for variant_record in convert_pandas_rows_to_variants(data):
         try:
-            rows.extend(convert_record(variant_record, log=log))
+            rows.extend(convert_record(variant_record))
         except NotImplementedError as err:
             logging.warning(str(err))
     return rows

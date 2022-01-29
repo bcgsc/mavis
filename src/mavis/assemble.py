@@ -1,5 +1,4 @@
 import itertools
-import warnings
 
 import distance
 import networkx as nx
@@ -8,7 +7,7 @@ from .bam import cigar as _cigar
 from .bam.read import calculate_alignment_score, nsb_align, sequence_complexity
 from .constants import reverse_complement
 from .interval import Interval
-from .util import DEVNULL
+from .util import logger
 
 
 class Contig:
@@ -247,9 +246,7 @@ def digraph_connected_components(graph, subgraph=None):
     return nx.connected_components(g)
 
 
-def pull_contigs_from_component(
-    assembly, component, min_edge_trim_weight, assembly_max_paths, log=DEVNULL
-):
+def pull_contigs_from_component(assembly, component, min_edge_trim_weight, assembly_max_paths):
     """
     builds contigs from the a connected component of the assembly DeBruijn graph
 
@@ -258,7 +255,6 @@ def pull_contigs_from_component(
         component (list):  list of nodes which make up the connected component
         min_edge_trim_weight (int): the minimum weight to not remove a non cutting edge/path
         assembly_max_paths (int): the maximum number of paths allowed before the graph is further simplified
-        log (Callable): the log function
 
     Returns:
         Dict[str,int]: the paths/contigs and their scores
@@ -287,12 +283,8 @@ def pull_contigs_from_component(
 
             if w > edge_weights[-1]:
                 continue
-            log(
-                'reducing estimated paths. Current estimate is {}+ from'.format(paths_est),
-                len(component),
-                'nodes',
-                'filter increase',
-                w,
+            logger.debug(
+                f'reducing estimated paths. Current estimate is {paths_est}+ from {len(component)} nodes filter increase {w}',
             )
             assembly.trim_forks_by_freq(w)
             assembly.trim_noncutting_paths_by_freq(w)
@@ -353,8 +345,7 @@ def assemble(
     assembly_max_paths=20,
     assembly_min_uniq=0.01,
     min_complexity=0,
-    log=lambda *pos, **kwargs: None,
-    **kwargs
+    **kwargs,
 ):
     """
     for a set of sequences creates a DeBruijnGraph
@@ -372,7 +363,6 @@ def assemble(
         min_contig_length: Minimum length of contigs assemble to attempt remapping reads to. Shorter contigs will be ignored
         remap_min_exact_match: see [assembly_min_exact_match_to_remap](/configuration/settings/#assembly_min_exact_match_to_remap)
         assembly_max_paths: see [assembly_max_paths](/configuration/settings/#assembly_max_paths)
-        log (Callable): the log function
 
     Returns:
         List[Contig]: a list of putative contigs
@@ -404,7 +394,7 @@ def assemble(
     for component in digraph_connected_components(assembly):
         subgraph = assembly.subgraph(component)
         if not nx.is_directed_acyclic_graph(subgraph):
-            log('dropping cyclic component', time_stamp=False)
+            logger.debug('dropping cyclic component')
             for node in subgraph.get_nodes():
                 assembly.remove_node(node)
     # initial data cleaning
@@ -422,12 +412,11 @@ def assemble(
                 component,
                 min_edge_trim_weight=min_edge_trim_weight,
                 assembly_max_paths=assembly_max_paths,
-                log=log,
             )
         )
 
     # now map the contigs to the possible input sequences
-    log('filtering contigs by size and complexity', len(path_scores), time_stamp=False)
+    logger.debug(f'filtering contigs by size and complexity {len(path_scores)}')
     contigs = []
     for seq, score in list(path_scores.items()):
         contig = Contig(seq, score)
@@ -435,10 +424,10 @@ def assemble(
             not min_complexity or contig.complexity() >= min_complexity
         ):
             contigs.append(contig)
-    log('filtering similar contigs', len(contigs))
+    logger.debug(f'filtering similar contigs {len(contigs)}')
     # remap the input reads
     contigs = filter_contigs(contigs, assembly_min_uniq)
-    log('remapping reads to {} contigs'.format(len(contigs)))
+    logger.debug(f'remapping reads to {len(contigs)} contigs')
 
     for input_seq in sequences:
         maps_to = {}  # contig, score
@@ -470,7 +459,7 @@ def assemble(
             assert len(best_alignments) >= 1
             for contig, read in best_alignments:
                 contig.add_mapped_sequence(read, len(best_alignments))
-    log('assemblies complete')
+    logger.debug('assemblies complete')
     return contigs
 
 

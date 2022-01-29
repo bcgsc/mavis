@@ -4,16 +4,16 @@ module which holds all functions relating to loading reference files
 import json
 import os
 import re
-import warnings
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 import pandas as pd
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
+from snakemake.utils import validate as snakemake_validate
 
-from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
+from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, translate
 from ..interval import Interval
-from ..util import DEVNULL, LOG, cast_boolean, filepath
+from ..util import logger
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, PreTranscript, Template, Transcript
 from .protein import Domain, Translation
@@ -60,7 +60,6 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
 
 def load_annotations(
     *filepaths: str,
-    warn: Callable = DEVNULL,
     reference_genome: Optional[Dict[str, SeqRecord]] = None,
     best_transcripts_only: bool = False,
 ) -> Dict[str, List[Gene]]:
@@ -79,17 +78,13 @@ def load_annotations(
     for filename in filepaths:
         data = None
 
-        if filename.endswith('.json'):
-            with open(filename) as fh:
-                data = json.load(fh)
-        else:
-            data = convert_tab_to_json(filename, warn)
+        with open(filename) as fh:
+            data = json.load(fh)
 
         current_annotations = parse_annotations_json(
             data,
             reference_genome=reference_genome,
             best_transcripts_only=best_transcripts_only,
-            warn=warn,
         )
 
         for chrom in current_annotations:
@@ -102,22 +97,24 @@ def parse_annotations_json(
     data,
     reference_genome: Optional[Dict[str, SeqRecord]] = None,
     best_transcripts_only=False,
-    warn=DEVNULL,
 ) -> Dict[str, List[Gene]]:
     """
     parses a json of annotation information into annotation objects
     """
+    try:
+        snakemake_validate(
+            data,
+            os.path.join(os.path.dirname(__file__), 'annotations_schema.json'),
+        )
+    except Exception as err:
+        short_msg = '. '.join(
+            [line for line in str(err).split('\n') if line.strip()][:3]
+        )  # these can get super long
+        raise AssertionError(short_msg)
+
     genes_by_chr: Dict[str, List[Gene]] = {}
 
     for gene_dict in data['genes']:
-        if gene_dict['strand'] in ['1', '+', 1]:
-            gene_dict['strand'] = STRAND.POS
-        elif gene_dict['strand'] in ['-1', '-', -1]:
-            gene_dict['strand'] = STRAND.NEG
-        else:
-            raise AssertionError(
-                'input has unexpected form. strand must be 1 or -1 but found', gene_dict['strand']
-            )
 
         gene = Gene(
             chr=gene_dict['chr'],
@@ -130,7 +127,6 @@ def parse_annotations_json(
 
         has_best = False
         for transcript in gene_dict['transcripts']:
-            transcript['is_best_transcript'] = cast_boolean(transcript['is_best_transcript'])
             transcript.setdefault('exons', [])
             exons = [Exon(strand=gene.strand, **ex) for ex in transcript['exons']]
             if not exons:
@@ -160,7 +156,9 @@ def parse_annotations_json(
                 tx_length = transcript['cdna_coding_end'] - transcript['cdna_coding_start'] + 1
                 # check that the translation makes sense before including it
                 if tx_length % CODON_SIZE != 0:
-                    warn('Ignoring translation. The translated region is not a multiple of three')
+                    logger.warning(
+                        'Ignoring translation. The translated region is not a multiple of three'
+                    )
                     continue
                 tx_length = tx_length // CODON_SIZE
                 domains = []
@@ -181,7 +179,7 @@ def parse_annotations_json(
                             )
                         )
                     except AssertionError as err:
-                        warn(repr(err))
+                        logger.warning(repr(err))
                 translation = Translation(
                     transcript['cdna_coding_start'],
                     transcript['cdna_coding_end'],
@@ -194,145 +192,14 @@ def parse_annotations_json(
                     met = seq[translation.start - 1 : translation.start + 2]
                     stop = seq[translation.end - CODON_SIZE : translation.end]
                     if translate(met) != START_AA or translate(stop) != STOP_AA:
-                        warn(
-                            'Sequence error. The sequence computed from the reference does look like '
-                            'a valid translation'
+                        logger.warning(
+                            'Sequence error. The sequence computed from the reference does look like a valid translation'
                         )
                         continue
                 spl_tx.translations.append(translation)
         if not best_transcripts_only or has_best:
             genes_by_chr.setdefault(gene.chr, []).append(gene)
     return genes_by_chr
-
-
-def convert_tab_to_json(filepath: str, warn: Callable = DEVNULL) -> Dict:
-    """
-    given a file in the std input format (see below) reads and return a list of genes (and sub-objects)
-
-    +-----------------------+---------------------------+-----------------------------------------------------------+
-    | column name           | example                   | description                                               |
-    +=======================+===========================+===========================================================+
-    | ensembl_transcript_id | ENST000001                |                                                           |
-    +-----------------------+---------------------------+-----------------------------------------------------------+
-    | ensembl_gene_id       | ENSG000001                |                                                           |
-    +-----------------------+---------------------------+-----------------------------------------------------------+
-    | strand                | -1                        | positive or negative 1                                    |
-    +-----------------------+---------------------------+-----------------------------------------------------------+
-    | cdna_coding_start     | 44                        | where translation begins relative to the start of the cdna|
-    +-----------------------+---------------------------+-----------------------------------------------------------+
-    | cdna_coding_end       | 150                       | where translation terminates                              |
-    +-----------------------+---------------------------+-----------------------------------------------------------+
-    | genomic_exon_ranges   | 100-201;334-412;779-830   | semi-colon demitited exon start/ends                      |
-    +-----------------------+---------------------------+-----------------------------------------------------------+
-    | AA_domain_ranges      | DBD:220-251,260-271       | semi-colon delimited list of domains                      |
-    +-----------------------+---------------------------+-----------------------------------------------------------+
-    | hugo_names            | KRAS                      | hugo gene name                                            |
-    +-----------------------+---------------------------+-----------------------------------------------------------+
-
-    Args:
-        filepath (str): path to the input tab-delimited file
-
-    Returns:
-        Dict[str,List[Gene]]: a dictionary keyed by chromosome name with values of list of genes on the chromosome
-
-    Warning:
-        does not load translations unless then start with 'M', end with '*' and have a length of multiple 3
-    """
-
-    def parse_exon_list(row):
-        if pd.isnull(row):
-            return []
-        exons = []
-        for temp in re.split('[; ]', row):
-            try:
-                start, end = temp.split('-')
-                exons.append({'start': int(start), 'end': int(end)})
-            except Exception as err:
-                warn('exon error:', repr(temp), repr(err))
-        return exons
-
-    def parse_domain_list(row):
-        if pd.isnull(row):
-            return []
-        domains = []
-        for domain in row.split(';'):
-            try:
-                name, temp = domain.rsplit(':')
-                temp = temp.split(',')
-                temp = [x.split('-') for x in temp]
-                regions = [{'start': int(x), 'end': int(y)} for x, y in temp]
-                domains.append({'name': name, 'regions': regions})
-            except Exception as err:
-                warn('error in domain:', domain, row, repr(err))
-        return domains
-
-    df = pd.read_csv(
-        filepath,
-        dtype={
-            'ensembl_gene_id': str,
-            'ensembl_transcript_id': str,
-            'chr': str,
-            'cdna_coding_start': pd.Int64Dtype(),
-            'cdna_coding_end': pd.Int64Dtype(),
-            'AA_domain_ranges': str,
-            'genomic_exon_ranges': str,
-            'hugo_names': str,
-            'transcript_genomic_start': pd.Int64Dtype(),
-            'transcript_genomic_end': pd.Int64Dtype(),
-            'best_ensembl_transcript_id': str,
-            'gene_start': int,
-            'gene_end': int,
-        },
-        sep='\t',
-        comment='#',
-    )
-
-    for col in ['ensembl_gene_id', 'chr', 'ensembl_transcript_id', 'gene_start', 'gene_end']:
-        if col not in df:
-            raise KeyError(f'missing required column: {col}')
-
-    for col, parser in [
-        ('genomic_exon_ranges', parse_exon_list),
-        ('AA_domain_ranges', parse_domain_list),
-    ]:
-        if col in df:
-            df[col] = df[col].apply(parser)
-
-    genes = {}
-    rows = df.where(df.notnull(), None).to_dict('records')
-
-    for row in rows:
-        gene = {
-            'chr': row['chr'],
-            'start': row['gene_start'],
-            'end': row['gene_end'],
-            'name': row['ensembl_gene_id'],
-            'strand': row['strand'],
-            'aliases': row['hugo_names'].split(';') if row.get('hugo_names') else [],
-            'transcripts': [],
-        }
-        if gene['name'] not in genes:
-            genes[gene['name']] = gene
-        else:
-            gene = genes[gene['name']]
-        is_best_transcript = (
-            row.get('best_ensembl_transcript_id', row['ensembl_transcript_id'])
-            == row['ensembl_transcript_id']
-        )
-        transcript = {
-            'is_best_transcript': is_best_transcript,
-            'name': row['ensembl_transcript_id'],
-            'exons': row.get('genomic_exon_ranges', []),
-            'domains': row.get('AA_domain_ranges', []),
-            'start': row.get('transcript_genomic_start'),
-            'end': row.get('transcript_genomic_end'),
-            'cdna_coding_start': row.get('cdna_coding_start'),
-            'cdna_coding_end': row.get('cdna_coding_end'),
-            'aliases': [],
-        }
-        gene['transcripts'].append(transcript)
-
-    return {'genes': genes.values()}
 
 
 def load_reference_genome(*filepaths: str) -> Dict[str, SeqRecord]:
@@ -506,12 +373,12 @@ class ReferenceFile:
             return self
         if self.key in ReferenceFile.CACHE and not ignore_cache:
             if verbose:
-                LOG('cached content:', self.name)
+                logger.info(f'cached content: {self.name}')
             self.content = ReferenceFile.CACHE[self.key].content
             return self
         self.files_exist()
         try:
-            LOG('loading:', self.name, time_stamp=True)
+            logger.info(f'loading: {self.name}')
             self.content = self.loader(*self.name, **self.opt)
             ReferenceFile.CACHE[self.key] = self
         except Exception as err:

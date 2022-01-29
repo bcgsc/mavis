@@ -1,0 +1,186 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "properties": {
+        "best_transcript_file": {
+            "type": "string"
+        },
+        "ensembl_version": {
+            "type": "integer"
+        },
+        "generation_time": {
+            "type": "string"
+        },
+        "genes": {
+            "items": {
+                "properties": {
+                    "aliases": {
+                        "default": [
+                        ],
+                        "items": {
+                            "minLength": 1,
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "chr": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "end": {
+                        "minimum": 1,
+                        "type": "integer"
+                    },
+                    "name": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "start": {
+                        "minimum": 1,
+                        "type": "integer"
+                    },
+                    "strand": {
+                        "enum": [
+                            "+",
+                            "-"
+                        ],
+                        "type": "string"
+                    },
+                    "transcripts": {
+                        "default": [
+                        ],
+                        "items": {
+                            "properties": {
+                                "aliases": {
+                                    "default": [
+                                    ],
+                                    "items": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                    },
+                                    "type": "array"
+                                },
+                                "cdna_coding_end": {
+                                    "minimum": 1,
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "default": null
+                                },
+                                "cdna_coding_start": {
+                                    "minimum": 1,
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "default": null
+                                },
+                                "domains": {
+                                    "default": [
+                                    ],
+                                    "items": {
+                                        "properties": {
+                                            "name": {
+                                                "minLength": 1,
+                                                "type": "string"
+                                            },
+                                            "regions": {
+                                                "minItems": 1,
+                                                "properties": {
+                                                    "end": {
+                                                        "minimum": 1,
+                                                        "type": "integer"
+                                                    },
+                                                    "start": {
+                                                        "minimum": 1,
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "type": "array"
+                                            }
+                                        },
+                                        "required": [
+                                            "name",
+                                            "regions"
+                                        ],
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                "end": {
+                                    "minimum": 1,
+                                    "type": "integer"
+                                },
+                                "exons": {
+                                    "defualt": [
+                                    ],
+                                    "items": {
+                                        "properties": {
+                                            "end": {
+                                                "minimum": 1,
+                                                "type": "integer"
+                                            },
+                                            "start": {
+                                                "minimum": 1,
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "required": [
+                                            "start",
+                                            "end"
+                                        ],
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                "is_best_transcript": {
+                                    "default": false,
+                                    "type": "boolean"
+                                },
+                                "name": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                },
+                                "start": {
+                                    "minimum": 1,
+                                    "type": "integer"
+                                }
+                            },
+                            "required": [
+                                "start",
+                                "end",
+                                "name"
+                            ],
+                            "type": "object"
+                        },
+                        "type": "array"
+                    }
+                },
+                "required": [
+                    "chr",
+                    "start",
+                    "end",
+                    "name",
+                    "strand"
+                ],
+                "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+        },
+        "hugo_mapping_file": {
+            "type": "string"
+        },
+        "script": {
+            "type": "string"
+        },
+        "script_version": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "genes"
+    ],
+    "type": "object"
+}

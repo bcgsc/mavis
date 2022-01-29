@@ -9,7 +9,6 @@
 -- http://wiki.bits.vib.be/index.php/Blat
 
 """
-import logging
 import math
 import re
 
@@ -28,7 +27,7 @@ from .constants import (
     reverse_complement,
 )
 from .interval import Interval
-from .util import LOG
+from .util import logger
 
 
 class Blat:
@@ -202,7 +201,7 @@ class Blat:
                         )
                 final_rows.append(row)
             except AssertionError as err:
-                LOG(type(err), ':', str(err), level=logging.DEBUG)
+                logger.debug(f'{type(err)}:{err}')
         return header, final_rows
 
     @staticmethod
@@ -391,11 +390,9 @@ def process_blat_output(
             try:
                 read = Blat.pslx_row_to_pysam(row, input_bam_cache, reference_genome)
             except KeyError as err:
-                LOG(
-                    'warning: reference template name not recognized', str(err), level=logging.DEBUG
-                )
+                logger.debug(f'warning: reference template name not recognized: {err}')
             except AssertionError as err:
-                LOG('warning: invalid blat alignment', repr(err), level=logging.DEBUG)
+                logger.warning(f'invalid blat alignment {repr(err)}')
             else:
                 reads.append((row, read))
 

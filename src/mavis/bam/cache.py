@@ -1,14 +1,12 @@
 import atexit
-import logging
 import re
-import warnings
 
 import pysam
 
-from .read import SamRead
+from .. import util as _util
 from ..annotate.base import ReferenceName
 from ..interval import Interval
-from .. import util as _util
+from .read import SamRead
 
 
 class BamCache:
@@ -50,7 +48,7 @@ class BamCache:
             read (pysam.AlignedSegment): the read to add to the cache
         """
         if not read.is_unmapped and read.reference_start == read.reference_end:
-            _util.LOG('ignoring invalid read', read.query_name, level=logging.DEBUG)
+            _util.logger.debug(f'ignoring invalid read: {read.query_name}')
             return
         if not isinstance(read, SamRead):
             read = SamRead.copy(read)
@@ -168,7 +166,7 @@ class BamCache:
             if stop_on_cached_read and self.has_read(read):
                 break
             if not read.is_unmapped and read.reference_start == read.reference_end:
-                _util.LOG('ignoring invalid read', read.query_name, level=logging.DEBUG)
+                _util.logger.debug(f'ignoring invalid read {read.query_name}')
                 continue
             read = SamRead.copy(read)
             if not filter_if(read):
@@ -231,7 +229,7 @@ class BamCache:
                 if bin_limit is not None and count >= running_surplus:
                     break
                 if not read.is_unmapped and read.reference_start == read.reference_end:
-                    _util.LOG('ignoring invalid read', read.query_name, level=logging.DEBUG)
+                    _util.logger.debug(f'ignoring invalid read {read.query_name}')
                     continue
                 read = SamRead.copy(read)
                 if not filter_if(read):
@@ -273,10 +271,10 @@ class BamCache:
             if not allow_file_access or read.mate_is_unmapped:
                 raise KeyError('mate is not found in the cache')
             else:
-                warnings.warn(
-                    'looking for uncached mate of {0}. This requires file access and'
+                _util.logger.warning(
+                    f'looking for uncached mate of {read.query_name}. This requires file access and'
                     ' requests may be slow. This should also not be using in a loop iterating using the file pointer '
-                    ' as it will change the file pointer position'.format(read.query_name)
+                    ' as it will change the file pointer position'
                 )
                 m = self.fh.mate(read)
                 m = SamRead.copy(m)

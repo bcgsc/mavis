@@ -5,27 +5,15 @@ import itertools
 import os
 import re
 import subprocess
-import warnings
-from copy import copy
 
 import pysam
 
 from .bam import cigar as _cigar
 from .bam import read as _read
 from .breakpoint import Breakpoint, BreakpointPair
-from .constants import (
-    CIGAR,
-    COLUMNS,
-    NA_MAPPING_QUALITY,
-    ORIENT,
-    STRAND,
-    SVTYPE,
-    MavisNamespace,
-    reverse_complement,
-)
-from .error import InvalidRearrangement
+from .constants import CIGAR, ORIENT, STRAND, SVTYPE, MavisNamespace, reverse_complement
 from .interval import Interval
-from .util import DEVNULL
+from .util import logger
 
 
 class SUPPORTED_ALIGNER(MavisNamespace):
@@ -234,7 +222,7 @@ def convert_to_duplication(alignment, reference_genome):
                 opposing_strands=alignment.opposing_strands,
                 read1=alignment.read1,
                 read2=alignment.read2,
-                **alignment.data
+                **alignment.data,
             )
             return result
     return alignment
@@ -405,8 +393,7 @@ def align_sequences(
     blat_limit_top_aln=25,
     blat_min_identity=0.7,
     clean_files=True,
-    log=DEVNULL,
-    **kwargs
+    **kwargs,
 ):
     """
     calls the alignment tool and parses the return output for a set of sequences
@@ -428,7 +415,7 @@ def align_sequences(
         if not sequences:
             return []
 
-        log('will use', aligner, 'to align', len(sequences), 'unique sequences', time_stamp=False)
+        logger.debug(f'will use {aligner} to align {len(sequences)} unique sequences')
 
         # call the aligner using subprocess
         if aligner == SUPPORTED_ALIGNER.BLAT:
@@ -454,7 +441,7 @@ def align_sequences(
                     blat_options,
                 ]
             )
-            log('writing aligner logging to:', aligner_output_log, time_stamp=False)
+            logger.debug(f'writing aligner logging to: {aligner_output_log}')
             with open(aligner_output_log, 'w') as log_fh:
                 log_fh.write('>>> {}\n'.format(command))
                 subprocess.check_call(command, shell=True, stdout=log_fh, stderr=log_fh)
@@ -471,7 +458,7 @@ def align_sequences(
             command = '{} -Y {} {} {}'.format(
                 aligner, align_options, aligner_reference, aligner_fa_input_file
             )
-            log('writing aligner logging to:', aligner_output_log, time_stamp=False)
+            logger.debug(f'writing aligner logging to: {aligner_output_log}')
             with open(aligner_output_log, 'w') as log_fh, open(
                 aligner_output_file, 'w'
             ) as aligner_output_fh:
@@ -489,10 +476,8 @@ def align_sequences(
                     try:
                         read.reference_id = input_bam_cache.reference_id(read.reference_name)
                     except KeyError:
-                        log(
-                            'dropping alignment (unknown reference)',
-                            read.reference_name,
-                            time_stamp=False,
+                        logger.warning(
+                            f'dropping alignment (unknown reference): {read.reference_name}'
                         )
                     else:
                         if read.is_paired:
@@ -523,7 +508,7 @@ def align_sequences(
                     try:
                         os.remove(outputfile)
                     except OSError as err:
-                        warnings.warn(repr(err))
+                        logger.warning(repr(err))
 
 
 def select_contig_alignments(evidence, reads_by_query):

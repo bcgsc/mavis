@@ -2,7 +2,6 @@ import shutil
 from unittest import mock
 
 import mavis.bam.cigar as _cigar
-import pytest
 from mavis import align
 from mavis.annotate.file_io import load_reference_genome
 from mavis.assemble import Contig
@@ -11,8 +10,8 @@ from mavis.bam.read import SamRead
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CIGAR, ORIENT, STRAND, reverse_complement
 from mavis.interval import Interval
-from mavis.schemas import DEFAULTS
 from mavis.validate.evidence import GenomeEvidence
+from mavis_config import DEFAULTS
 
 from ..util import blat_only, bwa_only, get_data
 from . import MockLongString, MockObject, MockRead

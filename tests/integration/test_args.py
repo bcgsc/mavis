@@ -1,7 +1,7 @@
 import json
 import sys
 import tempfile
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from mavis import util
@@ -65,7 +65,7 @@ class TestCluster:
             '--config',
             str(configpath),
         ]
-        with patch.object(cluster_main, 'main', util.DEVNULL):
+        with patch.object(cluster_main, 'main', Mock()):
             with patch.object(sys, 'argv', args):
                 mavis_main()
 
@@ -102,7 +102,7 @@ class TestCluster:
             '--config',
             str(configpath),
         ]
-        with patch.object(cluster_main, 'main', util.DEVNULL):
+        with patch.object(cluster_main, 'main', Mock()):
             with patch.object(sys, 'argv', args):
                 mavis_main()
 
@@ -123,7 +123,7 @@ class TestCluster:
             )
         )
         args = ['mavis', 'cluster', '--library', 'translib', '--output', output_dir]
-        with patch.object(cluster_main, 'main', util.DEVNULL):
+        with patch.object(cluster_main, 'main', Mock()):
             with patch.object(sys, 'argv', args):
                 expect_error(self, mavis_main)
 
@@ -163,7 +163,7 @@ class TestValidate:
             '--config',
             str(configpath),
         ]
-        with patch.object(validate_main, 'main', util.DEVNULL):
+        with patch.object(validate_main, 'main', Mock()):
             with patch.object(sys, 'argv', args):
                 expect_error(self, mavis_main)
 
@@ -208,7 +208,7 @@ class TestValidate:
             '--config',
             str(configpath),
         ]
-        with patch.object(validate_main, 'main', util.DEVNULL):
+        with patch.object(validate_main, 'main', Mock()):
             with patch.object(sys, 'argv', args):
                 mavis_main()
 
@@ -256,7 +256,7 @@ class TestValidate:
             '--config',
             str(configpath),
         ]
-        with patch.object(validate_main, 'main', util.DEVNULL):
+        with patch.object(validate_main, 'main', Mock()):
             with patch.object(sys, 'argv', args):
                 expect_error(self, mavis_main)
 
@@ -300,7 +300,7 @@ class TestValidate:
             '--config',
             str(configpath),
         ]
-        with patch.object(validate_main, 'main', util.DEVNULL):
+        with patch.object(validate_main, 'main', Mock()):
             with patch.object(sys, 'argv', args):
                 expect_error(self, mavis_main)
 
@@ -344,7 +344,7 @@ class TestValidate:
             '--config',
             str(configpath),
         ]
-        with patch.object(validate_main, 'main', util.DEVNULL):
+        with patch.object(validate_main, 'main', Mock()):
             with patch.object(sys, 'argv', args):
                 expect_error(self, mavis_main)
 
@@ -391,6 +391,6 @@ class TestValidate:
             '--config',
             str(configpath),
         ]
-        with patch.object(validate_main, 'main', util.DEVNULL):
+        with patch.object(validate_main, 'main', Mock()):
             with patch.object(sys, 'argv', args):
                 expect_error(self, mavis_main)
