@@ -1,8 +1,7 @@
-from __future__ import division
-
 import itertools
 from collections import namedtuple
 from copy import copy
+from typing import Dict, List
 
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import ORIENT, STRAND
@@ -67,7 +66,7 @@ def weighted_mean(values, weights=None):
     return sum(x * w for x, w in zip(values, weights)) / sum(weights)
 
 
-def merge_integer_intervals(*intervals, weight_adjustment=0):
+def merge_integer_intervals(*intervals, weight_adjustment: int = 0) -> Interval:
     """
     Merges a set of integer intervals into a single interval where the center is the
     weighted mean of the input intervals. The weight is inversely proportional to the
@@ -76,7 +75,7 @@ def merge_integer_intervals(*intervals, weight_adjustment=0):
     input intervals
 
     Args:
-        weight_adjustment (int): add to length to lower weighting differences between small intervals
+        weight_adjustment: add to length to lower weighting differences between small intervals
     """
     float_offset = 0.99999999
     intervals = list(intervals)
@@ -146,7 +145,12 @@ def all_pair_group_keys(pair, explicit_strand=False):
     return result
 
 
-def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=200):
+def merge_by_union(
+    input_pairs: List[BreakpointPair],
+    group_key: BreakpointPairGroupKey,
+    weight_adjustment: int = 10,
+    cluster_radius: int = 200,
+) -> List[BreakpointPair]:
     """
     for a given set of breakpoint pairs, merge the union of all pairs that are
     within the given distance (cluster_radius)
@@ -230,8 +234,11 @@ def merge_by_union(input_pairs, group_key, weight_adjustment=10, cluster_radius=
 
 
 def merge_breakpoint_pairs(
-    input_pairs, cluster_radius=200, cluster_initial_size_limit=25, verbose=False
-):
+    input_pairs: List[BreakpointPair],
+    cluster_radius: int = 200,
+    cluster_initial_size_limit: int = 25,
+    verbose: bool = False,
+) -> Dict[BreakpointPair, List[BreakpointPair]]:
     """
     two-step merging process
 
@@ -242,12 +249,12 @@ def merge_breakpoint_pairs(
         done in order of smallest total breakpoint interval size to largest
 
     Args:
-        input_pairs (List[BreakpointPair]): the pairs to be merged
-        cluster_radius (int) maximum distance allowed for a node to merge
-        cluster_initial_size_limit (int): maximum size of breakpoint intervals allowed in the first merging phase
+        input_pairs: the pairs to be merged
+        cluster_radius: maximum distance allowed for a node to merge
+        cluster_initial_size_limit: maximum size of breakpoint intervals allowed in the first merging phase
 
     Returns:
-        Dict[BreakpointPair,List[BreakpointPair]]: mapping of merged breakpoint pairs to the input pairs used in the merge
+        mapping of merged breakpoint pairs to the input pairs used in the merge
     """
 
     def pair_center_distance(pair1, pair2):

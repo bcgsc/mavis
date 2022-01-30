@@ -1,5 +1,6 @@
 import atexit
 import re
+from typing import Callable, Dict, List, Set, Union
 
 import pysam
 
@@ -15,24 +16,28 @@ class BamCache:
     the file if we've already read that section
     """
 
-    def __init__(self, bamfile, stranded=False):
+    fh: pysam.AlignmentFile
+    stranded: bool
+    cache: Dict
+
+    def __init__(self, bamfile: Union[pysam.AlignmentFile, str], stranded: bool = False):
         """
         Args:
-            bamfile (str): path to the input bam file
+            bamfile: path to the input bam file
         """
         self.cache = {}
         self.stranded = stranded
-        self.fh = bamfile
+
         if not hasattr(bamfile, 'fetch'):
             self.fh = pysam.AlignmentFile(bamfile, 'rb')
         else:
             try:
                 self.fh = bamfile.fh
             except AttributeError:
-                pass
+                self.fh = bamfile
         atexit.register(self.close)  # makes the file 'auto close' on normal python exit
 
-    def valid_chr(self, chrom):
+    def valid_chr(self, chrom: str) -> bool:
         """
         checks if a reference name exists in the bam file header
         """
@@ -42,10 +47,10 @@ class BamCache:
         except KeyError:
             return False
 
-    def add_read(self, read):
+    def add_read(self, read: pysam.AlignedSegment):
         """
         Args:
-            read (pysam.AlignedSegment): the read to add to the cache
+            read: the read to add to the cache
         """
         if not read.is_unmapped and read.reference_start == read.reference_end:
             _util.logger.debug(f'ignoring invalid read: {read.query_name}')
@@ -56,7 +61,7 @@ class BamCache:
         if read not in self.cache[read.query_name]:
             self.cache[read.query_name].add(read)
 
-    def has_read(self, read):
+    def has_read(self, read: pysam.AlignedSegment) -> bool:
         """
         checks if a read query name exists in the current cache
         """
@@ -66,12 +71,12 @@ class BamCache:
             return True
         return False
 
-    def reference_id(self, chrom):
+    def reference_id(self, chrom: str) -> int:
         """
         Args:
-            chrom (str): the chromosome/reference name
+            chrom: the chromosome/reference name
         Returns:
-            int: the reference id corresponding to input chromosome name
+            the reference id corresponding to input chromosome name
         """
         tid = self.fh.get_tid(chrom)
         if tid == -1:
@@ -82,23 +87,25 @@ class BamCache:
             raise KeyError('invalid reference name not present in bam file', chrom)
         return tid
 
-    def get_read_reference_name(self, read):
+    def get_read_reference_name(self, read: pysam.AlignedSegment) -> str:
         """
         Args:
-            read (pysam.AlignedSegment): the read we want the chromosome name for
+            read: the read we want the chromosome name for
         Returns:
-            str: the name of the chromosome
+            the name of the chromosome
         """
         return ReferenceName(self.fh.get_reference_name(read.reference_id))
 
     @classmethod
-    def _generate_fetch_bins(cls, start, stop, sample_bins, min_bin_size):
+    def _generate_fetch_bins(
+        cls, start: int, stop: int, sample_bins: int, min_bin_size: int
+    ) -> List[Interval]:
         """
         Args:
-            start (int): the start if the area to fetch reads from
-            stop (int): the end of the region
-            sample_bins (int): the number of bins to split the region into
-            min_bin_size (int): the minimum bin size
+            start: the start if the area to fetch reads from
+            stop: the end of the region
+            sample_bins: the number of bins to split the region into
+            min_bin_size: the minimum bin size
         """
         assert min_bin_size > 0
         length = stop - start + 1
@@ -120,28 +127,28 @@ class BamCache:
 
     def fetch(
         self,
-        input_chrom,
-        start,
-        stop,
-        limit=10000,
-        cache_if=lambda x: True,
-        filter_if=lambda x: False,
-        stop_on_cached_read=False,
-    ):
+        input_chrom: str,
+        start: int,
+        stop: int,
+        limit: int = 10000,
+        cache_if: Callable = lambda x: True,
+        filter_if: Callable = lambda x: False,
+        stop_on_cached_read: bool = False,
+    ) -> Set[pysam.AlignedSegment]:
         """
         Args:
-            input_chrom (str): chromosome name
-            start (int): start position
-            end (int): end position
-            limit (int): maximum number of reads to fetch
-            cache_if (Callable):  if returns True then the read is added to the cache
-            filter_if (Callable): if returns True then the read is not returned as part of the result
-            stop_on_cached_read (bool): stop reading at the first read found that is already in the cache
+            input_chrom: chromosome name
+            start: start position
+            end: end position
+            limit: maximum number of reads to fetch
+            cache_if:  if returns True then the read is added to the cache
+            filter_if: if returns True then the read is not returned as part of the result
+            stop_on_cached_read: stop reading at the first read found that is already in the cache
         Note:
             the cache_if and filter_if functions must be any function that takes a read as input and returns a boolean
 
         Returns:
-            Set[pysam.AlignedSegment]: a set of reads which overlap the input region
+            a set of reads which overlap the input region
         """
         # try using the cache to avoid fetching regions more than once
         result = []
@@ -180,32 +187,32 @@ class BamCache:
 
     def fetch_from_bins(
         self,
-        input_chrom,
-        start,
-        stop,
-        read_limit=10000,
-        cache=False,
-        sample_bins=3,
-        cache_if=lambda x: True,
-        min_bin_size=10,
-        filter_if=lambda x: False,
-    ):
+        input_chrom: str,
+        start: int,
+        stop: int,
+        read_limit: int = 10000,
+        cache: bool = False,
+        sample_bins: int = 3,
+        cache_if: Callable = lambda x: True,
+        min_bin_size: int = 10,
+        filter_if: Callable = lambda x: False,
+    ) -> Set[pysam.AlignedSegment]:
         """
         wrapper around the fetch method, returns a list to avoid errors with changing the file pointer
         position from within the loop. Also caches reads if requested and can return a limited read number
 
         Args:
-            chrom (str): the chromosome
-            start (int): the start position
-            stop (int): the end position
-            read_limit (int): the maximum number of reads to parse
-            cache (bool): flag to store reads
-            sample_bins (int): number of bins to split the region into
-            cache_if (Callable): function to check to against a read to determine if it should be cached
-            bin_gap_size (int): gap between the bins for the fetch area
+            input_chrom: the chromosome
+            start: the start position
+            stop: the end position
+            read_limit: the maximum number of reads to parse
+            cache: flag to store reads
+            sample_bins: number of bins to split the region into
+            cache_if: function to check to against a read to determine if it should be cached
+            bin_gap_size: gap between the bins for the fetch area
 
         Returns:
-            Set[pysam.AlignedSegment]: set of reads gathered from the region
+            set of reads gathered from the region
         """
         # try using the cache to make grabbing mate pairs easier
         result = []
@@ -242,14 +249,16 @@ class BamCache:
             running_surplus -= count
         return set(result)
 
-    def get_mate(self, read, primary_only=True, allow_file_access=False):
+    def get_mate(
+        self, read: pysam.AlignedSegment, primary_only: bool = True, allow_file_access: bool = False
+    ) -> List[pysam.AlignedSegment]:
         """
         Args:
-            read (pysam.AlignedSegment): the read
-            primary_only (bool): ignore secondary alignments
-            allow_file_access (bool): determines if the bam can be accessed to try to find the mate
+            read: the read
+            primary_only: ignore secondary alignments
+            allow_file_access: determines if the bam can be accessed to try to find the mate
         Returns:
-            List[pysam.AlignedSegment]: list of mates of the input read
+            list of mates of the input read
         """
         # NOTE: will return all mate alignments that have been cached
         putative_mates = self.cache.get(read.query_name, set())

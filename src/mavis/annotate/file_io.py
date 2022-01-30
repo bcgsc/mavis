@@ -8,11 +8,11 @@ from typing import Callable, Dict, List, Optional
 
 import pandas as pd
 from Bio import SeqIO
-from Bio.SeqRecord import SeqRecord
 from snakemake.utils import validate as snakemake_validate
 
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, translate
 from ..interval import Interval
+from ..types import ReferenceGenome
 from ..util import logger
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, PreTranscript, Template, Transcript
@@ -60,7 +60,7 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
 
 def load_annotations(
     *filepaths: str,
-    reference_genome: Optional[Dict[str, SeqRecord]] = None,
+    reference_genome: Optional[ReferenceGenome] = None,
     best_transcripts_only: bool = False,
 ) -> Dict[str, List[Gene]]:
     """
@@ -95,7 +95,7 @@ def load_annotations(
 
 def parse_annotations_json(
     data,
-    reference_genome: Optional[Dict[str, SeqRecord]] = None,
+    reference_genome: Optional[ReferenceGenome] = None,
     best_transcripts_only=False,
 ) -> Dict[str, List[Gene]]:
     """
@@ -202,7 +202,7 @@ def parse_annotations_json(
     return genes_by_chr
 
 
-def load_reference_genome(*filepaths: str) -> Dict[str, SeqRecord]:
+def load_reference_genome(*filepaths: str) -> ReferenceGenome:
     """
     Args:
         filepaths: the paths to the files containing the input fasta genomes

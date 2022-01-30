@@ -671,7 +671,6 @@ class Evidence(BreakpointPair):
             w[0] - 1 : w[1]
         ]
 
-        putative_alignments = None
         # figure out how much of the read must match when remaped
         min_match_tgt = read.cigar[-1][1] if breakpoint.orient == ORIENT.LEFT else read.cigar[0][1]
         min_match_tgt = min(

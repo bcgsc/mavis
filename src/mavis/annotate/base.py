@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 
 from ..constants import STRAND
 from ..interval import Interval
+from ..types import ReferenceGenome
 
 
 class ReferenceName(str):
@@ -133,7 +134,7 @@ class BioInterval:
     def __hash__(self):
         return hash(self.key())
 
-    def get_seq(self, reference_genome=None, ignore_cache=False):
+    def get_seq(self, reference_genome: Optional[ReferenceGenome] = None, ignore_cache=False):
         """
         get the sequence for the current annotation object
 
