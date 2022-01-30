@@ -6,6 +6,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 from .constants import COLUMNS, DNA_ALPHABET, ORIENT, STRAND, SVTYPE, reverse_complement
 from .error import InvalidRearrangement, NotSpecifiedError
 from .interval import Interval
+from .types import ReferenceGenome
 
 
 class Breakpoint(Interval):
@@ -429,7 +430,7 @@ class BreakpointPair:
             return False
         return True
 
-    def breakpoint_sequence_homology(self, reference_genome):
+    def breakpoint_sequence_homology(self, reference_genome: ReferenceGenome):
         """
         for a given set of breakpoints matches the sequence opposite the partner breakpoint
         this sequence comparison is done with reference to a reference genome and does not
@@ -446,7 +447,7 @@ class BreakpointPair:
             -------TT-TT-------- second break homology
 
         Args:
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence by template/chr name
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
             Tuple[str,str]: homologous sequence at the first breakpoint and second breakpoints

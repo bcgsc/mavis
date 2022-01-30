@@ -3,11 +3,13 @@ This is the primary module responsible for generating svg visualizations
 
 """
 import re
+from typing import List, Tuple
 
 from ..annotate.variant import FusionTranscript
 from ..constants import CODON_SIZE, GIEMSA_STAIN, ORIENT, STRAND
 from ..error import DrawingFitError, NotSpecifiedError
-from ..interval import Interval
+from ..interval import Interval, IntervalMapping
+from .constants import DiagramSettings
 from .util import (
     LabelMapping,
     Tag,
@@ -22,7 +24,9 @@ HEX_WHITE = '#FFFFFF'
 HEX_BLACK = '#000000'
 
 
-def draw_legend(config, canvas, swatches, border=True):
+def draw_legend(
+    config: DiagramSettings, canvas, swatches: List[Tuple[str, str]], border: bool = True
+):
     """
     generates an svg group object representing the legend
     """
@@ -83,13 +87,13 @@ def draw_legend(config, canvas, swatches, border=True):
 
 
 def draw_exon_track(
-    config,
+    config: DiagramSettings,
     canvas,
     transcript,
-    mapping,
+    mapping: IntervalMapping,
     colors=None,
-    genomic_min=None,
-    genomic_max=None,
+    genomic_min: int = None,
+    genomic_max: int = None,
     translation=None,
 ):
     """ """
@@ -173,12 +177,12 @@ def draw_exon_track(
 
 
 def draw_transcript_with_translation(
-    config,
+    config: DiagramSettings,
     canvas,
     translation,
     labels,
     colors,
-    mapping,
+    mapping: IntervalMapping,
     reference_genome=None,
     genomic_min=None,
     genomic_max=None,

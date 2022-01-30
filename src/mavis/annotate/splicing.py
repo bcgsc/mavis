@@ -1,4 +1,5 @@
 import itertools
+from typing import Iterable, List, Optional
 
 from ..constants import SPLICE_TYPE, STRAND, reverse_complement
 from ..interval import Interval
@@ -7,7 +8,7 @@ from .constants import ACCEPTOR_SEQ, DONOR_SEQ, SPLICE_SITE_RADIUS, SPLICE_SITE_
 
 
 class SplicingPattern(list):
-    def __init__(self, *args, splice_type=SPLICE_TYPE.NORMAL):
+    def __init__(self, *args, splice_type: str = SPLICE_TYPE.NORMAL):
         list.__init__(self, *args)
         self.splice_type = splice_type
 
@@ -24,7 +25,7 @@ class SplicingPattern(list):
         return '[{}]'.format(', '.join(temp))
 
     @classmethod
-    def classify(cls, pattern, original_sites):
+    def classify(cls, pattern: List[int], original_sites: Iterable[int]) -> str:
         # now need to decide the type for each set
         pattern = sorted(pattern)
         r_introns = []
@@ -80,12 +81,14 @@ class SplicingPattern(list):
         return SPLICE_TYPE.COMPLEX
 
     @classmethod
-    def generate_patterns(cls, sites, is_reverse=False):
+    def generate_patterns(
+        cls, sites: Iterable['SpliceSite'], is_reverse=False
+    ) -> List['SplicingPattern']:
         """
         returns a list of splice sites to be connected as a splicing pattern
 
         Returns:
-            List[SplicingPattern]: List of positions to be spliced together
+            List of positions to be spliced together
 
         Note:
             see [theory - predicting splicing patterns](/background/theory/#predicting-splicing-patterns)
@@ -115,7 +118,15 @@ class SplicingPattern(list):
 
 class SpliceSite(BioInterval):
     def __init__(
-        self, ref, pos, site_type, intact=True, start=None, end=None, strand=None, seq=None
+        self,
+        ref: BioInterval,
+        pos: int,
+        site_type: int,
+        intact: bool = True,
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+        strand: Optional[str] = None,
+        seq: Optional[str] = None,
     ):
         if start is None or end is None:
             self.strand = strand if strand else ref.get_strand()
@@ -170,17 +181,17 @@ class SpliceSite(BioInterval):
         )
 
 
-def predict_splice_sites(input_sequence, is_reverse=False):
+def predict_splice_sites(input_sequence: str, is_reverse: bool = False) -> List[SpliceSite]:
     """
     looks for the expected splice site sequence patterns in the
     input strings and returns a list of putative splice sites
 
     Args:
-        input_sequence (str): input sequence with respect to the positive/forward strand
-        is_reverse (bool): True when the sequences is transcribed on the reverse strand
+        input_sequence: input sequence with respect to the positive/forward strand
+        is_reverse: True when the sequences is transcribed on the reverse strand
 
     Return:
-        List[SpliceSite]: list of putative splice sites
+        list of putative splice sites
     """
     if is_reverse:
         sequence = reverse_complement(input_sequence)

@@ -5,6 +5,7 @@ import itertools
 import os
 import re
 import subprocess
+from typing import Dict, List
 
 import pysam
 
@@ -13,6 +14,7 @@ from .bam import read as _read
 from .breakpoint import Breakpoint, BreakpointPair
 from .constants import CIGAR, ORIENT, STRAND, SVTYPE, MavisNamespace, reverse_complement
 from .interval import Interval
+from .types import ReferenceGenome
 from .util import logger
 
 
@@ -140,7 +142,7 @@ class SplitAlignment(BreakpointPair):
         return contig.remap_depth(qrange)
 
 
-def get_aligner_version(aligner):
+def get_aligner_version(aligner: str) -> str:
     """
     executes a subprocess to try and run the aligner without arguments and parse the version number from the output
 
@@ -167,10 +169,10 @@ def get_aligner_version(aligner):
         raise NotImplementedError(aligner)
 
 
-def query_coverage_interval(read):
+def query_coverage_interval(read: pysam.AlignedSegment) -> Interval:
     """
     Returns:
-        mavis.interval.Interval: The portion of the original query sequence that is aligned by this read
+        The portion of the original query sequence that is aligned by this read
     """
     seq = read.query_sequence
     st = 0
@@ -182,7 +184,7 @@ def query_coverage_interval(read):
     return Interval(st, end)
 
 
-def convert_to_duplication(alignment, reference_genome):
+def convert_to_duplication(alignment, reference_genome: ReferenceGenome):
     """
     Given a breakpoint call, tests if the untemplated sequences matches the preceding
     reference sequence. If it does this is annotated as a duplication and the new
@@ -382,11 +384,11 @@ def call_paired_read_event(read1, read2, is_stranded=False):
 
 
 def align_sequences(
-    sequences,
+    sequences: Dict[str, str],
     input_bam_cache,
-    reference_genome,
-    aligner,
-    aligner_reference,
+    reference_genome: ReferenceGenome,
+    aligner: str,
+    aligner_reference: str,
     aligner_output_file='aligner_out.temp',
     aligner_fa_input_file='aligner_in.fa',
     aligner_output_log='aligner_out.log',
@@ -399,11 +401,11 @@ def align_sequences(
     calls the alignment tool and parses the return output for a set of sequences
 
     Args:
-        sequences (Dict[str,str]): dictionary of sequences by name
+        sequences: dictionary of sequences by name
         input_bam_cache (BamCache): bam cache to be used as a template for reading the alignments
         reference_genome: the reference genome
         aligner (SUPPORTED_ALIGNER): the name of the aligner to be used
-        aligner_reference (str): path to the aligner reference file
+        aligner_reference: path to the aligner reference file
     """
     try:
         # write the input sequences to a fasta file
@@ -468,7 +470,7 @@ def align_sequences(
             with pysam.AlignmentFile(
                 aligner_output_file, 'r', check_sq=bool(len(sequences))
             ) as samfile:
-                reads_by_query = {}
+                reads_by_query: Dict[str, List[_read.SamRead]] = {}
                 for read in samfile.fetch():
                     if read.is_unmapped:
                         continue

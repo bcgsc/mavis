@@ -8,9 +8,11 @@ from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import COLUMNS, GENE_PRODUCT_TYPE, PROTOCOL, STOP_AA, STRAND, SVTYPE
 from ..error import NotSpecifiedError
 from ..interval import Interval
+from ..types import ReferenceGenome
 from ..util import logger
 from .fusion import FusionTranscript, determine_prime
 from .genomic import Gene, IntergenicRegion, PreTranscript, Transcript
+from .protein import Translation
 
 
 class Annotation(BreakpointPair):
@@ -280,24 +282,33 @@ def flatten_fusion_translation(translation):
 
 
 class IndelCall:
-    def __init__(self, refseq, mutseq):
+    nterm_aligned: int
+    cterm_aligned: int
+    ref_seq: str
+    mut_seq: str
+    ins_seq: str
+    del_seq: str
+    is_dup: bool
+    terminates: bool
+
+    def __init__(self, refseq: str, mutseq: str):
         """
         Given two sequences, Assuming there exists a single difference between the two
         call an indel which accounts for the change
 
         Args:
-            refseq (str): The reference (amino acid) sequence
-            mutseq (str): The mutated (amino acid) sequence
+            refseq: The reference (amino acid) sequence
+            mutseq: The mutated (amino acid) sequence
 
         Attributes:
-            nterm_aligned (int): the number of characters aligned consecutively from the start of both strings
-            cterm_aligned (int): the number of characters aligned consecutively from the end of both strings
-            is_dup (bool): flag to indicate a duplication
-            ref_seq (str): the reference sequence
-            mut_seq (str): the mutated sequence
-            ins_seq (str): the inserted sequence
-            del_seq (str): the deleted sequence
-            terminates (bool): both sequences end in stop AAs
+            nterm_aligned: the number of characters aligned consecutively from the start of both strings
+            cterm_aligned: the number of characters aligned consecutively from the end of both strings
+            is_dup: flag to indicate a duplication
+            ref_seq: the reference sequence
+            mut_seq: the mutated sequence
+            ins_seq: the inserted sequence
+            del_seq: the deleted sequence
+            terminates: both sequences end in stop AAs
         """
         self.nterm_aligned = 0
         self.cterm_aligned = 0
@@ -379,7 +390,7 @@ class IndelCall:
                 self.del_seq = self.ref_seq[self.nterm_aligned : 0 - self.cterm_aligned]
                 self.ins_seq = self.mut_seq[self.nterm_aligned : 0 - self.cterm_aligned]
 
-    def hgvs_protein_notation(self):
+    def hgvs_protein_notation(self) -> Optional[str]:
         """
         returns the HGVS protein notation for an indel call
         """
@@ -454,17 +465,21 @@ class IndelCall:
         )
 
 
-def call_protein_indel(ref_translation, fusion_translation, reference_genome=None):
+def call_protein_indel(
+    ref_translation: Translation,
+    fusion_translation: Translation,
+    reference_genome: Optional[ReferenceGenome] = None,
+) -> str:
     """
     compare the fusion protein/aa sequence to the reference protein/aa sequence and
     return an hgvs notation indel call
 
     Args:
-        ref_translation (Translation): the reference protein/translation
-        fusion_translation (Translation): the fusion protein/translation
+        ref_translation: the reference protein/translation
+        fusion_translation: the fusion protein/translation
         reference_genome: the reference genome object used to fetch the reference translation AA sequence
     Returns:
-        str: the [HGVS](/glossary/#HGVS) protein indel notation
+        the [HGVS](/glossary/#HGVS) protein indel notation
     """
     ref_aa_seq = ref_translation.get_aa_seq(reference_genome)
     call = IndelCall(ref_aa_seq, fusion_translation.get_aa_seq())
@@ -519,14 +534,14 @@ def flatten_fusion_transcript(spliced_fusion_transcript):
     return row
 
 
-def overlapping_transcripts(ref_ann, breakpoint):
+def overlapping_transcripts(ref_ann, breakpoint: Breakpoint) -> List[PreTranscript]:
     """
     Args:
         ref_ann (Dict[str,List[Gene]]): the reference list of genes split
             by chromosome
-        breakpoint (Breakpoint): the breakpoint in question
+        breakpoint: the breakpoint in question
     Returns:
-        List[PreTranscript]: a list of possible transcripts
+        a list of possible transcripts
     """
     putative_annotations = set()
     for gene in ref_ann.get(breakpoint.chr, []):
@@ -636,7 +651,9 @@ def _gather_breakpoint_annotations(
     )
 
 
-def _gather_annotations(ref: Dict[str, List[Gene]], bp: BreakpointPair, proximity=None):
+def _gather_annotations(
+    ref: Dict[str, List[Gene]], bp: BreakpointPair, proximity=None
+) -> List[Annotation]:
     """
     each annotation is defined by the annotations selected at the breakpoints
     the other annotations are given relative to this
@@ -647,7 +664,7 @@ def _gather_annotations(ref: Dict[str, List[Gene]], bp: BreakpointPair, proximit
         breakpoint_pairs: breakpoint pair we wish to annotate as events
 
     Returns:
-        List[Annotation]: The annotations
+        The annotations
     """
     annotations = dict()
     break1_pos, break1_neg = _gather_breakpoint_annotations(ref, bp.break1)
@@ -781,21 +798,21 @@ def choose_more_annotated(ann_list: List[Annotation]) -> List[Annotation]:
         return intergenic
 
 
-def choose_transcripts_by_priority(ann_list: List[Annotation]):
+def choose_transcripts_by_priority(ann_list: List[Annotation]) -> List[Annotation]:
     """
     for each set of annotations with the same combinations of genes, choose the
     annotation with the most "best_transcripts" or most "alphanumeric" choices
     of transcript. Throw an error if they are identical
 
     Args:
-        ann_list (List[Annotation]): input annotations
+        ann_list: input annotations
 
     Warning:
         input annotations are assumed to be the same event (the same validation_id)
         the logic used would not apply to different events
 
     Returns:
-        List[Annotation]: the filtered list
+        the filtered list
     """
     annotations_by_gene_combination: Dict[
         Tuple[Optional[Gene], Optional[Gene]], List[Annotation]
@@ -845,7 +862,7 @@ def choose_transcripts_by_priority(ann_list: List[Annotation]):
 def annotate_events(
     bpps: List[BreakpointPair],
     annotations: Dict[str, List[Gene]],
-    reference_genome: Dict[str, str],
+    reference_genome: ReferenceGenome,
     max_proximity: int = 5000,
     min_orf_size: int = 200,
     min_domain_mapping_match: float = 0.95,
@@ -854,18 +871,17 @@ def annotate_events(
 ) -> List[Annotation]:
     """
     Args:
-        bpps (List[mavis.breakpoint.BreakpointPair]): list of events
+        bpps: list of events
         annotations: reference annotations
-        reference_genome (Dict[string,string]): dictionary of reference sequences by name
-        max_proximity (int): see [max_proximity](/configuration/settings/#max_proximity)
-        min_orf_size (int): see [min_orf_size](/configuration/settings/#min_orf_size)
+        reference_genome: dictionary of reference sequences by name
+        max_proximity: see [max_proximity](/configuration/settings/#max_proximity)
+        min_orf_size: see [min_orf_size](/configuration/settings/#min_orf_size)
         min_domain_mapping_match (float): see [min_domain_mapping_match](/configuration/settings/#min_domain_mapping_match)
-        max_orf_cap (int): see [max_orf_cap](/configuration/settings/#max_orf_cap)
-        log (Callable): callable function to take in strings and time_stamp args
-        filters (List[callable]): list of functions taking in a list and returning a list for filtering
+        max_orf_cap: see [max_orf_cap](/configuration/settings/#max_orf_cap)
+        filters: list of functions taking in a list and returning a list for filtering
 
     Returns:
-        List[Annotation]: list of the putative annotations
+        list of the putative annotations
     """
     if filters is None:
         filters = [choose_more_annotated, choose_transcripts_by_priority]

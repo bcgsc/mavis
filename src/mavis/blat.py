@@ -11,11 +11,13 @@
 """
 import math
 import re
+from typing import Dict, List, Tuple
 
 import pandas as pd
 
 from .align import query_coverage_interval
 from .bam import cigar as _cigar
+from .bam.cache import BamCache
 from .bam.cigar import QUERY_ALIGNED_STATES
 from .bam.read import SamRead
 from .constants import (
@@ -27,6 +29,7 @@ from .constants import (
     reverse_complement,
 )
 from .interval import Interval
+from .types import ReferenceGenome
 from .util import logger
 
 
@@ -34,11 +37,10 @@ class Blat:
     """ """
 
     @staticmethod
-    def millibad(row, is_protein=False, is_mrna=True):
+    def millibad(row: Dict, is_protein: bool = False, is_mrna: bool = True) -> float:
         """
         this function is used in calculating percent identity
-        direct translation of the perl code
-        # https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
+        direct translation of the perl code (<https://genome.ucsc.edu/FAQ/FAQblat.html#blat4>)
         """
         size_mul = 1 if not is_protein else 3
         if is_protein and is_mrna:
@@ -76,7 +78,7 @@ class Blat:
             return 0
 
     @staticmethod
-    def score(row, is_protein=False):
+    def score(row: Dict, is_protein: bool = False) -> int:
         """
         direct translation from ucsc guidelines on replicating the web blat score
         https://genome.ucsc.edu/FAQ/FAQblat.html#blat4
@@ -101,11 +103,16 @@ class Blat:
         return score
 
     @staticmethod
-    def percent_identity(row, is_protein=False, is_mrna=True):
+    def percent_identity(row: Dict, is_protein: bool = False, is_mrna: bool = True) -> float:
         return 100 - int(Blat.millibad(row, is_protein, is_mrna)) * 0.1
 
     @staticmethod
-    def read_pslx(filename, seqid_to_sequence_mapping, is_protein=False, verbose=True):
+    def read_pslx(
+        filename: str,
+        seqid_to_sequence_mapping: Dict[str, str],
+        is_protein: bool = False,
+        verbose: bool = True,
+    ) -> Tuple[List[str], Dict]:
         header = [
             'match',
             'mismatch',
@@ -205,15 +212,16 @@ class Blat:
         return header, final_rows
 
     @staticmethod
-    def pslx_row_to_pysam(row, bam_cache, reference_genome):
+    def pslx_row_to_pysam(
+        row: Dict, bam_cache: BamCache, reference_genome: ReferenceGenome
+    ) -> SamRead:
         """
         given a 'row' from reading a pslx file. converts the row to a BlatAlignedSegment object
 
         Args:
-            row Dict[str]: a row object from the 'read_pslx' method
+            row: a row object from the 'read_pslx' method
             bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
-            reference_genome (Dict[str,Bio.SeqRecord]):
-              dict of reference sequence by template/chr name
+            reference_genome: reference sequence by template/chr name
 
         """
         chrom = bam_cache.reference_id(row['tname'])
@@ -356,15 +364,15 @@ class Blat:
 
 
 def process_blat_output(
-    input_bam_cache,
-    query_id_mapping,
-    reference_genome,
-    aligner_output_file='aligner_out.temp',
-    blat_min_percent_of_max_score=0.8,
-    blat_min_identity=0.7,
-    blat_limit_top_aln=25,
-    is_protein=False,
-):
+    input_bam_cache: BamCache,
+    query_id_mapping: Dict[str, str],
+    reference_genome: ReferenceGenome,
+    aligner_output_file: str = 'aligner_out.temp',
+    blat_min_percent_of_max_score: float = 0.8,
+    blat_min_identity: float = 0.7,
+    blat_limit_top_aln: int = 25,
+    is_protein: bool = False,
+) -> Dict[str, List[SamRead]]:
     """
     converts the blat output pslx (unheadered file) to bam reads
     """

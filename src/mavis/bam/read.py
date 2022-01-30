@@ -1,6 +1,7 @@
 import itertools
 import re
 from copy import copy
+from typing import Callable, Iterable, List, Optional, Tuple
 
 import pysam
 from Bio.Data import IUPACData as iupac
@@ -158,16 +159,18 @@ class SamRead(pysam.AlignedSegment):
         return hash(self.key())
 
 
-def pileup(reads, filter_func=None):
+def pileup(
+    reads: Iterable[pysam.AlignedSegment], filter_func: Optional[Callable] = None
+) -> List[Tuple[int, int]]:
     """
     For a given set of reads generate a pileup of all reads (excluding those for which the filter_func returns True)
 
     Args:
-        reads (Iterable[pysam.AlignedSegment]): reads to pileup
-        filter_func (Callable): function which takes in a  read and returns True if it should be ignored and False otherwise
+        reads: reads to pileup
+        filter_func: function which takes in a  read and returns True if it should be ignored and False otherwise
 
     Returns:
-        Iterable[Tuple[int,int]]: tuples of genomic position and read count at that position
+        tuples of genomic position and read count at that position
 
     Note:
         returns positions using 1-based indexing
@@ -181,13 +184,13 @@ def pileup(reads, filter_func=None):
     return sorted(hist.items())
 
 
-def map_ref_range_to_query_range(read, ref_range):
+def map_ref_range_to_query_range(read: pysam.AlignedSegment, ref_range: Interval) -> Interval:
     """
     Args:
-        ref_range (Interval): 1-based inclusive
-        read (pysam.AlignedSegment): read used for the mapping
+        ref_range: 1-based inclusive
+        read: read used for the mapping
     Returns:
-        Interval: 1-based inclusive range
+        1-based inclusive range
     """
     rpos = read.reference_start
     qpos = 0
@@ -213,17 +216,17 @@ def map_ref_range_to_query_range(read, ref_range):
     return Interval(qstart, qend)
 
 
-def breakpoint_pos(read, orient=ORIENT.NS):
+def breakpoint_pos(read: pysam.AlignedSegment, orient: str = ORIENT.NS) -> int:
     """
     assumes the breakpoint is the position following softclipping on the side with more
     softclipping (unless and orientation has been specified)
 
     Args:
-        read (pysam.AlignedSegment): the read object
-        orient (ORIENT): the orientation
+        read: the read object
+        orient: the orientation
 
     Returns:
-        int: the position of the breakpoint in the input read
+        the position of the breakpoint in the input read
     """
     typ, freq = read.cigar[0]
     end_typ, end_freq = read.cigar[-1]
@@ -266,15 +269,15 @@ def breakpoint_pos(read, orient=ORIENT.NS):
         return read.reference_end - 1
 
 
-def calculate_alignment_score(read, consec_bonus=1):
+def calculate_alignment_score(read: pysam.AlignedSegment, consec_bonus=1) -> float:
     """
     calculates a score for comparing alignments
 
     Args:
-        read (pysam.AlignedSegment): the input read
+        read: the input read
 
     Returns:
-        float: the score
+        the score
     """
     score = 0
     qlen = read.reference_end - read.reference_start
@@ -290,32 +293,27 @@ def calculate_alignment_score(read, consec_bonus=1):
 
 
 def nsb_align(
-    ref,
-    seq,
-    weight_of_score=0.5,
-    min_overlap_percent=1,
-    min_match=0,
+    ref: str,
+    seq: str,
+    min_overlap_percent: float = 1,
+    min_match: float = 0,
     min_consecutive_match=1,
-    scoring_function=calculate_alignment_score,
-):
+    scoring_function: Callable = calculate_alignment_score,
+) -> List[SamRead]:
     """
     given some reference string and a smaller sequence string computes the best non-space-breaking alignment
     i.e. an alignment that does not allow for indels (straight-match). Positions in the aligned segments are
     given relative to the length of the reference sequence (1-based)
 
     Args:
-        ref (str): the reference sequence
-        seq (str): the sequence being aligned
-        weight_of_score (float): when scoring alignments this determines the amount
-            of weight to place on the cigar match. Should be a number between 0 and 1
-        min_overlap_percent (float): the minimum amount of overlap of the input sequence to the reference
-            should be a number between 0 and 1
-        min_match (float): the minimum number of matches compared to total
-        scoring_function (Callable): any function that will take a read as input and return a float
-          used in comparing alignments to choose the best alignment
+        ref: the reference sequence
+        seq: the sequence being aligned
+        min_overlap_percent: the minimum amount of overlap of the input sequence to the reference should be a number between 0 and 1
+        min_match: the minimum number of matches compared to total
+        scoring_function: any function that will take a read as input and return a float used in comparing alignments to choose the best alignment
 
     Returns:
-        List[pysam.AlignedSegment]: list of aligned segments
+        list of aligned segments
 
     Note:
         using a higher min_match may improve performance as low quality alignments are rejected more quickly. However
@@ -399,13 +397,13 @@ def nsb_align(
     return filtered
 
 
-def sequenced_strand(read, strand_determining_read=2):
+def sequenced_strand(read: pysam.AlignedSegment, strand_determining_read: int = 2) -> str:
     """
     determines the strand that was sequenced
 
     Args:
-        read (pysam.AlignedSegment): the read being used to determine the strand
-        strand_determining_read (int): which read in the read pair is the same as the sequenced strand
+        read: the read being used to determine the strand
+        strand_determining_read: which read in the read pair is the same as the sequenced strand
 
     Returns:
         STRAND: the strand that was sequenced
@@ -435,13 +433,13 @@ def sequenced_strand(read, strand_determining_read=2):
     return strand
 
 
-def read_pair_type(read):
+def read_pair_type(read: pysam.AlignedSegment) -> str:
     # check if the read pair is in the expected orientation
     """
     assumptions based on illumina pairs: only 4 possible combinations
 
     Args:
-        read (pysam.AlignedSegment): the input read
+        read: the input read
 
     Returns:
         READ_PAIR_TYPE: the type of input read pair
@@ -474,18 +472,17 @@ def read_pair_type(read):
         raise NotImplementedError('unexpected orientation for pair')
 
 
-def orientation_supports_type(read, event_type):
+def orientation_supports_type(read: pysam.AlignedSegment, event_type: str) -> bool:
     """
     checks if the orientation is compatible with the type of event
 
     Args:
-        read (pysam.AlignedSegment): a read from the pair
-        event_type (SVTYPE): the type of event to check
+        read: a read from the pair
+        event_type: the type of event to check
 
     Returns:
-        bool:
-            - ``True`` - the read pair is in the correct orientation for this event type
-            - ``False`` - the read is not in the correct orientation
+        - ``True`` - the read pair is in the correct orientation for this event type
+        - ``False`` - the read is not in the correct orientation
     """
     if event_type == SVTYPE.DEL or event_type == SVTYPE.INS:
         if read_pair_type(read) != READ_PAIR_TYPE.LR:
@@ -504,7 +501,12 @@ def orientation_supports_type(read, event_type):
     return True
 
 
-def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor_size=None):
+def convert_events_to_softclipping(
+    read: pysam.AlignedSegment,
+    orientation: str,
+    max_event_size: int,
+    min_anchor_size: Optional[int] = None,
+) -> pysam.AlignedSegment:
     """
     given an alignment, simplifies the alignment by grouping everything past the first anchor and including the
     first event considered too large and unaligning them turning them into softclipping
@@ -574,7 +576,7 @@ def convert_events_to_softclipping(read, orientation, max_event_size, min_anchor
     return read
 
 
-def sequence_complexity(seq):
+def sequence_complexity(seq: str) -> float:
     """
     basic measure of sequence complexity
     """
