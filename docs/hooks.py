@@ -4,7 +4,7 @@ import re
 from textwrap import dedent
 
 from markdown_refdocs.main import extract_to_markdown
-from mavis.schemas import DEFAULTS
+from mavis_config import DEFAULTS
 from mavis.util import ENV_VAR_PREFIX
 
 
