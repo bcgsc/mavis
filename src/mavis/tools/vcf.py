@@ -204,7 +204,7 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                     COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1],
                 }
             )
-        
+
         if 'SVTYPE' in info:
             std_row[COLUMNS.event_type] = info['SVTYPE']
 
