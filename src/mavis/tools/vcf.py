@@ -156,6 +156,8 @@ def convert_record(record, record_mapping={}) -> List[Dict]:
 
         if info.get('SVTYPE') == 'BND':
             chr2, end, orient1, orient2, ref, alt = parse_bnd_alt(alt)
+            if end == 0:
+                end = 1  # telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
             std_row[COLUMNS.break1_orientation] = orient1
             std_row[COLUMNS.break2_orientation] = orient2
             std_row[COLUMNS.untemplated_seq] = alt
@@ -202,20 +204,6 @@ def convert_record(record, record_mapping={}) -> List[Dict]:
                     COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1],
                 }
             )
-
-        '''
-        As per VCF 4.2 specifications (https://samtools.github.io/hts-specs/VCFv4.2.pdf): 
-        A start_position = 1, end_position = 0 linkage indicates connections to telomeres
-        Change 0 a 1 since coordinates are 1-based and we cannot start before the start of a sequence
-        '''
-
-        if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
-            std_row.update({'break1_position_end': 1})
-        if std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
-            std_row.update({'break2_position_end': 1})
-        if 'SVTYPE' in info:
-            std_row[COLUMNS.event_type] = info['SVTYPE']
-
         try:
             orient1, orient2 = info['CT'].split('to')
             connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
