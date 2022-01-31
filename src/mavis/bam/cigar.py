@@ -4,7 +4,12 @@ an iterable list of tuples where the first element in each tuple is the
 CIGAR value (i.e. 1 for an insertion), and the second value is the frequency
 """
 import re
+from typing import Tuple
+
+import pysam
+
 from ..constants import CIGAR, DNA_ALPHABET, GAP
+from ..types import CigarTuples
 
 EVENT_STATES = {CIGAR.D, CIGAR.I, CIGAR.X}
 ALIGNED_STATES = {CIGAR.M, CIGAR.X, CIGAR.EQ}
@@ -13,27 +18,26 @@ QUERY_ALIGNED_STATES = ALIGNED_STATES | {CIGAR.I, CIGAR.S}
 CLIPPING_STATE = {CIGAR.S, CIGAR.H}
 
 
-def recompute_cigar_mismatch(read, ref):
+def recompute_cigar_mismatch(read: pysam.AlignedSegment, ref: str) -> CigarTuples:
     """
     for cigar tuples where M is used, recompute to replace with X/= for increased
     utility and specificity
 
     Args:
-        read (pysam.AlignedSegment): the input read
-        ref (str): the reference sequence
+        read: the input read
+        ref: the reference sequence
 
     Returns:
-        List[Tuple[int,int]]: the cigar tuple
+        the cigar tuple
     """
-    result = []
-    offset = 0
+    result: CigarTuples = []
 
     ref_pos = read.reference_start
     seq_pos = 0
 
     for cigar_value, freq in read.cigar:
         if cigar_value in ALIGNED_STATES:
-            for offset in range(0, freq):
+            for _ in range(0, freq):
                 if DNA_ALPHABET.match(ref[ref_pos], read.query_sequence[seq_pos]):
                     if len(result) == 0 or result[-1][0] != CIGAR.EQ:
                         result.append((CIGAR.EQ, 1))
@@ -56,13 +60,13 @@ def recompute_cigar_mismatch(read, ref):
     return result
 
 
-def longest_fuzzy_match(cigar, max_fuzzy_interupt=1):
+def longest_fuzzy_match(cigar: CigarTuples, max_fuzzy_interupt: int = 1) -> int:
     """
     computes the longest sequence of exact matches allowing for 'x' event interrupts
 
     Args:
         cigar: cigar tuples
-        max_fuzzy_interupt (int): number of mismatches allowed
+        max_fuzzy_interupt: number of mismatches allowed
 
     """
     temp = join(cigar)
@@ -85,28 +89,28 @@ def longest_fuzzy_match(cigar, max_fuzzy_interupt=1):
     return longest_fuzzy_match
 
 
-def longest_exact_match(cigar):
+def longest_exact_match(cigar: CigarTuples) -> int:
     """
     returns the longest consecutive exact match
 
     Args:
-        cigar (List[Tuple[int,int]]): the cigar tuples
+        cigar: the cigar tuples
     """
     return longest_fuzzy_match(cigar, 0)
 
 
-def score(cigar, **kwargs):
+def score(cigar: CigarTuples, **kwargs) -> int:
     """scoring based on sw alignment properties with gap extension penalties
 
     Args:
-        cigar (List[Tuple[mavis.constants.CIGAR,int]]): list of cigar tuple values
+        cigar: list of cigar tuple values
         MISMATCH (int): mismatch penalty
         MATCH (int): match penalty
         GAP (int): initial gap penalty
         GAP_EXTEND (int): gap extension penalty
 
     Returns:
-        int: the score value
+        the score value
     """
 
     mismatch = kwargs.pop('MISMATCH', -1)
@@ -129,7 +133,7 @@ def score(cigar, **kwargs):
     return score
 
 
-def match_percent(cigar):
+def match_percent(cigar: CigarTuples) -> float:
     """
     calculates the percent of aligned bases (matches or mismatches) that are matches
     """
@@ -169,7 +173,9 @@ def join(*pos):
     return result
 
 
-def extend_softclipping(cigar, min_exact_to_stop_softclipping):
+def extend_softclipping(
+    cigar: CigarTuples, min_exact_to_stop_softclipping: int
+) -> Tuple[CigarTuples, int]:
     """
     given some input cigar, extends softclipping if there are mismatches/insertions/deletions
     close to the end of the aligned portion. The stopping point is defined by the
@@ -177,11 +183,11 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
     exact match aligned portion to signal stop
 
     Args:
-        original_cigar (List[Tuple[mavis.constants.CIGAR,int]]): the input cigar
-        min_exact_to_stop_softclipping (int): number of exact matches to terminate extension
+        original_cigar: the input cigar
+        min_exact_to_stop_softclipping: number of exact matches to terminate extension
 
     Returns:
-        Tuple[List[Tuple[mavis.constants.CIGAR,int]], int]: new cigar list and shift from the original start position
+        new cigar list and shift from the original start position
     """
     new_cigar = []
     anchors = [
@@ -215,7 +221,9 @@ def extend_softclipping(cigar, min_exact_to_stop_softclipping):
     return new_cigar, start_ref_aligned
 
 
-def compute(ref, alt, force_softclipping=True, min_exact_to_stop_softclipping=6):
+def compute(
+    ref: str, alt: str, force_softclipping: bool = True, min_exact_to_stop_softclipping: int = 6
+) -> Tuple[CigarTuples, int]:
     """
     given a ref and alt sequence compute the cigar string representing the alt
 
@@ -247,7 +255,7 @@ def compute(ref, alt, force_softclipping=True, min_exact_to_stop_softclipping=6)
         return cigar, 0
 
 
-def convert_for_igv(cigar):
+def convert_for_igv(cigar: CigarTuples) -> CigarTuples:
     """
     igv does not support the extended CIGAR values for match v mismatch
 
@@ -263,7 +271,7 @@ def convert_for_igv(cigar):
     return join(result)
 
 
-def alignment_matches(cigar):
+def alignment_matches(cigar: CigarTuples) -> int:
     """
     counts the number of aligned bases irrespective of match/mismatch
     this is equivalent to counting all CIGAR.M
@@ -275,7 +283,7 @@ def alignment_matches(cigar):
     return result
 
 
-def merge_indels(cigar):
+def merge_indels(cigar: CigarTuples) -> CigarTuples:
     """
     For a given cigar tuple, merges adjacent insertions/deletions
 
@@ -298,7 +306,7 @@ def merge_indels(cigar):
     return new_cigar
 
 
-def hgvs_standardize_cigar(read, reference_seq):
+def hgvs_standardize_cigar(read: pysam.AlignedSegment, reference_seq: str) -> CigarTuples:
     """
     extend alignments as long as matches are possible.
     call insertions before deletions
@@ -420,7 +428,7 @@ def hgvs_standardize_cigar(read, reference_seq):
     return join(cigar)
 
 
-def convert_string_to_cigar(string):
+def convert_string_to_cigar(string: str) -> CigarTuples:
     """
     Given a cigar string, converts it to the appropriate cigar tuple
 
@@ -436,11 +444,13 @@ def convert_string_to_cigar(string):
     return cigar
 
 
-def convert_cigar_to_string(cigar):
+def convert_cigar_to_string(cigar: CigarTuples) -> str:
     return ''.join(['{}{}'.format(f, CIGAR.reverse(s) if s != CIGAR.EQ else '=') for s, f in cigar])
 
 
-def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
+def merge_internal_events(
+    cigar: CigarTuples, inner_anchor: int = 10, outer_anchor: int = 10
+) -> CigarTuples:
     """
     merges events (insertions, deletions, mismatches) within a cigar if they are
     between exact matches on either side (anchors) and separated by less exact
@@ -449,12 +459,12 @@ def merge_internal_events(cigar, inner_anchor=10, outer_anchor=10):
     does not merge two mismatches, must contain a deletion/insertion
 
     Args:
-        cigar (List): a list of tuples of cigar states and counts
-        inner_anchor (int): minimum number of consecutive exact matches separating events
-        outer_anchor (int): minimum consecutively aligned exact matches to anchor an end for merging
+        cigar: a list of tuples of cigar states and counts
+        inner_anchor: minimum number of consecutive exact matches separating events
+        outer_anchor: minimum consecutively aligned exact matches to anchor an end for merging
 
     Returns:
-        List: new list of cigar tuples with merged events
+        new list of cigar tuples with merged events
 
     Example:
         >>> merge_internal_events([(CIGAR.EQ, 10), (CIGAR.X, 1), (CIGAR.EQ, 2), (CIGAR.D, 1), (CIGAR.EQ, 10)])

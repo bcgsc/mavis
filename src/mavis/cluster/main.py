@@ -29,13 +29,13 @@ def split_clusters(
     outputdir: str,
     total_batches: int,
     write_bed_summary: bool = True,
-):
+) -> List[str]:
     """
     For a set of clusters creates a bed file representation of all clusters.
     Also splits the clusters evenly into multiple files based on the user parameters (max_files)
 
     Returns:
-        list: of output file names (not including the bed file)
+        list of output file names (not including the bed file)
     """
     if write_bed_summary:
         bedfile = os.path.join(outputdir, 'clusters.bed')

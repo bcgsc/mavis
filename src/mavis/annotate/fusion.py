@@ -1,9 +1,10 @@
-from .genomic import Exon, Transcript, PreTranscript
-from .protein import calculate_orf, Domain, Translation
 from ..breakpoint import Breakpoint
-from ..constants import ORIENT, PRIME, PROTOCOL, reverse_complement, STRAND, SVTYPE
+from ..constants import ORIENT, PRIME, PROTOCOL, STRAND, SVTYPE, reverse_complement
 from ..error import NotSpecifiedError
 from ..interval import Interval, IntervalMapping
+from ..types import ReferenceGenome
+from .genomic import Exon, PreTranscript, Transcript
+from .protein import Domain, Translation, calculate_orf
 
 
 def determine_prime(transcript, breakpoint):
@@ -87,7 +88,12 @@ class FusionTranscript(PreTranscript):
 
     @classmethod
     def _build_single_gene_inversion(
-        cls, ann, reference_genome, min_orf_size, max_orf_cap, min_domain_mapping_match
+        cls,
+        ann,
+        reference_genome: ReferenceGenome,
+        min_orf_size,
+        max_orf_cap,
+        min_domain_mapping_match,
     ):
         """
         builds a fusion transcript for a single gene inversion. Note that this is an incomplete
@@ -283,7 +289,7 @@ class FusionTranscript(PreTranscript):
     def build(
         cls,
         ann,
-        reference_genome,
+        reference_genome: ReferenceGenome,
         min_orf_size=None,
         max_orf_cap=None,
         min_domain_mapping_match=None,
@@ -291,7 +297,7 @@ class FusionTranscript(PreTranscript):
         """
         Args:
             ann (Annotation): the annotation object we want to build a FusionTranscript for
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference sequence
+            reference_genome: dict of reference sequence
                 by template/chr name
 
         Returns:

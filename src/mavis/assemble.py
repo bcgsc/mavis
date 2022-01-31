@@ -1,4 +1,5 @@
 import itertools
+from typing import List, Optional
 
 import distance
 import networkx as nx
@@ -27,7 +28,7 @@ class Contig:
     def complexity(self):
         return sequence_complexity(self.seq)
 
-    def add_mapped_sequence(self, read, multimap=1):
+    def add_mapped_sequence(self, read, multimap: int = 1):
         self.remapped_sequences[read] = 1 / multimap
 
     def remap_score(self):
@@ -40,7 +41,7 @@ class Contig:
         cov = sum([len(i) for i in itvls])
         return cov / len(self.seq)
 
-    def remap_depth(self, query_range=None):
+    def remap_depth(self, query_range: Optional[Interval] = None):
         """
         the average depth of remapped reads over a give range of the contig sequence
 
@@ -95,12 +96,12 @@ class DeBruijnGraph(nx.DiGraph):
     def all_edges(self, *nodes, data=False):
         return self.get_in_edges(*nodes, data=data) + self.get_out_edges(*nodes, data=data)
 
-    def trim_tails_by_freq(self, min_weight):
+    def trim_tails_by_freq(self, min_weight: int):
         """
         for any paths where all edges are lower than the minimum weight trim
 
         Args:
-            min_weight (int): the minimum weight for an edge to be retained
+            min_weight: the minimum weight for an edge to be retained
         """
         ends = sorted(
             [n for n in self.get_nodes() if self.out_degree(n) == 0 or self.in_degree(n) == 0]
@@ -220,7 +221,7 @@ class DeBruijnGraph(nx.DiGraph):
         return nodeset
 
 
-def digraph_connected_components(graph, subgraph=None):
+def digraph_connected_components(graph: nx.DiGraph, subgraph=None) -> List[List]:
     """
     the networkx module does not support deriving connected
     components from digraphs (only simple graphs)
@@ -229,10 +230,10 @@ def digraph_connected_components(graph, subgraph=None):
     in a simple graph and a digraph
 
     Args:
-        graph (networkx.DiGraph): the input graph to gather components from
+        graph: the input graph to gather components from
 
     Returns:
-        List[List]: returns a list of compnents which are lists of node names
+        returns a list of compnents which are lists of node names
     """
     if subgraph is None:
         subgraph = set(graph.get_nodes())
@@ -246,15 +247,17 @@ def digraph_connected_components(graph, subgraph=None):
     return nx.connected_components(g)
 
 
-def pull_contigs_from_component(assembly, component, min_edge_trim_weight, assembly_max_paths):
+def pull_contigs_from_component(
+    assembly: DeBruijnGraph, component: List, min_edge_trim_weight: int, assembly_max_paths: int
+):
     """
     builds contigs from the a connected component of the assembly DeBruijn graph
 
     Args:
-        assembly (DeBruijnGraph): the assembly graph
-        component (list):  list of nodes which make up the connected component
-        min_edge_trim_weight (int): the minimum weight to not remove a non cutting edge/path
-        assembly_max_paths (int): the maximum number of paths allowed before the graph is further simplified
+        assembly: the assembly graph
+        component:  list of nodes which make up the connected component
+        min_edge_trim_weight: the minimum weight to not remove a non cutting edge/path
+        assembly_max_paths: the maximum number of paths allowed before the graph is further simplified
 
     Returns:
         Dict[str,int]: the paths/contigs and their scores
@@ -304,7 +307,7 @@ def pull_contigs_from_component(assembly, component, min_edge_trim_weight, assem
     return path_scores
 
 
-def filter_contigs(contigs, assembly_min_uniq=0.01):
+def filter_contigs(contigs, assembly_min_uniq: float = 0.01):
     """
     given a list of contigs, removes similar contigs to leave the highest (of the similar) scoring contig only
     """
@@ -339,14 +342,15 @@ def filter_contigs(contigs, assembly_min_uniq=0.01):
 
 
 def assemble(
-    sequences,
-    kmer_size,
-    min_edge_trim_weight=3,
-    assembly_max_paths=20,
-    assembly_min_uniq=0.01,
-    min_complexity=0,
+    sequences: List[str],
+    kmer_size: float,
+    min_edge_trim_weight: int = 3,
+    assembly_max_paths: int = 20,
+    assembly_min_uniq: float = 0.01,
+    min_complexity: float = 0,
+    remap_min_exact_match: int = 6,
     **kwargs,
-):
+) -> List[Contig]:
     """
     for a set of sequences creates a DeBruijnGraph
     simplifies trailing and leading paths where edges fall
@@ -355,17 +359,18 @@ def assemble(
     drops any sequences too small to fit the kmer size
 
     Args:
-        sequences (List[str]): a list of strings/sequences to assemble
-        kmer_size: see [assembly_kmer_size](/configuration/settings/#assembly_kmer_size) the size of the kmer to use
-        min_edge_trim_weight: see [assembly_min_edge_trim_weight](/configuration/settings/#assembly_min_edge_trim_weight)
+        sequences: a list of strings/sequences to assemble
+        kmer_size: see [assembly_kmer_size](/configuration/settings/#validateassembly_kmer_size) the size of the kmer to use
+        min_edge_trim_weight: see [assembly_min_edge_trim_weight](/configuration/settings/#validateassembly_min_edge_trim_weight)
         remap_min_match: Minimum match percentage of the remapped read (based on the exact matches in the cigar)
         remap_min_overlap: defaults to the kmer size. Minimum amount of overlap between the contig and the remapped read
         min_contig_length: Minimum length of contigs assemble to attempt remapping reads to. Shorter contigs will be ignored
-        remap_min_exact_match: see [assembly_min_exact_match_to_remap](/configuration/settings/#assembly_min_exact_match_to_remap)
-        assembly_max_paths: see [assembly_max_paths](/configuration/settings/#assembly_max_paths)
+        remap_min_exact_match: see [assembly_min_exact_match_to_remap](/configuration/settings/#validateassembly_min_exact_match_to_remap)
+        assembly_max_paths: see [assembly_max_paths](/configuration/settings/#validateassembly_max_paths)
+        min_complexity: see [min_call_complexity](/configuration/settings/#validatemin_call_complexity)
 
     Returns:
-        List[Contig]: a list of putative contigs
+        a list of putative contigs
     """
     if not sequences:
         return []
@@ -373,7 +378,6 @@ def assemble(
     kmer_size = int(round(kmer_size, 0))
     min_contig_length = kwargs.pop('min_contig_length', min_seq + 1)
     remap_min_overlap = kwargs.pop('remap_min_overlap', kmer_size)
-    remap_min_exact_match = kwargs.pop('remap_min_exact_match', 6)
     remap_min_match = kwargs.pop('remap_min_match', 0.95)
 
     if kwargs:

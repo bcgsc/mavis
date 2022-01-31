@@ -121,7 +121,7 @@ def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def convert_record(record, record_mapping={}) -> List[Dict]:
+def convert_record(record: VcfRecordType) -> List[Dict]:
     """
     converts a vcf record
 
@@ -218,7 +218,7 @@ def convert_record(record, record_mapping={}) -> List[Dict]:
     return records
 
 
-def convert_pandas_rows_to_variants(df):
+def convert_pandas_rows_to_variants(df: pd.DataFrame) -> List[VcfRecordType]:
     def parse_info(info_field):
         info = {}
         for pair in info_field.split(';'):
@@ -257,7 +257,7 @@ def convert_pandas_rows_to_variants(df):
     return rows
 
 
-def pandas_vcf(input_file) -> Tuple[List[str], pd.DataFrame]:
+def pandas_vcf(input_file: str) -> Tuple[List[str], pd.DataFrame]:
     """
     Read a standard vcf file into a pandas dataframe
     """
@@ -294,7 +294,7 @@ def pandas_vcf(input_file) -> Tuple[List[str], pd.DataFrame]:
     return header_lines, df
 
 
-def convert_file(input_file: str):
+def convert_file(input_file: str) -> List[Dict]:
     """process a VCF file
 
     Args:
