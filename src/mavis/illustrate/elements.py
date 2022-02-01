@@ -3,7 +3,9 @@ This is the primary module responsible for generating svg visualizations
 
 """
 import re
-from typing import List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+
+import svgwrite
 
 from ..annotate.variant import FusionTranscript
 from ..constants import CODON_SIZE, GIEMSA_STAIN, ORIENT, STRAND
@@ -18,6 +20,10 @@ from .util import (
     split_intervals_into_tracks,
 )
 
+if TYPE_CHECKING:
+    from ..annotate.base import BioInterval
+    from ..annotate.genomic import Exon, Gene
+    from ..breakpoint import Breakpoint
 # draw gene level view
 # draw gene box
 HEX_WHITE = '#FFFFFF'
@@ -26,7 +32,7 @@ HEX_BLACK = '#000000'
 
 def draw_legend(
     config: DiagramSettings, canvas, swatches: List[Tuple[str, str]], border: bool = True
-):
+) -> svgwrite.container.Group:
     """
     generates an svg group object representing the legend
     """
@@ -88,14 +94,14 @@ def draw_legend(
 
 def draw_exon_track(
     config: DiagramSettings,
-    canvas,
+    canvas: svgwrite.drawing.Drawing,
     transcript,
     mapping: IntervalMapping,
     colors=None,
     genomic_min: int = None,
     genomic_max: int = None,
     translation=None,
-):
+) -> svgwrite.container.Group:
     """ """
     colors = {} if colors is None else colors
     main_group = canvas.g(class_='exon_track')
@@ -178,7 +184,7 @@ def draw_exon_track(
 
 def draw_transcript_with_translation(
     config: DiagramSettings,
-    canvas,
+    canvas: svgwrite.drawing.Drawing,
     translation,
     labels,
     colors,
@@ -186,7 +192,7 @@ def draw_transcript_with_translation(
     reference_genome=None,
     genomic_min=None,
     genomic_max=None,
-):
+) -> svgwrite.container.Group:
     main_group = canvas.g()
     pre_transcript = translation.transcript.reference_object
     spl_tx = translation.transcript
@@ -444,17 +450,16 @@ def draw_transcript_with_translation(
 
 
 def draw_ustranscript(
-    config,
-    canvas,
+    config: DiagramSettings,
+    canvas: svgwrite.drawing.Drawing,
     pre_transcript,
-    target_width=None,
-    breakpoints=[],
+    target_width: Optional[int] = None,
+    breakpoints: List['Breakpoint'] = [],
     labels=LabelMapping(),
     colors={},
     mapping=None,
-    reference_genome=None,
     masks=None,
-):
+) -> svgwrite.container.Group:
     """
     builds an svg group representing the transcript. Exons are drawn in a track with the splicing
     information and domains are drawn in separate tracks below
@@ -462,17 +467,13 @@ def draw_ustranscript(
     if there are multiple splicing variants then multiple exon tracks are drawn
 
     Args:
-        canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
-        target_width (int): the target width of the diagram
+        canvas: the main svgwrite object used to create new svg elements
+        target_width: the target width of the diagram
         pre_transcript (Transcript): the transcript being drawn
-        exon_color (str): the color being used for the fill of the exons
-        utr_color (str): the color for the fill of the UTR regions
-        abrogated_splice_sites (List[int]): list of positions to ignore as splice sites
-        breakpoints (List[Breakpoint]): the breakpoints to overlay
+        breakpoints: the breakpoints to overlay
 
     Return:
-        svgwrite.container.Group: the group element for the transcript diagram
-                Has the added parameters of labels, height, and mapping
+        the group element for the transcript diagram Has the added parameters of labels, height, and mapping
     """
     if pre_transcript.get_strand() not in [STRAND.POS, STRAND.NEG]:
         raise NotSpecifiedError('strand must be positive or negative to draw the pre_transcript')
@@ -610,31 +611,29 @@ def draw_ustranscript(
 
 
 def draw_genes(
-    config,
-    canvas,
-    genes,
-    target_width,
-    breakpoints=None,
-    colors=None,
-    labels=None,
-    plots=None,
-    masks=None,
-):
+    config: DiagramSettings,
+    canvas: svgwrite.drawing.Drawing,
+    genes: List['Gene'],
+    target_width: int,
+    breakpoints: Optional[List[Breakpoint]] = None,
+    colors: Optional[Dict[str, 'Gene']] = None,
+    labels: Optional[LabelMapping] = None,
+    plots: Optional[List] = None,
+    masks: Optional[List[Interval]] = None,
+) -> svgwrite.container.Group:
     """
     draws the genes given in order of their start position trying to minimize
     the number of tracks required to avoid overlap
 
     Args:
-        canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
-        target_width (int): the target width of the diagram
-        genes (List[Gene]): the list of genes to draw
-        breakpoints (List[Breakpoint]): the breakpoints to overlay
-        colors (Dict[str,Gene]): dictionary of the colors assigned to each Gene as
-         fill
+        canvas: the main svgwrite object used to create new svg elements
+        target_width: the target width of the diagram
+        genes: the list of genes to draw
+        breakpoints: the breakpoints to overlay
+        colors: dictionary of the colors assigned to each Gene as fill
 
     Return:
-        svgwrite.container.Group: the group element for the diagram.
-            Has the added parameters of labels, height, and mapping
+        the group element for the diagram. Has the added parameters of labels, height, and mapping
     """
     # mutable default argument parameters
     breakpoints = [] if breakpoints is None else breakpoints
@@ -752,15 +751,22 @@ def draw_genes(
     return main_group
 
 
-def draw_vmarker(config, canvas, marker, width, height, label='', color=None):
+def draw_vmarker(
+    config: DiagramSettings,
+    canvas: svgwrite.drawing.Drawing,
+    marker: 'BioInterval',
+    width: int,
+    height: int,
+    label='',
+    color=None,
+) -> svgwrite.container.Group:
     """
     Args:
-        canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
-        breakpoint (Breakpoint): the breakpoint to draw
-        width (int): the pixel width
-        height (int): the pixel height
+        canvas: the main svgwrite object used to create new svg elements
+        width: the pixel width
+        height: the pixel height
     Return:
-        svgwrite.container.Group: the group element for the diagram
+        the group element for the diagram
     """
     color = config.marker_color if color is None else color
     g = canvas.g(class_='marker')
@@ -789,15 +795,22 @@ def draw_vmarker(config, canvas, marker, width, height, label='', color=None):
     return g
 
 
-def draw_breakpoint(config, canvas, breakpoint, width, height, label=''):
+def draw_breakpoint(
+    config: DiagramSettings,
+    canvas: svgwrite.drawing.Drawing,
+    breakpoint: Breakpoint,
+    width: int,
+    height: int,
+    label: str = '',
+) -> svgwrite.container.Group:
     """
     Args:
-        canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
-        breakpoint (Breakpoint): the breakpoint to draw
-        width (int): the pixel width
-        height (int): the pixel height
+        canvas: the main svgwrite object used to create new svg elements
+        breakpoint: the breakpoint to draw
+        width: the pixel width
+        height: the pixel height
     Return:
-        svgwrite.container.Group: the group element for the diagram
+        the group element for the diagram
     """
     g = canvas.g(class_='breakpoint')
     y = config.padding + config.breakpoint_label_font_size / 2
@@ -841,19 +854,28 @@ def draw_breakpoint(config, canvas, breakpoint, width, height, label=''):
     return g
 
 
-def draw_exon(config, canvas, exon, width, height, fill, label='', translation=None):
+def draw_exon(
+    config: DiagramSettings,
+    canvas: svgwrite.drawing.Drawing,
+    exon: 'Exon',
+    width: int,
+    height: int,
+    fill: str,
+    label: str = '',
+    translation=None,
+) -> svgwrite.container.Group:
     """
     generates the svg object representing an exon
 
     Args:
-        canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
+        canvas: the main svgwrite object used to create new svg elements
         exon (Exon): the exon to draw
-        width (int): the pixel width
-        height (int): the pixel height
-        fill (str): the fill color to use for the exon
+        width: the pixel width
+        height: the pixel height
+        fill: the fill color to use for the exon
 
     Return:
-        svgwrite.container.Group: the group element for the diagram
+        the group element for the diagram
 
     Todo:
         add markers for exons with abrogated splice sites
@@ -892,13 +914,19 @@ def draw_exon(config, canvas, exon, width, height, fill, label='', translation=N
 
 
 def draw_template(
-    config, canvas, template, target_width, labels=None, colors=None, breakpoints=None
-):
+    config: DiagramSettings,
+    canvas: svgwrite.drawing.Drawing,
+    template,
+    target_width,
+    labels=None,
+    colors=None,
+    breakpoints=None,
+) -> svgwrite.container.Group:
     """
     Creates the template/chromosome illustration
 
     Return:
-        svgwrite.container.Group: the group element for the diagram
+        the group element for the diagram
     """
 
     labels = LabelMapping() if labels is None else labels
@@ -1019,19 +1047,27 @@ def draw_template(
     return group
 
 
-def draw_gene(config, canvas, gene, width, height, fill, label='', reference_genome=None):
+def draw_gene(
+    config: DiagramSettings,
+    canvas: svgwrite.drawing.Drawing,
+    gene: 'Gene',
+    width: int,
+    height: int,
+    fill: str,
+    label: str = '',
+) -> svgwrite.container.Group:
     """
     generates the svg object representing a gene
 
     Args:
-        canvas (svgwrite.drawing.Drawing): the main svgwrite object used to create new svg elements
-        gene (Gene): the gene to draw
-        width (int): the pixel width
-        height (int): the pixel height
-        fill (str): the fill color to use for the gene
+        canvas: the main svgwrite object used to create new svg elements
+        gene: the gene to draw
+        width: the pixel width
+        height: the pixel height
+        fill: the fill color to use for the gene
 
     Return:
-        svgwrite.container.Group: the group element for the diagram
+        the group element for the diagram
     """
 
     group = canvas.g(class_='gene')

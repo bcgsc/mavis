@@ -6,7 +6,7 @@ import os
 import platform
 import sys
 import time
-from typing import Dict
+from typing import Dict, List, Optional
 
 from mavis_config import validate_config
 from mavis_config.constants import SUBCOMMAND
@@ -160,13 +160,13 @@ def create_parser(argv):
     return parser, parser.parse_args(argv)
 
 
-def main(argv=None):
+def main(argv: Optional[List[str]] = None):
     """
     sets up the parser and checks the validity of command line args
     loads reference files and redirects into subcommand main functions
 
     Args:
-        argv (list): List of arguments, defaults to command line arguments
+        argv: List of arguments, defaults to command line arguments
     """
     if argv is None:  # need to do at run time or patching will not behave as expected
         argv = sys.argv[1:]

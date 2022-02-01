@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 
 class Interval:
@@ -10,9 +10,9 @@ class Interval:
     def __init__(self, start: int, end: Optional[int] = None, freq: int = 1, number_type=None):
         """
         Args:
-            start (int): the start of the interval (inclusive)
-            end (int): the end of the interval (inclusive)
-            freq (int): the frequency or weight of the interval
+            start: the start of the interval (inclusive)
+            end: the end of the interval (inclusive)
+            freq: the frequency or weight of the interval
         """
         self.start = start
         self.end = end if end is not None else start
@@ -98,13 +98,13 @@ class Interval:
         raise IndexError('index input accessor is out of bounds: 1 or 2 only', index)
 
     @classmethod
-    def overlaps(cls, first, other):
+    def overlaps(cls, first: 'Interval', other: 'Interval') -> bool:
         """
         checks if two intervals have any portion of their given ranges in common
 
         Args:
-            first (Interval): an interval to be compared
-            other (Interval): an interval to be compared
+            first: an interval to be compared
+            other: an interval to be compared
 
         Example:
             >>> Interval.overlaps(Interval(1, 4), Interval(5, 7))

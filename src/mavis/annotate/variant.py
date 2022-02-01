@@ -8,7 +8,7 @@ from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import COLUMNS, GENE_PRODUCT_TYPE, PROTOCOL, STOP_AA, STRAND, SVTYPE
 from ..error import NotSpecifiedError
 from ..interval import Interval
-from ..types import ReferenceGenome
+from ..types import Annotations, ReferenceGenome
 from ..util import logger
 from .fusion import FusionTranscript, determine_prime
 from .genomic import Gene, IntergenicRegion, PreTranscript, Transcript
@@ -36,15 +36,20 @@ class Annotation(BreakpointPair):
         return self.data.get(COLUMNS.validation_id)
 
     def __init__(
-        self, bpp: BreakpointPair, transcript1=None, transcript2=None, proximity=5000, **kwargs
+        self,
+        bpp: BreakpointPair,
+        transcript1: Optional[Transcript] = None,
+        transcript2: Optional[Transcript] = None,
+        proximity: int = 5000,
+        **kwargs,
     ):
         """
         Holds a breakpoint call and a set of transcripts, other information is gathered relative to these
 
         Args:
-            bpp (BreakpointPair): the breakpoint pair call. Will be adjusted and then stored based on the transcripts
-            transcript1 (Transcript): transcript at the first breakpoint
-            transcript2 (Transcript): Transcript at the second breakpoint
+            bpp: the breakpoint pair call. Will be adjusted and then stored based on the transcripts
+            transcript1: transcript at the first breakpoint
+            transcript2: Transcript at the second breakpoint
         """
         # narrow the breakpoint windows by the transcripts being used for annotation
         temp = bpp.break1 if transcript1 is None else bpp.break1 & transcript1
@@ -86,12 +91,12 @@ class Annotation(BreakpointPair):
         self.proximity = proximity
         self.fusion = None
 
-    def add_gene(self, input_gene):
+    def add_gene(self, input_gene: Gene):
         """
         adds a input_gene to the current set of annotations. Checks which set it should be added to
 
         Args:
-            input_gene (input_gene): the input_gene being added
+            input_gene: the input_gene being added
         """
         if input_gene.chr not in [self.break1.chr, self.break2.chr]:
             raise AttributeError(
@@ -167,12 +172,12 @@ class Annotation(BreakpointPair):
 
             self.genes_proximal_to_break2 = temp
 
-    def flatten(self):
+    def flatten(self) -> Dict:
         """
         generates a dictionary of the annotation information as strings
 
         Returns:
-            Dict[str,str]: dictionary of attribute names and values
+            dictionary of attribute names and values
         """
         row = BreakpointPair.flatten(self)
         row.update(
@@ -245,16 +250,16 @@ class Annotation(BreakpointPair):
                 pass
         return row
 
-    def single_transcript(self):
+    def single_transcript(self) -> bool:
         return bool(self.transcript1 == self.transcript2 and self.transcript1)
 
 
-def flatten_fusion_translation(translation):
+def flatten_fusion_translation(translation: Translation) -> Dict:
     """
     for a given fusion product (translation) gather the information to be output to the tabbed files
 
     Args:
-        translation (Translation): the translation which is on the fusion transcript
+        translation: the translation which is on the fusion transcript
     Returns:
         dict: the dictionary of column names to values
     """
@@ -534,11 +539,12 @@ def flatten_fusion_transcript(spliced_fusion_transcript):
     return row
 
 
-def overlapping_transcripts(ref_ann, breakpoint: Breakpoint) -> List[PreTranscript]:
+def overlapping_transcripts(
+    ref_ann: ReferenceAnnotations, breakpoint: Breakpoint
+) -> List[PreTranscript]:
     """
     Args:
-        ref_ann (Dict[str,List[Gene]]): the reference list of genes split
-            by chromosome
+        ref_ann: the reference list of genes split by chromosome
         breakpoint: the breakpoint in question
     Returns:
         a list of possible transcripts
@@ -558,7 +564,7 @@ def overlapping_transcripts(ref_ann, breakpoint: Breakpoint) -> List[PreTranscri
 
 
 def _gather_breakpoint_annotations(
-    ref_ann: Dict[str, List[Gene]], breakpoint: Breakpoint
+    ref_ann: Annotations, breakpoint: Breakpoint
 ) -> Tuple[
     List[Union[PreTranscript, IntergenicRegion]], List[Union[PreTranscript, IntergenicRegion]]
 ]:
@@ -651,9 +657,7 @@ def _gather_breakpoint_annotations(
     )
 
 
-def _gather_annotations(
-    ref: Dict[str, List[Gene]], bp: BreakpointPair, proximity=None
-) -> List[Annotation]:
+def _gather_annotations(ref: Annotations, bp: BreakpointPair, proximity=None) -> List[Annotation]:
     """
     each annotation is defined by the annotations selected at the breakpoints
     the other annotations are given relative to this
@@ -861,7 +865,7 @@ def choose_transcripts_by_priority(ann_list: List[Annotation]) -> List[Annotatio
 
 def annotate_events(
     bpps: List[BreakpointPair],
-    annotations: Dict[str, List[Gene]],
+    annotations: Annotations,
     reference_genome: ReferenceGenome,
     max_proximity: int = 5000,
     min_orf_size: int = 200,

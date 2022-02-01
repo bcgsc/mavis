@@ -2,10 +2,15 @@
 import math
 import os
 import statistics as stats
+from typing import TYPE_CHECKING
 
 from ..constants import STRAND
+from ..types import ReferenceAnnotations
 from ..util import logger
 from .read import sequenced_strand
+
+if TYPE_CHECKING:
+    from .cache import BamCache
 
 os.environ["OMP_NUM_THREADS"] = "4"  # export OMP_NUM_THREADS=4
 os.environ["OPENBLAS_NUM_THREADS"] = "4"  # export OPENBLAS_NUM_THREADS=4
@@ -103,29 +108,28 @@ class Histogram(dict):
 
 
 def compute_transcriptome_bam_stats(
-    bam_cache,
-    annotations,
-    sample_size,
-    min_mapping_quality=1,
-    stranded=True,
-    sample_cap=10000,
-    distribution_fraction=0.97,
-):
+    bam_cache: 'BamCache',
+    annotations: ReferenceAnnotations,
+    sample_size: int,
+    min_mapping_quality: int = 1,
+    stranded: bool = True,
+    sample_cap: int = 10000,
+    distribution_fraction: float = 0.97,
+) -> BamStats:
     """
     computes various statistical measures relating the input bam file
 
     Args:
-        bam_file_handle (BamCache): the input bam file handle
-        annotations (object): see :func:`mavis.annotate.load_annotations`
-        sample_size (int): the number of genes to compute stats over
-        log (Callable): outputs logging information
-        min_mapping_quality (int): the minimum mapping quality for a read to be used
-        stranded (bool): if True then reads must match the gene strand
-        sample_cap (int): maximum number of reads to collect for any given sample region
-        distribution_fraction (float): the proportion of the distribution to use in computing stdev
+        bam_file_handle: the input bam file handle
+        annotations: see :func:`mavis.annotate.load_annotations`
+        sample_size: the number of genes to compute stats over
+        min_mapping_quality: the minimum mapping quality for a read to be used
+        stranded: if True then reads must match the gene strand
+        sample_cap: maximum number of reads to collect for any given sample region
+        distribution_fraction: the proportion of the distribution to use in computing stdev
 
     Returns:
-        BamStats: the fragment size median, stdev and the read length in a object
+        the fragment size median, stdev and the read length in a object
     """
     import numpy as np
 
@@ -151,7 +155,7 @@ def compute_transcriptome_bam_stats(
     read_lengths = []
     for gene in genes:
         for read in bam_cache.fetch(
-            gene.chr, gene.start, gene.end, cache_if=lambda x: False, limit=sample_cap
+            gene.chr, gene.start, gene.end, cache_if=lambda _: False, limit=sample_cap
         ):
             if any(
                 [
@@ -213,27 +217,26 @@ def compute_transcriptome_bam_stats(
 
 
 def compute_genome_bam_stats(
-    bam_file_handle,
-    sample_bin_size,
-    sample_size,
-    min_mapping_quality=1,
-    sample_cap=10000,
-    distribution_fraction=0.99,
-):
+    bam_file_handle: 'BamCache',
+    sample_bin_size: int,
+    sample_size: int,
+    min_mapping_quality: int = 1,
+    sample_cap: int = 10000,
+    distribution_fraction: float = 0.99,
+) -> BamStats:
     """
     computes various statistical measures relating the input bam file
 
     Args:
-        bam_file_handle (pysam.AlignmentFile): the input bam file handle
-        sample_bin_size (int): how large to make the sample bin (in bp)
-        sample_size (int): the number of genes to compute stats over
-        log (Callable): outputs logging information
-        min_mapping_quality (int): the minimum mapping quality for a read to be used
-        sample_cap (int): maximum number of reads to collect for any given sample region
-        distribution_fraction (float): the proportion of the distribution to use in computing stdev
+        bam_file_handle: the input bam file handle
+        sample_bin_size: how large to make the sample bin (in bp)
+        sample_size: the number of genes to compute stats over
+        min_mapping_quality: the minimum mapping quality for a read to be used
+        sample_cap: maximum number of reads to collect for any given sample region
+        distribution_fraction: the proportion of the distribution to use in computing stdev
 
     Returns:
-        BamStats: the fragment size median, stdev and the read length in a object
+        the fragment size median, stdev and the read length in a object
     """
     import numpy as np
 
@@ -254,7 +257,7 @@ def compute_genome_bam_stats(
     read_lengths = []
     for bin_chr, bin_start, bin_end in bins:
         for read in bam_file_handle.fetch(
-            bin_chr, bin_start, bin_end, limit=sample_cap, cache_if=lambda x: False
+            bin_chr, bin_start, bin_end, limit=sample_cap, cache_if=lambda _: False
         ):
             if any(
                 [

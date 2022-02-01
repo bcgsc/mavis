@@ -467,16 +467,16 @@ def assemble(
     return contigs
 
 
-def kmers(s, size):
+def kmers(s: str, size: int) -> List[str]:
     """
     for a sequence, compute and return a list of all kmers of a specified size
 
     Args:
-        s (str): the input sequence
-        size (int): the size of the kmers
+        s: the input sequence
+        size: the size of the kmers
 
     Returns:
-        List[str]: the list of kmers
+        the list of kmers
 
     Example:
         >>> kmers('abcdef', 2)

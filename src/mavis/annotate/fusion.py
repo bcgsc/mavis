@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from ..breakpoint import Breakpoint
 from ..constants import ORIENT, PRIME, PROTOCOL, STRAND, SVTYPE, reverse_complement
 from ..error import NotSpecifiedError
@@ -6,14 +8,17 @@ from ..types import ReferenceGenome
 from .genomic import Exon, PreTranscript, Transcript
 from .protein import Domain, Translation, calculate_orf
 
+if TYPE_CHECKING:
+    from .variant import Annotation
 
-def determine_prime(transcript, breakpoint):
+
+def determine_prime(transcript: Transcript, breakpoint: Breakpoint) -> int:
     """
     determine the side of the transcript 5' or 3' which is 'kept' given the breakpoint
 
     Args:
-        transcript (Transcript): the transcript
-        breakpoint (Breakpoint): the breakpoint
+        transcript: the transcript
+        breakpoint: the breakpoint
 
     Returns:
         PRIME: 5' or 3'
@@ -56,6 +61,9 @@ class FusionTranscript(PreTranscript):
     The preferred way to construct a FusionTranscript is through the build method.
     """
 
+    last_five_prime_exon: Exon
+    first_three_prime_exon: Exon
+
     def __init__(self):
         self.exon_mapping = {}
         self.exons = []
@@ -71,10 +79,10 @@ class FusionTranscript(PreTranscript):
         self.break1 = None  # first breakpoint position in the fusion transcript
         self.break2 = None  # second breakpoint position in the fusion transcript
 
-    def exon_number(self, exon):
+    def exon_number(self, exon: Exon) -> int:
         """
         Args:
-            exon (Exon): the exon to be numbered
+            exon: the exon to be numbered
 
         Returns:
             int: the number of the exon in the original transcript (prior to fusion)
@@ -87,14 +95,7 @@ class FusionTranscript(PreTranscript):
         self.mapping_to_chrs[Interval(interval_on_fusion[0], interval_on_fusion[1])] = chr
 
     @classmethod
-    def _build_single_gene_inversion(
-        cls,
-        ann,
-        reference_genome: ReferenceGenome,
-        min_orf_size,
-        max_orf_cap,
-        min_domain_mapping_match,
-    ):
+    def _build_single_gene_inversion(cls, ann, reference_genome: ReferenceGenome):
         """
         builds a fusion transcript for a single gene inversion. Note that this is an incomplete
         fusion transcript and still requires translations and domain information to be added
@@ -209,9 +210,7 @@ class FusionTranscript(PreTranscript):
         return fusion_pre_transcript
 
     @classmethod
-    def _build_single_gene_duplication(
-        cls, ann, reference_genome, min_orf_size, max_orf_cap, min_domain_mapping_match
-    ):
+    def _build_single_gene_duplication(cls, ann, reference_genome):
         """
         builds a fusion transcript for a single gene duplication. Note that this is an incomplete
         fusion transcript and still requires translations and domain information to be added
@@ -288,20 +287,19 @@ class FusionTranscript(PreTranscript):
     @classmethod
     def build(
         cls,
-        ann,
+        ann: 'Annotation',
         reference_genome: ReferenceGenome,
         min_orf_size=None,
         max_orf_cap=None,
         min_domain_mapping_match=None,
-    ):
+    ) -> 'FusionTranscript':
         """
         Args:
-            ann (Annotation): the annotation object we want to build a FusionTranscript for
-            reference_genome: dict of reference sequence
-                by template/chr name
+            ann: the annotation object we want to build a FusionTranscript for
+            reference_genome: dict of reference sequence by template/chr name
 
         Returns:
-            FusionTranscript: the newly built fusion transcript
+            the newly built fusion transcript
 
         """
         if not ann.transcript1 or not ann.transcript2:
@@ -489,15 +487,13 @@ class FusionTranscript(PreTranscript):
                             pass
         return fusion_pre_transcript
 
-    def get_seq(self, reference_genome=None, ignore_cache=False):
+    def get_seq(self):
         return PreTranscript.get_seq(self)
 
-    def get_cdna_seq(self, splicing_pattern, reference_genome=None, ignore_cache=False):
+    def get_cdna_seq(self, splicing_pattern):
         """
         Args:
             splicing_pattern (List[int]): the list of splicing positions
-            reference_genome (Dict[str,Bio.SeqRecord]): dict of reference seq
-                by template/chr name
 
         Returns:
             str: the spliced cDNA seq

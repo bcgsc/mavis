@@ -220,7 +220,7 @@ class Blat:
 
         Args:
             row: a row object from the 'read_pslx' method
-            bam_cache (BamCache): the bam file/cache to use as a template for creating reference_id from chr name
+            bam_cache: the bam file/cache to use as a template for creating reference_id from chr name
             reference_genome: reference sequence by template/chr name
 
         """
