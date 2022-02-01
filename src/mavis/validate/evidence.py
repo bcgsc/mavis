@@ -75,7 +75,7 @@ class GenomeEvidence(Evidence):
             self.compatible_window1 = self.generate_window(compt_break1)
             self.compatible_window2 = self.generate_window(compt_break2)
 
-    def compute_fragment_size(self, read: pysam.AlignedSegment):
+    def compute_fragment_size(self, read: pysam.AlignedSegment, mate=None):
         return Interval(abs(read.template_length))
 
 

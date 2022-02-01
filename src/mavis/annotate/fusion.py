@@ -95,7 +95,14 @@ class FusionTranscript(PreTranscript):
         self.mapping_to_chrs[Interval(interval_on_fusion[0], interval_on_fusion[1])] = chr
 
     @classmethod
-    def _build_single_gene_inversion(cls, ann, reference_genome: ReferenceGenome):
+    def _build_single_gene_inversion(
+        cls,
+        ann,
+        reference_genome: ReferenceGenome,
+        min_orf_size,
+        max_orf_cap,
+        min_domain_mapping_match,
+    ):
         """
         builds a fusion transcript for a single gene inversion. Note that this is an incomplete
         fusion transcript and still requires translations and domain information to be added
@@ -210,7 +217,14 @@ class FusionTranscript(PreTranscript):
         return fusion_pre_transcript
 
     @classmethod
-    def _build_single_gene_duplication(cls, ann, reference_genome):
+    def _build_single_gene_duplication(
+        cls,
+        ann,
+        reference_genome,
+        min_orf_size,
+        max_orf_cap,
+        min_domain_mapping_match,
+    ):
         """
         builds a fusion transcript for a single gene duplication. Note that this is an incomplete
         fusion transcript and still requires translations and domain information to be added
@@ -487,10 +501,10 @@ class FusionTranscript(PreTranscript):
                             pass
         return fusion_pre_transcript
 
-    def get_seq(self):
+    def get_seq(self, reference_genome=None, ignore_cache=False):
         return PreTranscript.get_seq(self)
 
-    def get_cdna_seq(self, splicing_pattern):
+    def get_cdna_seq(self, splicing_pattern, reference_genome=None, ignore_cache=False):
         """
         Args:
             splicing_pattern (List[int]): the list of splicing positions

@@ -460,6 +460,7 @@ def draw_ustranscript(
     colors={},
     mapping=None,
     masks=None,
+    reference_genome=None,
 ) -> svgwrite.container.Group:
     """
     builds an svg group representing the transcript. Exons are drawn in a track with the splicing
