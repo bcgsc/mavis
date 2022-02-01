@@ -8,7 +8,7 @@ from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import COLUMNS, GENE_PRODUCT_TYPE, PROTOCOL, STOP_AA, STRAND, SVTYPE
 from ..error import NotSpecifiedError
 from ..interval import Interval
-from ..types import Annotations, ReferenceGenome
+from ..types import ReferenceAnnotations, ReferenceGenome
 from ..util import logger
 from .fusion import FusionTranscript, determine_prime
 from .genomic import Gene, IntergenicRegion, PreTranscript, Transcript
@@ -564,7 +564,7 @@ def overlapping_transcripts(
 
 
 def _gather_breakpoint_annotations(
-    ref_ann: Annotations, breakpoint: Breakpoint
+    ref_ann: ReferenceAnnotations, breakpoint: Breakpoint
 ) -> Tuple[
     List[Union[PreTranscript, IntergenicRegion]], List[Union[PreTranscript, IntergenicRegion]]
 ]:
@@ -657,7 +657,9 @@ def _gather_breakpoint_annotations(
     )
 
 
-def _gather_annotations(ref: Annotations, bp: BreakpointPair, proximity=None) -> List[Annotation]:
+def _gather_annotations(
+    ref: ReferenceAnnotations, bp: BreakpointPair, proximity=None
+) -> List[Annotation]:
     """
     each annotation is defined by the annotations selected at the breakpoints
     the other annotations are given relative to this
@@ -865,7 +867,7 @@ def choose_transcripts_by_priority(ann_list: List[Annotation]) -> List[Annotatio
 
 def annotate_events(
     bpps: List[BreakpointPair],
-    annotations: Annotations,
+    annotations: ReferenceAnnotations,
     reference_genome: ReferenceGenome,
     max_proximity: int = 5000,
     min_orf_size: int = 200,

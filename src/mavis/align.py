@@ -388,7 +388,7 @@ def call_paired_read_event(read1, read2, is_stranded=False):
 
 def align_sequences(
     sequences: Dict[str, str],
-    input_bam_cache: BamCache,
+    input_bam_cache: 'BamCache',
     reference_genome: ReferenceGenome,
     aligner: str,
     aligner_reference: str,

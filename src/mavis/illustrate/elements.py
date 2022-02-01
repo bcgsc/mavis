@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 import svgwrite
 
 from ..annotate.variant import FusionTranscript
+from ..breakpoint import Breakpoint
 from ..constants import CODON_SIZE, GIEMSA_STAIN, ORIENT, STRAND
 from ..error import DrawingFitError, NotSpecifiedError
 from ..interval import Interval, IntervalMapping
@@ -23,7 +24,7 @@ from .util import (
 if TYPE_CHECKING:
     from ..annotate.base import BioInterval
     from ..annotate.genomic import Exon, Gene
-    from ..breakpoint import Breakpoint
+
 # draw gene level view
 # draw gene box
 HEX_WHITE = '#FFFFFF'
