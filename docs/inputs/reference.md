@@ -163,6 +163,26 @@ python tools/generate_ensembl_json.py -s human -r 75 -o ensembl_human_v75.json
 
 This will produce the JSON file required as input by MAVIS
 
+### Conversion from Other Standard Formats
+
+If you have a GTF or GFF3 file you can convert them to match the MAVIS json format with the helper script provided in the tools folder
+
+```bash
+python src/tools/convert_annotations_format.py \
+    /path/to/gtf/file \
+    --input_type gtf \
+    output_mavis_annotations.json
+```
+
+or similarly for the GFF3 format
+
+```bash
+python src/tools/convert_annotations_format.py \
+    /path/to/gff3/file \
+    --input_type gff3 \
+    output_mavis_annotations.json
+```
+
 
 ## DGV (Database of Genomic Variants)
 

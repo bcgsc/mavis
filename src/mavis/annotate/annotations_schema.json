@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "additionalProperties": false,
+    "additionalProperties": true,
     "properties": {
         "best_transcript_file": {
             "type": "string"
@@ -13,6 +13,7 @@
         },
         "genes": {
             "items": {
+                "additionalProperties": true,
                 "properties": {
                     "aliases": {
                         "default": [
@@ -50,6 +51,7 @@
                         "default": [
                         ],
                         "items": {
+                            "additionalProperties": true,
                             "properties": {
                                 "aliases": {
                                     "default": [
@@ -61,25 +63,26 @@
                                     "type": "array"
                                 },
                                 "cdna_coding_end": {
+                                    "default": null,
                                     "minimum": 1,
                                     "type": [
                                         "integer",
                                         "null"
-                                    ],
-                                    "default": null
+                                    ]
                                 },
                                 "cdna_coding_start": {
+                                    "default": null,
                                     "minimum": 1,
                                     "type": [
                                         "integer",
                                         "null"
-                                    ],
-                                    "default": null
+                                    ]
                                 },
                                 "domains": {
                                     "default": [
                                     ],
                                     "items": {
+                                        "additionalProperties": true,
                                         "properties": {
                                             "name": {
                                                 "minLength": 1,
@@ -116,6 +119,7 @@
                                     "defualt": [
                                     ],
                                     "items": {
+                                        "additionalProperties": true,
                                         "properties": {
                                             "end": {
                                                 "minimum": 1,
