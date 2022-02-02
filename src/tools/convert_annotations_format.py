@@ -165,6 +165,7 @@ def convert_tab_to_json(filepath: str) -> Dict:
 def convert_pandas_gff_to_mavis(df) -> Dict:
     df['parent_type'] = df.Parent.str.split(':').str[0]
     genelike_features = {'gene', 'ncRNA_gene', 'biological_region', 'pseudogene'}
+    consumed = set()
 
     def pull_alias_terms(row):
         aliases = []
@@ -185,6 +186,7 @@ def convert_pandas_gff_to_mavis(df) -> Dict:
             'transcripts': [],
             'name': row['feature_id'] + '.' + row['version'],
         }
+        consumed.add(row['row_index'])
     logging.info(f'loaded {len(genes_by_id)} genes')
 
     transcripts_by_id = {}
@@ -209,6 +211,7 @@ def convert_pandas_gff_to_mavis(df) -> Dict:
             }
             genes_by_id[gene_id]['transcripts'].append(transcript)
             transcripts_by_id[feature_id] = transcript
+            consumed.add(row['row_index'])
 
     logging.info(f'loaded {len(transcripts_by_id)} transcripts')
     # now cds
@@ -218,12 +221,13 @@ def convert_pandas_gff_to_mavis(df) -> Dict:
             transcript_id = parent.split(':')[1]
             if transcript_id not in transcripts_by_id:
                 raise KeyError(
-                    f'failed to find parent transcript ({transcript_id}) skipping cds ({row["feature_id"]})'
+                    f'failed to find parent transcript ({transcript_id}) skipping cds on line ({row["row_index"] + 1})'
                 )
             transcripts_by_id[transcript_id].update(
                 {'cdna_coding_start': row['start'], 'cdna_coding_end': row['end']}
             )
             cds_count += 1
+            consumed.add(row['row_index'])
     logging.info(f'loaded {cds_count} cds regions')
     # exons
     exons_count = 0
@@ -232,7 +236,7 @@ def convert_pandas_gff_to_mavis(df) -> Dict:
             transcript_id = parent.split(':')[1]
             if transcript_id not in transcripts_by_id:
                 raise KeyError(
-                    f'failed to find parent transcript ({transcript_id}) skipping exon ({row["feature_id"]})'
+                    f'failed to find parent transcript ({transcript_id}) skipping exon ({row["feature_id"]}) on line {row["row_index"] + 1}'
                 )
             transcripts_by_id[transcript_id]['exons'].append(
                 {
@@ -242,8 +246,15 @@ def convert_pandas_gff_to_mavis(df) -> Dict:
                 }
             )
             exons_count += 1
+            consumed.add(row['row_index'])
 
     logging.info(f'loaded {exons_count} exons')
+
+    ignored_df = df[~df.row_index.isin(consumed)]
+    if ignored_df.shape[0]:
+        logging.warning(
+            f'Ignored {ignored_df.shape[0]} rows that did not match the expected types: {ignored_df.type.unique()}'
+        )
 
     result = {'genes': list(genes_by_id.values())}
     try:
@@ -282,10 +293,10 @@ def convert_gff3_to_mavis(filename: str, no_alt) -> Dict:
         na_values=['.'] + PANDAS_DEFAULT_NA_VALUES,
         names=['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes'],
     )
+    df['row_index'] = df.index
     if no_alt:
         df = df[~df.seqid.str.startswith('GL')]
         df = df[~df.seqid.str.startswith('KI')]
-    df['row_index'] = df.index
 
     skip_types = {
         'five_prime_UTR',
@@ -394,10 +405,10 @@ def convert_gff2_to_mavis(filename: str, no_alt) -> Dict:
 
     def split_attributes(row):
         result = {}
-        for attr in row.attributes.split(';'):
+        for attr in row.attributes.split('";'):
             if not attr:
                 continue
-            m = re.match(r'^\s*([^"]+)\s+"(.*)"$', attr)
+            m = re.match(r'^\s*([^"]+)\s+"(.*)"?$', attr)
             if not m:
                 raise KeyError(f'attributes do not follow expected pattern: {attr}')
             result[m.group(1)] = m.group(2)
