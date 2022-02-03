@@ -59,15 +59,22 @@ class BioInterval:
     strand: Optional[str]
 
     def __init__(
-        self, reference_object, start, end=None, name=None, seq=None, data=None, strand=None
+        self,
+        reference_object,
+        start: int,
+        end: int = None,
+        name: Optional[str] = None,
+        seq: Optional[str] = None,
+        data: Optional[Dict] = None,
+        strand: Optional[str] = None,
     ):
         """
         Args:
             reference_object: the object this interval is on
-            start (int) start of the interval (inclusive)
-            end (int): end of the interval (inclusive)
+            start: start of the interval (inclusive)
+            end: end of the interval (inclusive)
             name: optional
-            seq (str): the seq relating to this interval
+            seq: the seq relating to this interval
 
         Example:
             >>> b = BioInterval('1', 12572784, 12578898, 'q22.2')
@@ -88,13 +95,13 @@ class BioInterval:
         self.strand = strand
 
     @property
-    def start(self):
-        """*int*: the start position"""
+    def start(self) -> int:
+        """the start position"""
         return self.position.start
 
     @property
-    def end(self):
-        """*int*: the end position"""
+    def end(self) -> int:
+        """the end position"""
         return self.position.end
 
     def __getitem__(self, index):

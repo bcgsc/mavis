@@ -225,7 +225,9 @@ class BamCache:
                 chrom = 'chr' + chrom
             if chrom not in self.fh.references:
                 raise KeyError('bam file does not contain the expected reference', input_chrom)
-        bins = self.__class__._generate_fetch_bins(start, stop, sample_bins, min_bin_size)
+        bins: List[Interval] = self.__class__._generate_fetch_bins(
+            start, stop, sample_bins, min_bin_size
+        )
         running_surplus = 0
         temp_cache = set()
         for fstart, fend in bins:

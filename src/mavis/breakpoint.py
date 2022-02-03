@@ -1,5 +1,3 @@
-from __future__ import division
-
 from copy import copy as _copy
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
@@ -24,15 +22,23 @@ class Breakpoint(Interval):
     def key(self):
         return (self.chr, self.start, self.end, self.orient, self.strand)
 
-    def __init__(self, chr, start, end=None, orient=ORIENT.NS, strand=STRAND.NS, seq=None):
+    def __init__(
+        self,
+        chr: str,
+        start: int,
+        end: Optional[int] = None,
+        orient=ORIENT.NS,
+        strand=STRAND.NS,
+        seq: Optional[str] = None,
+    ):
         """
         Args:
-            chr (str): the chromosome
-            start (int): the genomic position of the breakpoint
-            end (int): if the breakpoint is uncertain (a range) then specify the end of the range here
+            chr: the chromosome
+            start: the genomic position of the breakpoint
+            end: if the breakpoint is uncertain (a range) then specify the end of the range here
             orient (ORIENT): the orientation (which side is retained at the break)
             strand (STRAND): the strand
-            seq (str): the seq
+            seq: the seq
 
         Examples:
             >>> Breakpoint('1', 1, 2)

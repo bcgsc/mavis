@@ -263,11 +263,11 @@ class Translation(BioInterval):
         describes the splicing pattern and cds start and end with reference to a particular transcript
 
         Args:
-            start (int): start of the coding sequence (cds) relative to the start of the first exon in the transcript
-            end (int): end of the coding sequence (cds) relative to the start of the first exon in the transcript
-            transcript (Transcript): the transcript this is a Translation of
-            domains (List[Domain]): a list of the domains on this translation
-            sequence (str): the cds sequence
+            start: start of the coding sequence (cds) relative to the start of the first exon in the transcript
+            end: end of the coding sequence (cds) relative to the start of the first exon in the transcript
+            transcript: the transcript this is a Translation of
+            domains: a list of the domains on this translation
+            sequence: the cds sequence
         """
         domains = [] if domains is None else domains
         BioInterval.__init__(
@@ -334,7 +334,7 @@ class Translation(BioInterval):
             raise IndexError('conversion failed. position is outside the exonic region')
         return cds
 
-    def convert_genomic_to_nearest_cds(self, pos: str) -> Tuple[int, int]:
+    def convert_genomic_to_nearest_cds(self, pos: int) -> Tuple[int, int]:
         """
         converts a genomic position to its cds equivalent or (if intronic) the nearest cds and shift
 

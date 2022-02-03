@@ -12,7 +12,7 @@ from snakemake.utils import validate as snakemake_validate
 
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, translate
 from ..interval import Interval
-from ..types import ReferenceGenome
+from ..types import ReferenceAnnotations, ReferenceGenome
 from ..util import logger
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, PreTranscript, Template, Transcript
@@ -97,7 +97,7 @@ def parse_annotations_json(
     data,
     reference_genome: Optional[ReferenceGenome] = None,
     best_transcripts_only=False,
-) -> Dict[str, List[Gene]]:
+) -> ReferenceAnnotations:
     """
     parses a json of annotation information into annotation objects
     """
@@ -112,7 +112,7 @@ def parse_annotations_json(
         )  # these can get super long
         raise AssertionError(short_msg)
 
-    genes_by_chr: Dict[str, List[Gene]] = {}
+    genes_by_chr: ReferenceAnnotations = {}
 
     for gene_dict in data['genes']:
 
@@ -321,10 +321,10 @@ class ReferenceFile:
     ):
         """
         Args:
-            *filepaths (str): list of paths to load
-            file_type (str): Type of file to load
-            eager_load (bool=False): load the files immeadiately
-            assert_exists (bool=False): check that all files exist
+            *filepaths: list of paths to load
+            file_type: Type of file to load
+            eager_load: load the files immeadiately
+            assert_exists: check that all files exist
             **opt: key word arguments to be passed to the load function and used as part of the file cache key
 
         Raises
