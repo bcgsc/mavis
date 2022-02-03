@@ -202,6 +202,11 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                     COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1],
                 }
             )
+        if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
+            # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
+            std_row.update({'break1_position_end': 1})
+        if std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
+            std_row.update({'break2_position_end': 1})
 
         if 'SVTYPE' in info:
             std_row[COLUMNS.event_type] = info['SVTYPE']

@@ -112,7 +112,7 @@ class TestConvert:
     def test_sniffle(self):
         results = self.run_main(get_data('sniffles.vcf'), SUPPORTED_TOOL.VCF, False)
         print(results.keys())
-        record = results['vcf-35777'][0]
+        record = results['vcf-30259'][0]
         print(record, record.data)
         assert record.data['event_type'] == 'translocation'
 
