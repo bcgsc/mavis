@@ -344,17 +344,10 @@ class ReferenceFile:
     ):
         """
         Args:
-<<<<<<< HEAD
-            *filepaths (str): list of paths to load
-            file_type (str): Type of file to load
-            eager_load (bool=False): load the files immediately
-            assert_exists (bool=False): check that all files exist
-=======
             *filepaths: list of paths to load
             file_type: Type of file to load
-            eager_load: load the files immeadiately
+            eager_load: load the files immediately
             assert_exists: check that all files exist
->>>>>>> develop_v3
             **opt: key word arguments to be passed to the load function and used as part of the file cache key
 
         Raises
