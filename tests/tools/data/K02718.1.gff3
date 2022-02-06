@@ -1,0 +1,24 @@
+K02718.1	Genbank	CDS	1140	2813	.	+	0	ID=cds-AAA46936.1;Parent=gene-E1;Dbxref=NCBI_GP:AAA46936.1;Name=AAA46936.1;Note=E1 interrupted ORF from 859 to 2813%3B putative;gbkey=CDS;gene=E1;product=replication protein;protein_id=AAA46936.1
+K02718.1	Genbank	CDS	2755	3852	.	+	0	ID=cds-AAA46941.1;Parent=gene-E2;Dbxref=NCBI_GP:AAA46941.1;Name=AAA46941.1;Note=E2 ORF from 2725 to 3852%3B putative;gbkey=CDS;gene=E2;product=regulatory protein;protein_id=AAA46941.1
+K02718.1	Genbank	CDS	3332	3619	.	+	0	ID=cds-AAA46937.1;Parent=gene-E4;Dbxref=NCBI_GP:AAA46937.1;Name=AAA46937.1;gbkey=CDS;gene=E4;partial=true;product=AAA46937.1;protein_id=AAA46937.1;start_range=.,3332
+K02718.1	Genbank	CDS	3863	4099	.	+	0	ID=cds-AAA46938.1;Parent=gene-E5;Dbxref=NCBI_GP:AAA46938.1;Name=AAA46938.1;gbkey=CDS;gene=E5;partial=true;product=AAA46938.1;protein_id=AAA46938.1;start_range=.,3863
+K02718.1	Genbank	CDS	4235	5656	.	+	0	ID=cds-AAA46942.1;Parent=gene-L2;Dbxref=NCBI_GP:AAA46942.1;Name=AAA46942.1;Note=L2 ORF from 4133 to 5656%3B putative;gbkey=CDS;gene=L2;product=minor capsid protein;protein_id=AAA46942.1
+K02718.1	Genbank	CDS	5559	7154	.	+	0	ID=cds-AAA46943.1;Parent=gene-L1;Dbxref=NCBI_GP:AAA46943.1;Name=AAA46943.1;Note=L1 ORF from 5526 to 7154%3B putative;gbkey=CDS;gene=L1;product=major capsid protein;protein_id=AAA46943.1
+K02718.1	Genbank	CDS	562	858	.	+	0	ID=cds-AAA46940.1;Parent=gene-E7;Dbxref=NCBI_GP:AAA46940.1;Name=AAA46940.1;Note=E7 ORF from 544 to 858%3B putative;gbkey=CDS;gene=E7;product=transforming protein;protein_id=AAA46940.1
+K02718.1	Genbank	CDS	83	559	.	+	0	ID=cds-AAA46939.1;Parent=gene-E6;Dbxref=NCBI_GP:AAA46939.1;Name=AAA46939.1;Note=E6 ORF from 65 to 559%3B putative;gbkey=CDS;gene=E6;product=transforming protein;protein_id=AAA46939.1
+K02718.1	Genbank	CDS	865	1140	.	+	0	ID=cds-AAA46936.1;Parent=gene-E1;Dbxref=NCBI_GP:AAA46936.1;Name=AAA46936.1;Note=E1 interrupted ORF from 859 to 2813%3B putative;gbkey=CDS;gene=E1;product=replication protein;protein_id=AAA46936.1
+K02718.1	Genbank	gene	1140	2813	.	+	.	ID=gene-E1;Name=E1;gbkey=Gene;gene=E1;gene_biotype=protein_coding
+K02718.1	Genbank	gene	2755	3852	.	+	.	ID=gene-E2;Name=E2;gbkey=Gene;gene=E2;gene_biotype=protein_coding
+K02718.1	Genbank	gene	3332	3619	.	+	.	ID=gene-E4;Name=E4;gbkey=Gene;gene=E4;gene_biotype=protein_coding
+K02718.1	Genbank	gene	3863	4099	.	+	.	ID=gene-E5;Name=E5;gbkey=Gene;gene=E5;gene_biotype=protein_coding
+K02718.1	Genbank	gene	4235	5656	.	+	.	ID=gene-L2;Name=L2;gbkey=Gene;gene=L2;gene_biotype=protein_coding
+K02718.1	Genbank	gene	5559	7154	.	+	.	ID=gene-L1;Name=L1;gbkey=Gene;gene=L1;gene_biotype=protein_coding
+K02718.1	Genbank	gene	562	858	.	+	.	ID=gene-E7;Name=E7;gbkey=Gene;gene=E7;gene_biotype=protein_coding
+K02718.1	Genbank	gene	83	559	.	+	.	ID=gene-E6;Name=E6;gbkey=Gene;gene=E6;gene_biotype=protein_coding
+K02718.1	Genbank	gene	865	1140	.	+	.	ID=gene-E1;Name=E1;gbkey=Gene;gene=E1;gene_biotype=protein_coding
+K02718.1	Genbank	region	17	23	.	+	.	ID=id-K02718.1:17..23;gbkey=TATA_signal
+K02718.1	Genbank	region	1	7904	.	+	.	ID=K02718.1:1..7904;Dbxref=taxon:333760;Is_circular=true;gbkey=Src;mol_type=genomic DNA
+K02718.1	Genbank	region	4213	4218	.	+	.	ID=id-K02718.1:4213..4218;Note=putative;gbkey=polyA_signal
+K02718.1	Genbank	region	4289	4295	.	+	.	ID=id-L2;gbkey=TATA_signal;gene=L2
+K02718.1	Genbank	region	65	71	.	+	.	ID=id-K02718.1:65..71;gbkey=TATA_signal
+K02718.1	Genbank	region	7260	7265	.	+	.	ID=id-K02718.1:7260..7265;gbkey=polyA_signal

@@ -1,0 +1,188 @@
+{
+    "genes": [
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 2813,
+            "name": "E1",
+            "start": 865,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2810,
+                    "name": "E1_T",
+                    "start": 865,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2810,
+                            "name": "AAA46936.1",
+                            "start": 865
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 3852,
+            "name": "E2",
+            "start": 2755,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3849,
+                    "name": "E2_T",
+                    "start": 2755,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3849,
+                            "name": "AAA46941.1",
+                            "start": 2755
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 3619,
+            "name": "E4",
+            "start": 3332,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3616,
+                    "name": "E4_T",
+                    "start": 3332,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3616,
+                            "name": "AAA46937.1",
+                            "start": 3332
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 4099,
+            "name": "E5",
+            "start": 3863,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4096,
+                    "name": "E5_T",
+                    "start": 3863,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4096,
+                            "name": "AAA46938.1",
+                            "start": 3863
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 559,
+            "name": "E6",
+            "start": 83,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 556,
+                    "name": "E6_T",
+                    "start": 83,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 556,
+                            "name": "AAA46939.1",
+                            "start": 83
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 858,
+            "name": "E7",
+            "start": 562,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 855,
+                    "name": "E7_T",
+                    "start": 562,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 855,
+                            "name": "AAA46940.1",
+                            "start": 562
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 7154,
+            "name": "L1",
+            "start": 5559,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7151,
+                    "name": "L1_T",
+                    "start": 5559,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7151,
+                            "name": "AAA46943.1",
+                            "start": 5559
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 5656,
+            "name": "L2",
+            "start": 4235,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5653,
+                    "name": "L2_T",
+                    "start": 4235,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5653,
+                            "name": "AAA46942.1",
+                            "start": 4235
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
