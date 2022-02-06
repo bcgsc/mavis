@@ -334,7 +334,7 @@ class Translation(BioInterval):
             raise IndexError('conversion failed. position is outside the exonic region')
         return cds
 
-    def convert_genomic_to_nearest_cds(self, pos: str) -> Tuple[int, int]:
+    def convert_genomic_to_nearest_cds(self, pos: int) -> Tuple[int, int]:
         """
         converts a genomic position to its cds equivalent or (if intronic) the nearest cds and shift
 

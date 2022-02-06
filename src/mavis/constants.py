@@ -68,12 +68,12 @@ CODON_SIZE: int = 3
 """the number of bases making up a codon"""
 
 
-def reverse_complement(s):
+def reverse_complement(s: str) -> str:
     """
     wrapper for the Bio.Seq reverse_complement method
 
     Args:
-        s (str): the input DNA sequence
+        s: the input DNA sequence
 
     Returns:
         str: the reverse complement of the input sequence
@@ -88,8 +88,8 @@ def reverse_complement(s):
     input_string = str(s)
     if not re.match('^[A-Za-z]*$', input_string):
         raise ValueError('unexpected sequence format. cannot reverse complement', input_string)
-    input_string = Seq(input_string, DNA_ALPHABET)
-    return str(input_string.reverse_complement())
+    seq = Seq(input_string, DNA_ALPHABET)
+    return str(seq.reverse_complement())
 
 
 def translate(s: str, reading_frame: int = 0) -> str:

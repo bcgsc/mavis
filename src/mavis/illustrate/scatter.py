@@ -1,39 +1,42 @@
 import os
+from typing import Optional
+
+import svgwrite
 
 from ..bam.read import pileup, sequenced_strand
-from ..interval import Interval
+from ..interval import Interval, IntervalMapping
 from ..util import logger
+from .constants import DiagramSettings
 
 
 def bam_to_scatter(
-    bam_file,
-    chrom,
-    start,
-    end,
+    bam_file: str,
+    chrom: str,
+    start: int,
+    end: int,
     density,
-    strand=None,
-    axis_name=None,
-    ymax=None,
-    min_mapping_quality=0,
-    strand_determining_read=2,
-    ymax_color='#FF0000',
-):
+    strand: Optional[str] = None,
+    axis_name: Optional[str] = None,
+    ymax: Optional[int] = None,
+    min_mapping_quality: int = 0,
+    strand_determining_read: int = 2,
+    ymax_color: str = '#FF0000',
+) -> 'ScatterPlot':
     """
     pull data from a bam file to set up a scatter plot of the pileup
 
     Args:
-        bam_file (str): path to the bam file
-        chrom (str): chromosome name
-        start (int): genomic start position for the plot
-        end (int): genomic end position for the plot
-        bin_size (int): number of genomic positions to group together and average to reduce data
+        bam_file: path to the bam file
+        chrom: chromosome name
+        start: genomic start position for the plot
+        end: genomic end position for the plot
         strand (STRAND): expected strand
-        axis_name (str): axis name
-        ymax (int): maximum value to plot the y axis
-        min_mapping_quality (int): minimum mapping quality for reads to be considered in the plot
+        axis_name: axis name
+        ymax: maximum value to plot the y axis
+        min_mapping_quality: minimum mapping quality for reads to be considered in the plot
 
     Returns:
-        ScatterPlot: the scatter plot representing the bam pileup
+        the scatter plot representing the bam pileup
     """
     import pysam
 
@@ -123,16 +126,20 @@ class ScatterPlot:
         self.density = density
 
 
-def draw_scatter(ds, canvas, plot, xmapping):
+def draw_scatter(
+    ds: DiagramSettings,
+    canvas: svgwrite.drawing.Drawing,
+    plot: ScatterPlot,
+    xmapping: IntervalMapping,
+) -> svgwrite.container.Group:
     """
     given a xmapping, draw the scatter plot svg group
 
     Args:
-        ds (DiagramSettings): the settings/constants to use for building the svg
-        canvas (svgwrite.canvas): the svgwrite object used to create new svg elements
-        plot (ScatterPlot): the plot to be drawn
-        xmapping (Dict[Interval,Interval]):
-            dict used for conversion of coordinates in the xaxis to pixel positions
+        ds: the settings/constants to use for building the svg
+        canvas: the svgwrite object used to create new svg elements
+        plot: the plot to be drawn
+        xmapping: dict used for conversion of coordinates in the xaxis to pixel positions
     """
     from shapely.geometry import Point as sPoint
 

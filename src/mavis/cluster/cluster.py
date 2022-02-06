@@ -150,7 +150,7 @@ def merge_by_union(
     group_key: BreakpointPairGroupKey,
     weight_adjustment: int = 10,
     cluster_radius: int = 200,
-) -> List[BreakpointPair]:
+) -> Dict[BreakpointPairGroupKey, List[BreakpointPair]]:
     """
     for a given set of breakpoint pairs, merge the union of all pairs that are
     within the given distance (cluster_radius)

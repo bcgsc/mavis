@@ -4,6 +4,8 @@ from textwrap import dedent
 
 import pkg_resources
 from markdown_refdocs.main import extract_to_markdown
+from mavis_config import DEFAULTS
+from mavis.util import ENV_VAR_PREFIX
 
 
 def json_to_pytype(record):

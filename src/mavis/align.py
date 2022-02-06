@@ -5,7 +5,7 @@ import itertools
 import os
 import re
 import subprocess
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
 import pysam
 
@@ -16,6 +16,9 @@ from .constants import CIGAR, ORIENT, STRAND, SVTYPE, MavisNamespace, reverse_co
 from .interval import Interval
 from .types import ReferenceGenome
 from .util import logger
+
+if TYPE_CHECKING:
+    from .bam.cache import BamCache
 
 
 class SUPPORTED_ALIGNER(MavisNamespace):
@@ -385,7 +388,7 @@ def call_paired_read_event(read1, read2, is_stranded=False):
 
 def align_sequences(
     sequences: Dict[str, str],
-    input_bam_cache,
+    input_bam_cache: 'BamCache',
     reference_genome: ReferenceGenome,
     aligner: str,
     aligner_reference: str,
@@ -402,7 +405,7 @@ def align_sequences(
 
     Args:
         sequences: dictionary of sequences by name
-        input_bam_cache (BamCache): bam cache to be used as a template for reading the alignments
+        input_bam_cache: bam cache to be used as a template for reading the alignments
         reference_genome: the reference genome
         aligner (SUPPORTED_ALIGNER): the name of the aligner to be used
         aligner_reference: path to the aligner reference file

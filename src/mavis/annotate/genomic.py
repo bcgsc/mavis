@@ -599,7 +599,7 @@ class Transcript(BioInterval):
     def __init__(
         self,
         pre_transcript: PreTranscript,
-        splicing_patt: List[SpliceSite],
+        splicing_patt: SplicingPattern,
         seq: Optional[str] = None,
         translations: Optional[List[Translation]] = None,
     ):

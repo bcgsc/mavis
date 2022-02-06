@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import time
-from typing import Any, Callable, Dict, List, Set
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set
 
 import pandas as pd
 from mavis_config import bash_expands
@@ -24,6 +24,9 @@ from .constants import (
 )
 from .error import InvalidRearrangement
 from .interval import Interval
+
+if TYPE_CHECKING:
+    from mavis.annotate.base import BioInterval
 
 ENV_VAR_PREFIX = 'MAVIS_'
 
@@ -143,13 +146,15 @@ def mkdirp(dirname):
     return dirname
 
 
-def filter_on_overlap(bpps, regions_by_reference_name):
+def filter_on_overlap(
+    bpps: List[BreakpointPair], regions_by_reference_name: Dict[str, List['BioInterval']]
+):
     """
     filter a set of breakpoint pairs based on overlap with a set of genomic regions
 
     Args:
-        bpps (List[mavis.breakpoint.BreakpointPair]): list of breakpoint pairs to be filtered
-        regions_by_reference_name (Dict[str,List[mavis.annotate.base.BioInterval]]): regions to filter against
+        bpps: list of breakpoint pairs to be filtered
+        regions_by_reference_name: regions to filter against
     """
     logger.info(f'filtering from {len(bpps)} using overlaps with regions filter')
     failed = []
@@ -175,7 +180,9 @@ def filter_on_overlap(bpps, regions_by_reference_name):
     return passed, failed
 
 
-def read_inputs(inputs, required_columns=[], **kwargs):
+def read_inputs(
+    inputs: List[str], required_columns: List[str] = [], **kwargs
+) -> List[BreakpointPair]:
     bpps = []
 
     for finput in bash_expands(*inputs):
@@ -237,18 +244,19 @@ def get_connected_components(adj_matrix):
     return components
 
 
-def generate_complete_stamp(output_dir, prefix='MAVIS.', start_time=None):
+def generate_complete_stamp(
+    output_dir: str, prefix: str = 'MAVIS.', start_time: Optional[int] = None
+) -> str:
     """
     writes a complete stamp, optionally including the run time if start_time is given
 
     Args:
-        output_dir (str): path to the output dir the stamp should be written in
-        log (Callable): function to print logging messages to
-        prefix (str): prefix for the stamp name
-        start_time (int): the start time
+        output_dir: path to the output dir the stamp should be written in
+        prefix: prefix for the stamp name
+        start_time: the start time
 
     Return:
-        str: path to the complete stamp
+        path to the complete stamp
 
     Example:
         >>> generate_complete_stamp('some_output_dir')

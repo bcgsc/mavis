@@ -118,8 +118,8 @@ def main(
 ):
     """
     Args:
-        inputs (List[str]): list of input files to read
-        output (str): path to the output directory
+        inputs: list of input files to read
+        output: path to the output directory
     """
     reference_genome = ReferenceFile.load_from_config(config, 'reference_genome')
     annotations = ReferenceFile.load_from_config(config, 'annotations')
