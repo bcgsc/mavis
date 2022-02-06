@@ -16,9 +16,9 @@ class SplicingPattern(list):
         temp = []
         for site in self:
             temp.append(
-                '{}{}{}'.format(
-                    'D' if site.type == SPLICE_SITE_TYPE.DONOR else 'A',
+                '{}:{}{}'.format(
                     site.pos,
+                    'D' if site.type == SPLICE_SITE_TYPE.DONOR else 'A',
                     '' if site.intact else '*',
                 )
             )
@@ -160,25 +160,6 @@ class SpliceSite(BioInterval):
 
     def __or__(self, other):
         return Interval.__or__(self, other)
-
-    def __repr__(self):
-        cls = self.__class__.__name__
-        refname = self.reference_object
-        try:
-            refname = self.reference_object.name
-        except AttributeError:
-            pass
-        seq = '' if not self.seq else ', seq=' + self.seq
-        return '{}(type={}, {}:{}({}-{}){}, strand={})'.format(
-            cls,
-            SPLICE_SITE_TYPE.reverse(self.type),
-            refname,
-            self.pos,
-            self.start,
-            self.end,
-            seq,
-            self.get_strand(),
-        )
 
 
 def predict_splice_sites(input_sequence: str, is_reverse: bool = False) -> List[SpliceSite]:

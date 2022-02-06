@@ -256,18 +256,18 @@ class Translation(BioInterval):
         end: int,
         transcript: Optional['Transcript'] = None,
         domains: Optional[List[Domain]] = None,
-        seq=None,
-        name=None,
+        seq: Optional[str] = None,
+        name: Optional[str] = None,
     ):
         """
         describes the splicing pattern and cds start and end with reference to a particular transcript
 
         Args:
-            start (int): start of the coding sequence (cds) relative to the start of the first exon in the transcript
-            end (int): end of the coding sequence (cds) relative to the start of the first exon in the transcript
-            transcript (Transcript): the transcript this is a Translation of
-            domains (List[Domain]): a list of the domains on this translation
-            sequence (str): the cds sequence
+            start: start of the coding sequence (cds) relative to the start of the first exon in the transcript
+            end: end of the coding sequence (cds) relative to the start of the first exon in the transcript
+            transcript: the transcript this is a Translation of
+            domains: a list of the domains on this translation
+            sequence: the cds sequence
         """
         domains = [] if domains is None else domains
         BioInterval.__init__(
@@ -279,7 +279,7 @@ class Translation(BioInterval):
             raise AttributeError('start must be a positive integer', start)
         if transcript and end > len(transcript):
             raise AttributeError(
-                'translation cannot be outside of related transcript range', end, len(transcript)
+                f'translation ({self.name}) cannot be outside of related transcript range ({end} > {len(transcript)})'
             )
 
         for domain in domains:
