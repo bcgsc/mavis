@@ -2,7 +2,6 @@ import argparse
 import json
 import logging
 import re
-import traceback
 from typing import Dict, Tuple
 
 import pandas as pd
@@ -313,13 +312,6 @@ def split_col_into_rows(df, col, delimiter=',', new_col=None):
     if new_col == col:
         new_df = new_df.drop(columns=[new_col])
     return new_df.merge(s, left_index=True, right_index=True)
-
-
-def print_marker(df, links_df=None):
-    stack = traceback.extract_stack(limit=2)[0]
-    print(f'{stack.filename}:{stack.lineno} {stack.name}')
-    print(df.shape, links_df.shape if links_df is not None else '')
-    print(df.groupby(['type']).agg({'feature_id': 'count', 'feature_id': 'unique'}).reset_index())
 
 
 def fix_dangling_parent_reference(nodes_df, links_df):
