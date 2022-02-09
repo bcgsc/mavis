@@ -1,0 +1,466 @@
+{
+    "genes": [
+        {
+            "aliases": [
+                "KRAS"
+            ],
+            "chr": "12",
+            "end": 25403870,
+            "name": "ENSG00000133703",
+            "start": 25357723,
+            "strand": "-",
+            "transcripts": [
+                {
+                    "aliases": [
+                    ],
+                    "end": 25403865,
+                    "exons": [
+                        {
+                            "end": 25403865,
+                            "start": 25403685
+                        },
+                        {
+                            "end": 25398329,
+                            "start": 25398208
+                        },
+                        {
+                            "end": 25380346,
+                            "start": 25380168
+                        },
+                        {
+                            "end": 25378707,
+                            "start": 25378548
+                        },
+                        {
+                            "end": 25362845,
+                            "start": 25357723
+                        }
+                    ],
+                    "is_best_transcript": true,
+                    "name": "ENST00000311936",
+                    "start": 25357723,
+                    "translations": [
+                        {
+                            "cdna_coding_end": 759,
+                            "cdna_coding_start": 193,
+                            "domains": [
+                                {
+                                    "name": "PR00449",
+                                    "regions": [
+                                        {
+                                            "end": 25,
+                                            "start": 4
+                                        },
+                                        {
+                                            "end": 43,
+                                            "start": 27
+                                        },
+                                        {
+                                            "end": 66,
+                                            "start": 44
+                                        },
+                                        {
+                                            "end": 120,
+                                            "start": 107
+                                        },
+                                        {
+                                            "end": 163,
+                                            "start": 141
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PF00025",
+                                    "regions": [
+                                        {
+                                            "end": 162,
+                                            "start": 3
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SM00173",
+                                    "regions": [
+                                        {
+                                            "end": 166,
+                                            "start": 1
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PF00009",
+                                    "regions": [
+                                        {
+                                            "end": 163,
+                                            "start": 45
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PF08477",
+                                    "regions": [
+                                        {
+                                            "end": 119,
+                                            "start": 5
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PS50318",
+                                    "regions": [
+                                        {
+                                            "end": 184,
+                                            "start": 165
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SSF52540",
+                                    "regions": [
+                                        {
+                                            "end": 184,
+                                            "start": 3
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "TIGR00231",
+                                    "regions": [
+                                        {
+                                            "end": 159,
+                                            "start": 1
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SM00175",
+                                    "regions": [
+                                        {
+                                            "end": 166,
+                                            "start": 4
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PF00071",
+                                    "regions": [
+                                        {
+                                            "end": 164,
+                                            "start": 5
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SM00174",
+                                    "regions": [
+                                        {
+                                            "end": 166,
+                                            "start": 6
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "aliases": [
+                    ],
+                    "end": 25403870,
+                    "exons": [
+                        {
+                            "end": 25403870,
+                            "start": 25403685
+                        },
+                        {
+                            "end": 25398329,
+                            "start": 25398208
+                        },
+                        {
+                            "end": 25362845,
+                            "start": 25362102
+                        }
+                    ],
+                    "is_best_transcript": false,
+                    "name": "ENST00000557334",
+                    "start": 25362102,
+                    "translations": [
+                        {
+                            "cdna_coding_end": 425,
+                            "cdna_coding_start": 198,
+                            "domains": [
+                                {
+                                    "name": "PR00449",
+                                    "regions": [
+                                        {
+                                            "end": 25,
+                                            "start": 4
+                                        },
+                                        {
+                                            "end": 43,
+                                            "start": 27
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PS50318",
+                                    "regions": [
+                                        {
+                                            "end": 71,
+                                            "start": 52
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SM00173",
+                                    "regions": [
+                                        {
+                                            "end": 53,
+                                            "start": 1
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PF00071",
+                                    "regions": [
+                                        {
+                                            "end": 44,
+                                            "start": 5
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SSF52540",
+                                    "regions": [
+                                        {
+                                            "end": 37,
+                                            "start": 3
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "aliases": [
+                    ],
+                    "end": 25403737,
+                    "exons": [
+                        {
+                            "end": 25403737,
+                            "start": 25403685
+                        },
+                        {
+                            "end": 25398329,
+                            "start": 25398208
+                        },
+                        {
+                            "end": 25380346,
+                            "start": 25380168
+                        },
+                        {
+                            "end": 25378707,
+                            "start": 25378548
+                        },
+                        {
+                            "end": 25368494,
+                            "start": 25368371
+                        },
+                        {
+                            "end": 25362845,
+                            "start": 25362365
+                        }
+                    ],
+                    "is_best_transcript": false,
+                    "name": "ENST00000256078",
+                    "start": 25362365,
+                    "translations": [
+                        {
+                            "cdna_coding_end": 634,
+                            "cdna_coding_start": 65,
+                            "domains": [
+                                {
+                                    "name": "SM00175",
+                                    "regions": [
+                                        {
+                                            "end": 166,
+                                            "start": 4
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PF00071",
+                                    "regions": [
+                                        {
+                                            "end": 164,
+                                            "start": 5
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SSF52540",
+                                    "regions": [
+                                        {
+                                            "end": 185,
+                                            "start": 3
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SM00176",
+                                    "regions": [
+                                        {
+                                            "end": 189,
+                                            "start": 9
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "TIGR00231",
+                                    "regions": [
+                                        {
+                                            "end": 159,
+                                            "start": 1
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SM00174",
+                                    "regions": [
+                                        {
+                                            "end": 166,
+                                            "start": 6
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PR00449",
+                                    "regions": [
+                                        {
+                                            "end": 25,
+                                            "start": 4
+                                        },
+                                        {
+                                            "end": 43,
+                                            "start": 27
+                                        },
+                                        {
+                                            "end": 66,
+                                            "start": 44
+                                        },
+                                        {
+                                            "end": 120,
+                                            "start": 107
+                                        },
+                                        {
+                                            "end": 163,
+                                            "start": 141
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PF00025",
+                                    "regions": [
+                                        {
+                                            "end": 161,
+                                            "start": 3
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PF08477",
+                                    "regions": [
+                                        {
+                                            "end": 119,
+                                            "start": 5
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PF00009",
+                                    "regions": [
+                                        {
+                                            "end": 162,
+                                            "start": 45
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SM00173",
+                                    "regions": [
+                                        {
+                                            "end": 166,
+                                            "start": 1
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "aliases": [
+                    ],
+                    "end": 25403863,
+                    "exons": [
+                        {
+                            "end": 25403863,
+                            "start": 25403698
+                        },
+                        {
+                            "end": 25398329,
+                            "start": 25398208
+                        },
+                        {
+                            "end": 25388160,
+                            "start": 25386753
+                        }
+                    ],
+                    "is_best_transcript": false,
+                    "name": "ENST00000556131",
+                    "start": 25386753,
+                    "translations": [
+                        {
+                            "cdna_coding_end": 309,
+                            "cdna_coding_start": 178,
+                            "domains": [
+                                {
+                                    "name": "PR00449",
+                                    "regions": [
+                                        {
+                                            "end": 25,
+                                            "start": 4
+                                        },
+                                        {
+                                            "end": 43,
+                                            "start": 27
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "PF00071",
+                                    "regions": [
+                                        {
+                                            "end": 37,
+                                            "start": 5
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SSF52540",
+                                    "regions": [
+                                        {
+                                            "end": 38,
+                                            "start": 3
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

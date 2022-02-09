@@ -7,12 +7,14 @@ from tools.convert_annotations_format import (
     convert_gff2_to_mavis,
     convert_gff3_to_mavis,
     convert_mavis_json_2to3,
+    convert_tab_to_json,
 )
 
 CONVERTERS = {
     'gff3': convert_gff3_to_mavis,
     'gtf': convert_gff2_to_mavis,
     'v2-json': convert_mavis_json_2to3,
+    'v2-tab': convert_tab_to_json,
 }
 
 
@@ -45,6 +47,11 @@ def sort_elements(data):
         ['Homo_sapiens.GRCh38.kras.gff3', 'Homo_sapiens.GRCh38.kras.gff3.json', 'gff3'],
         ['Homo_sapiens.GRCh38.kras.gtf', 'Homo_sapiens.GRCh38.kras.gtf.json', 'gtf'],
         ['example_genes.v2.json', 'example_genes.v3.json', 'v2-json'],
+        [
+            'ensembl69_hg19_annotations.kras.tab',
+            'ensembl69_hg19_annotations.kras.tab.json',
+            'v2-tab',
+        ],
     ],
 )
 def test_gff_examples(filename, expected_file, input_type):
