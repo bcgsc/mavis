@@ -96,7 +96,7 @@ class TestConvert:
         assert somatic_event.data.get('SOMATIC', False) is True
 
     def test_pindel(self):
-        self.run_main(get_data('pindel_events.vcf'), SUPPORTED_TOOL.PINDEL, False)
+        self.run_main(get_data('pindel_events.vcf.gz'), SUPPORTED_TOOL.PINDEL, False)
 
     def test_transabyss(self):
         self.run_main(get_data('transabyss_indels_output.tab'), SUPPORTED_TOOL.TA, False)
