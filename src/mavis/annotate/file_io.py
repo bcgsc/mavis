@@ -153,24 +153,29 @@ def parse_annotations_json(
 
                 for translation in transcript.get('translations', []):
                     try:
-                        if 'cdna_coding_end' not in translation:
-                            translation['cdna_coding_end'] = spl_tx.convert_genomic_to_cdna(
-                                translation['end']
-                            )
-                        if 'cdna_coding_start' not in translation:
-                            translation['cdna_coding_start'] = spl_tx.convert_genomic_to_cdna(
-                                translation['start']
-                            )
+                        if (
+                            'cdna_coding_end' not in translation
+                            or 'cdna_coding_start' not in translation
+                        ):
+                            if 'cdna_coding_end' not in translation:
+                                translation['cdna_coding_end'] = spl_tx.convert_genomic_to_cdna(
+                                    translation['end']
+                                )
+                            if 'cdna_coding_start' not in translation:
+                                translation['cdna_coding_start'] = spl_tx.convert_genomic_to_cdna(
+                                    translation['start']
+                                )
+
+                            if gene.strand == STRAND.NEG:
+                                translation['cdna_coding_start'], translation['cdna_coding_end'] = (
+                                    translation['cdna_coding_end'],
+                                    translation['cdna_coding_start'],
+                                )
+
                     except IndexError as err:
                         raise IndexError(
                             f'Invalid specification of CDS ({translation["name"]}: {translation["start"]}-{translation["end"]}) '
                             f'region on transcript ({transcript["name"]}: {transcript["start"]}-{transcript["end"]}): {err}'
-                        )
-
-                    if gene.strand == STRAND.NEG:
-                        translation['cdna_coding_start'], translation['cdna_coding_end'] = (
-                            translation['cdna_coding_end'],
-                            translation['cdna_coding_start'],
                         )
 
                     tx_length = (
@@ -191,7 +196,7 @@ def parse_annotations_json(
                             for region in regions:
                                 if region.start < 1 or region.end > tx_length:
                                     raise AssertionError(
-                                        'region cannot be outside the translated length'
+                                        f'region ({dom["name"]}:{region.start}-{region.end}) cannot be outside the translated length ({tx_length})'
                                     )
                             domains.append(
                                 Domain(
@@ -203,8 +208,8 @@ def parse_annotations_json(
                         except AssertionError as err:
                             logger.warning(repr(err))
                     translation = Translation(
-                        translation['cdna_coding_start'],
-                        translation['cdna_coding_end'],
+                        start=translation['cdna_coding_start'],
+                        end=translation['cdna_coding_end'],
                         transcript=spl_tx,
                         domains=domains,
                         name=translation.get('name'),
