@@ -113,6 +113,8 @@ def parse_annotations_json(
         raise AssertionError(short_msg)
 
     genes_by_chr: ReferenceAnnotations = {}
+    tx_skipped = 0
+    domain_errors = 0
 
     for gene_dict in data['genes']:
 
@@ -183,7 +185,8 @@ def parse_annotations_json(
                     )
                     # check that the translation makes sense before including it
                     if tx_length % CODON_SIZE != 0:
-                        logger.warning(
+                        tx_skipped += 1
+                        logger.debug(
                             f'Ignoring translation ({translation.get("name")}). The translated region is not a multiple of three (length={tx_length})'
                         )
                         continue
@@ -206,7 +209,8 @@ def parse_annotations_json(
                                 )
                             )
                         except AssertionError as err:
-                            logger.warning(repr(err))
+                            domain_errors += 1
+                            logger.debug(repr(err))
                     translation = Translation(
                         start=translation['cdna_coding_start'],
                         end=translation['cdna_coding_end'],
@@ -227,6 +231,14 @@ def parse_annotations_json(
                     spl_tx.translations.append(translation)
         if not best_transcripts_only or has_best:
             genes_by_chr.setdefault(gene.chr, []).append(gene)
+    if tx_skipped:
+        logger.warning(
+            f'Skipped {tx_skipped} translations where the CDS length was not a multiple of 3'
+        )
+    if domain_errors:
+        logger.warning(
+            f'Skipped {domain_errors} domains due to errors (coordinates defined outside the translated region)'
+        )
     return genes_by_chr
 
 

@@ -183,7 +183,7 @@ def convert_tab_to_json(filepath: str) -> Dict:
     skip_lines = 0
     with open(filepath, 'r') as fh:
         lines = fh.readlines()
-        skip_lines = len([l for l in lines if l.startswith('##')])
+        skip_lines = len([line for line in lines if line.startswith('##')])
 
     df = pd.read_csv(
         filepath,
@@ -815,26 +815,47 @@ def convert_mavis_json_2to3(filename):
         content = json.load(fh)
 
     # move translations into sep object
+    skipped_tx = 0
+    total_tx = 0
     for gene in content['genes']:
-        if gene['strand'] == '1':
+        if str(gene['strand']) == '1':
             gene['strand'] = '+'
-        elif gene['strand'] == '-1':
+        elif str(gene['strand']) == '-1':
             gene['strand'] = '-'
         for transcript in gene.get('transcripts', []):
-            if any(transcript.get(k) for k in ['cdna_coding_start', 'cdna_coding_end', 'domains']):
-                transcript['translations'] = [
-                    {
-                        'cdna_coding_start': transcript['cdna_coding_start'],
-                        'cdna_coding_end': transcript['cdna_coding_end'],
-                        'domains': transcript['domains'],
-                    }
-                ]
-                del transcript['domains']
+            if all(transcript.get(k) for k in ['cdna_coding_start', 'cdna_coding_end']):
+                total_tx += 1
+                translation = {
+                    'cdna_coding_start': transcript['cdna_coding_start'],
+                    'cdna_coding_end': transcript['cdna_coding_end'],
+                    'domains': transcript.get('domains', []),
+                }
+                translated_length = (
+                    1 + transcript['cdna_coding_end'] - transcript['cdna_coding_start']
+                )
+
+                if 'domains' in transcript:
+                    del transcript['domains']
+
                 del transcript['cdna_coding_start']
                 del transcript['cdna_coding_end']
+
+                if translated_length % 3 != 0:
+                    skipped_tx += 1
+                    logging.debug(
+                        f'Ignoring translation ({transcript.get("name")}). The translated region is not a multiple of three (length={translated_length})'
+                    )
+                    continue
+                transcript['translations'] = [translation]
+    if skipped_tx:
+        logging.warning(
+            f'dropped {skipped_tx} / {total_tx} translations for lengths that were not a multiple of 3'
+        )
     content = coerce_number_types(content)
     content = strip_empty_fields(content)
+    logging.info('testing new JSON with MAVIS loader')
     parse_annotations_json(content)
+    logging.info('removing unnecessary empty fields')
     content = strip_empty_fields(content)
     return content
 
@@ -857,8 +878,11 @@ def main():
     )
 
     args = parser.parse_args()
-
-    logging.basicConfig(format='{message}', style='{', level=logging.getLevelName(args.log_level))
+    logging.basicConfig(
+        format='{asctime} [{levelname}] {message}',
+        style='{',
+        level=logging.getLevelName(args.log_level),
+    )
 
     if args.input_type == 'v2-tab':
         annotations = convert_tab_to_json(args.input)

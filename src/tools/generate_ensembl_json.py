@@ -247,7 +247,7 @@ class EnsemblAnnotation(object):
             self.alias = defaultdict(set)
 
         self.data = EnsemblRelease(release, species)
-        self.download_pyensembl_cache(self.data, self.custom_cache)
+        self.download_pyensembl_cache()
         self.get_domain_cache()
 
         if self.best_file:
@@ -260,9 +260,6 @@ class EnsemblAnnotation(object):
     def download_pyensembl_cache(self):
         """
         Method download the pyensembl cache files for this release if not already there.
-        Args:
-            data (EnsemblRelease): pyensembl object for the release info
-            custom_cache (str): path to cirectory to cache pyensembl files
         """
         if self.custom_cache:
             os.environ["PYENSEMBL_CACHE_DIR"] = self.custom_cache

@@ -5,7 +5,8 @@ wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRC
 gunzip GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.gz
 
 echo "downloading the gene annotations file"
-wget http://www.bcgsc.ca/downloads/mavis/ensembl79_hg38_annotations.json
+wget http://www.bcgsc.ca/downloads/mavis/v3/ensembl79_hg38_annotations.v3.json.gz
+gunzip ensembl79_hg38_annotations.v3.json.gz
 
 echo "downloading the masking file"
 wget http://www.bcgsc.ca/downloads/mavis/GRCh38_masking.tab
