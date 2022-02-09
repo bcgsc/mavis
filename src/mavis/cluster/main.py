@@ -158,7 +158,7 @@ def main(
             annotations.content, breakpoint_pairs, max_proximity=config[f'{SECTION}.max_proximity']
         )
         logger.info(
-            f'filtered from {len(breakpoint_pairs)} down to {len(pass_clusters)} (removed {uninformative_clusters})'
+            f'filtered from {len(breakpoint_pairs)} down to {len(pass_clusters)} (removed {len(uninformative_clusters)})'
         )
         breakpoint_pairs = pass_clusters
         for bpp in uninformative_clusters:

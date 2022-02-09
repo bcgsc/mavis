@@ -1,3 +1,4 @@
+import gzip
 import logging
 import re
 from dataclasses import dataclass
@@ -269,13 +270,22 @@ def pandas_vcf(input_file: str) -> Tuple[List[str], pd.DataFrame]:
     Read a standard vcf file into a pandas dataframe
     """
     # read the comment/header information
-    header_lines = []
-    with open(input_file, 'r') as fh:
-        line = '##'
-        while line.startswith('##'):
-            header_lines.append(line)
-            line = fh.readline().strip()
-        header_lines = header_lines[1:]
+    try:
+        header_lines = []
+        with open(input_file, 'r') as fh:
+            line = '##'
+            while line.startswith('##'):
+                header_lines.append(line)
+                line = fh.readline().strip()
+            header_lines = header_lines[1:]
+    except UnicodeDecodeError:
+        header_lines = []
+        with gzip.open(input_file, 'rt') as fh:
+            line = '##'
+            while line.startswith('##'):
+                header_lines.append(line)
+                line = fh.readline().strip()
+            header_lines = header_lines[1:]
     # read the data
     df = pd.read_csv(
         input_file,

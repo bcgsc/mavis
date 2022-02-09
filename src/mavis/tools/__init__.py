@@ -294,7 +294,7 @@ def _convert_tool_output(
         df.columns = [c[1:] if c.startswith('#') else c for c in df.columns]
         rows = df.where(df.notnull(), None).to_dict('records')
     if rows:
-        logger.info('found', len(rows), 'rows')
+        logger.info(f'found {len(rows)} rows')
         for row in rows:
             try:
                 std_rows = _convert_tool_row(
