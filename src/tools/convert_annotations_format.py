@@ -7,9 +7,6 @@ from typing import Dict, Tuple
 import pandas as pd
 from mavis.annotate.file_io import parse_annotations_json
 
-# pd.set_option('display.width', 250)
-pd.options.display.width = 0
-
 PANDAS_DEFAULT_NA_VALUES = [
     '-1.#IND',
     '1.#QNAN',
@@ -92,17 +89,33 @@ def agg_strings_unique(series):
 
 
 def strip_empty_fields(input_obj):
-    """Remove all empty string fields from some dictionary object to reduce the size"""
+    """Remove all empty string or null fields from some dictionary object to reduce the size"""
 
     if isinstance(input_obj, dict):
         result = {}
         for k, v in input_obj.items():
-            if v == '' or (isinstance(v, list) and not len(v)):
+            if v == '' or v is None or (isinstance(v, list) and not len(v)):
                 continue
             result[k] = strip_empty_fields(v)
         return result
     elif isinstance(input_obj, list):
         return [strip_empty_fields(v) for v in input_obj]
+    return input_obj
+
+
+def coerce_number_types(input_obj, fields=['start', 'end', 'coding_cdna_start', 'coding_cdna_end']):
+    if isinstance(input_obj, dict):
+        result = {}
+        for k, v in input_obj.items():
+            if k in fields and isinstance(v, str):
+                if v.lower() in {'', 'null', 'none'}:
+                    continue
+                result[k] = int(v)
+            else:
+                result[k] = coerce_number_types(v)
+        return result
+    elif isinstance(input_obj, list):
+        return [coerce_number_types(v) for v in input_obj]
     return input_obj
 
 
@@ -167,10 +180,16 @@ def convert_tab_to_json(filepath: str) -> Dict:
                 logging.warning(f'error in domain: {domain}, {row}, {repr(err)}')
         return domains
 
+    skip_lines = 0
+    with open(filepath, 'r') as fh:
+        lines = fh.readlines()
+        skip_lines = len([l for l in lines if l.startswith('##')])
+
     df = pd.read_csv(
         filepath,
+        skiprows=skip_lines,
         dtype={
-            'ensembl_gene_id': str,
+            '#ensembl_gene_id': str,
             'ensembl_transcript_id': str,
             'chr': str,
             'cdna_coding_start': pd.Int64Dtype(),
@@ -185,8 +204,7 @@ def convert_tab_to_json(filepath: str) -> Dict:
             'gene_end': int,
         },
         sep='\t',
-        comment='#',
-    )
+    ).rename(columns={'#ensembl_gene_id': 'ensembl_gene_id'})
 
     for col in ['ensembl_gene_id', 'chr', 'ensembl_transcript_id', 'gene_start', 'gene_end']:
         if col not in df:
@@ -228,19 +246,20 @@ def convert_tab_to_json(filepath: str) -> Dict:
             'is_best_transcript': is_best_transcript,
             'name': row['ensembl_transcript_id'],
             'exons': row.get('genomic_exon_ranges', []),
-            'domains': row.get('AA_domain_ranges', []),
             'start': row.get('transcript_genomic_start'),
             'end': row.get('transcript_genomic_end'),
-            'cdna_coding_start': row.get('cdna_coding_start'),
-            'cdna_coding_end': row.get('cdna_coding_end'),
             'aliases': [],
+            'translations': [
+                {
+                    'domains': row.get('AA_domain_ranges', []),
+                    'cdna_coding_start': row.get('cdna_coding_start'),
+                    'cdna_coding_end': row.get('cdna_coding_end'),
+                }
+            ],
         }
-        for int_value in ['start', 'end', 'cdna_coding_start', 'cdna_coding_end']:
-            if transcript.get(int_value) is not None:
-                transcript[int_value] = int(transcript[int_value])
         gene['transcripts'].append(transcript)
 
-    return {'genes': list(genes.values())}
+    return coerce_number_types({'genes': list(genes.values())})
 
 
 def strip_id_field(feature_id) -> Tuple[str, str]:
@@ -620,8 +639,6 @@ def convert_pandas_gff_to_mavis(df) -> Dict:
         short_msg = '. '.join(
             [line for line in str(err).split('\n') if line.strip()][:3]
         )  # these can get super long
-        with open('tmp_out.json', 'w') as fh:
-            fh.write(json.dumps(result, sort_keys=True, indent='  '))
         raise AssertionError(short_msg)
     # re-strip (mavis adds defaults)
     result = strip_empty_fields({'genes': list(genes_by_id.values())})
@@ -799,6 +816,10 @@ def convert_mavis_json_2to3(filename):
 
     # move translations into sep object
     for gene in content['genes']:
+        if gene['strand'] == '1':
+            gene['strand'] = '+'
+        elif gene['strand'] == '-1':
+            gene['strand'] = '-'
         for transcript in gene.get('transcripts', []):
             if any(transcript.get(k) for k in ['cdna_coding_start', 'cdna_coding_end', 'domains']):
                 transcript['translations'] = [
@@ -811,12 +832,14 @@ def convert_mavis_json_2to3(filename):
                 del transcript['domains']
                 del transcript['cdna_coding_start']
                 del transcript['cdna_coding_end']
+    content = coerce_number_types(content)
+    content = strip_empty_fields(content)
     parse_annotations_json(content)
     content = strip_empty_fields(content)
     return content
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'input', help='path to the tab-delimated mavis v2 style reference annotations file'
@@ -849,3 +872,7 @@ if __name__ == '__main__':
     logging.info(f'writing: {args.output}')
     with open(args.output, 'w') as fh:
         fh.write(json.dumps(annotations, sort_keys=True))
+
+
+if __name__ == '__main__':
+    main()
