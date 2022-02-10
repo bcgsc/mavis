@@ -5,16 +5,17 @@ import pytest
 from mavis.annotate.base import BioInterval, ReferenceName
 from mavis.annotate.file_io import load_annotations, load_reference_genome
 from mavis.annotate.fusion import FusionTranscript, determine_prime
-from mavis.annotate.genomic import (Exon, Gene, PreTranscript, Template,
-                                    Transcript)
-from mavis.annotate.protein import (Domain, DomainRegion, Translation,
-                                    calculate_orf, translate)
-from mavis.annotate.variant import (Annotation, _gather_annotations,
-                                    _gather_breakpoint_annotations,
-                                    annotate_events, overlapping_transcripts)
+from mavis.annotate.genomic import Exon, Gene, PreTranscript, Template, Transcript
+from mavis.annotate.protein import Domain, DomainRegion, Translation, calculate_orf, translate
+from mavis.annotate.variant import (
+    Annotation,
+    _gather_annotations,
+    _gather_breakpoint_annotations,
+    annotate_events,
+    overlapping_transcripts,
+)
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import (ORIENT, PRIME, PROTOCOL, STRAND, SVTYPE,
-                             reverse_complement)
+from mavis.constants import ORIENT, PRIME, PROTOCOL, STRAND, SVTYPE, reverse_complement
 from mavis.error import NotSpecifiedError
 from mavis.interval import Interval
 

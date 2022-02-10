@@ -6,8 +6,7 @@ from mavis.annotate.genomic import Exon, PreTranscript
 from mavis.annotate.splicing import predict_splice_sites
 from mavis.annotate.variant import annotate_events
 from mavis.breakpoint import Breakpoint, BreakpointPair
-from mavis.constants import (PROTOCOL, SPLICE_TYPE, STRAND, SVTYPE,
-                             reverse_complement)
+from mavis.constants import PROTOCOL, SPLICE_TYPE, STRAND, SVTYPE, reverse_complement
 from mavis.interval import Interval
 
 from ..mock import MockLongString, MockObject, get_example_genes
