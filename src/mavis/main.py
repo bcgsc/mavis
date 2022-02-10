@@ -17,11 +17,11 @@ from . import util as _util
 from .align import get_aligner_version
 from .annotate import main as annotate_main
 from .cluster import main as cluster_main
+from .convert import SUPPORTED_TOOL, convert_tool_output
 from .overlay import check_overlay_args
 from .overlay import main as overlay_main
 from .pairing import main as pairing_main
 from .summary import main as summary_main
-from .tools import SUPPORTED_TOOL, convert_tool_output
 from .util import filepath
 from .validate import main as validate_main
 

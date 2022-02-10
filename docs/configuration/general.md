@@ -1,6 +1,6 @@
 # Getting Started
 
-An exhaustive list of the various configurable settings can be found [here](../settings)
+An exhaustive list of the various configurable settings can be found [here](../settings). Alternatively you can view them through the [online schema explorer](https://json-schema.app/view?url=https://raw.githubusercontent.com/bcgsc/mavis_config/master/src/mavis_config/config.json)
 
 ## Pipeline Configuration File
 
