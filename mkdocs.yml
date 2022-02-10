@@ -12,7 +12,21 @@ markdown_extensions:
   - markdown_include.include:
       base_path: docs
 extra_css: [extra.css]
+nav:
+  - index.md
+  - install.md
+  - migrating.md
+  - ... | background/**.md
+  - ... | inputs/**.md
+  - ... | outputs/**.md
+  - ... | configuration/**.md
+  - ... | tutorials/**.md
+  - development.md
+  - ...
+  - glossary.md
+
 plugins:
+  - awesome-pages
   - mkdocs-simple-hooks:
       hooks:
         on_pre_build: "docs.hooks:build_package_docs"
