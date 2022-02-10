@@ -51,6 +51,7 @@ jobs:
         pytest tests -v \
           --junitxml=junit/test-results-${{ matrix.python-version }}.xml \
           --cov mavis \
+          --cov tools.convert_annotations_format \
           --cov-report term-missing \
           --cov-report xml \
           --durations=10 \

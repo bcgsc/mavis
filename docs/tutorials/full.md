@@ -155,7 +155,7 @@ Finally you will need to set output directory and the reference files
       "reference_inputs/hg19.2bit"
   ],
   "reference.annotations": [
-      "reference_inputs/ensembl69_hg19_annotations.json"
+      "reference_inputs/ensembl69_hg19_annotations.v3.json"
   ],
   "reference.dgv_annotation": [
       "reference_inputs/dgv_hg19_variants.tab"

@@ -20,7 +20,6 @@ import requests
 import simplejson as json
 from pyensembl import EnsemblRelease
 
-
 VERSION = "1.0.0"
 SCRIPT = os.path.abspath(__file__)
 CACHE_DEFAULT = os.environ["HOME"] + "/.cache"
@@ -261,9 +260,6 @@ class EnsemblAnnotation(object):
     def download_pyensembl_cache(self):
         """
         Method download the pyensembl cache files for this release if not already there.
-        Args:
-            data (EnsemblRelease): pyensembl object for the release info
-            custom_cache (str): path to cirectory to cache pyensembl files
         """
         if self.custom_cache:
             os.environ["PYENSEMBL_CACHE_DIR"] = self.custom_cache
@@ -311,35 +307,38 @@ class EnsemblAnnotation(object):
         if not protein_id:
             return None
 
+        translation = {
+            'domains': [],
+            "name": protein_id,
+        }
         result = {
             "name": str(transcript.transcript_id),
             "start": int(transcript.start),
             "end": int(transcript.end),
             "aliases": [str(transcript.transcript_name)],
             "is_best_transcript": str(transcript.transcript_id) in self.best,
-            "protein_id": transcript.protein_id,
             "exons": [],
-            "domains": [],
+            "translations": [translation],
         }
 
         # start/end are absolute genomic positions, so calculate positions relative to the mRNA start
         cpos = transcript.coding_sequence_position_ranges
         if transcript.strand in ("+", "1"):
-            result["cdna_coding_start"] = transcript.spliced_offset(cpos[0][0]) + 1
-            result["cdna_coding_end"] = transcript.spliced_offset(cpos[-1][1]) + 1
+            translation["cdna_coding_start"] = transcript.spliced_offset(cpos[0][0]) + 1
+            translation["cdna_coding_end"] = transcript.spliced_offset(cpos[-1][1]) + 1
         elif transcript.strand in ("-", "-1"):
-            result["cdna_coding_start"] = transcript.spliced_offset(cpos[0][1]) + 1
-            result["cdna_coding_end"] = transcript.spliced_offset(cpos[-1][0]) + 1
+            translation["cdna_coding_start"] = transcript.spliced_offset(cpos[0][1]) + 1
+            translation["cdna_coding_end"] = transcript.spliced_offset(cpos[-1][0]) + 1
 
         return result
 
-    def get_exons(self, eid):
+    def get_exons(self, eid: str) -> dict:
         """
         Method parse exon info in the EnsemblRelease into json format.
         Args:
-            eid (str): Ensembl exon ID
+            eid: Ensembl exon ID
         Returns:
-            dict: exon info formatted for json
+            exon info formatted for json
         """
         exon = self.data.exon_by_id(eid)
         result = {"name": str(exon.exon_id), "start": int(exon.start), "end": int(exon.end)}
@@ -347,7 +346,7 @@ class EnsemblAnnotation(object):
         return result
 
     @cached_domains
-    def get_domains(self, eid):
+    def get_domains(self, eid: str):
         """
         Method request domain info from Ensembl and parse into json format.
         Args:
@@ -404,8 +403,9 @@ class EnsemblAnnotation(object):
                     for eid in self.data.exon_ids_of_transcript_id(tid):
                         exond = self.get_exons(eid)
                         transd["exons"].append(exond)
-                    domains = self.get_domains(transd["protein_id"])
-                    transd["domains"] = domains
+                    for translation in transd['translations']:
+                        domains = self.get_domains(translation["name"])
+                        transd["domains"] = domains
                     gened["transcripts"].append(transd)
                 else:
                     count["non_coding"] += 1
@@ -547,7 +547,10 @@ def main():
         help="a tab-separated file of Ensembl gene IDs and gene aliases (one ID and one alias per line)",
     )
     opt_parser.add_argument(
-        "-c", "--custom-cache", help="use a non-default path to cache ensembl data"
+        "-c",
+        "--custom-cache",
+        help="use a non-default path to cache ensembl data",
+        default=CACHE_DEFAULT,
     )
     opt_parser.add_argument(
         "-d",

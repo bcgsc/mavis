@@ -15,7 +15,8 @@ rm -f chr*.fa
 rm -f chromeFa.tar.gz
 
 echo "downloading the gene annotations file"
-wget http://www.bcgsc.ca/downloads/mavis/ensembl69_hg19_annotations.json
+wget http://www.bcgsc.ca/downloads/mavis/v3/ensembl69_hg19_annotations.v3.json.gz
+gunzip ensembl69_hg19_annotations.v3.json.gz
 
 echo "downloading the masking file"
 wget http://www.bcgsc.ca/downloads/mavis/hg19_masking.tab

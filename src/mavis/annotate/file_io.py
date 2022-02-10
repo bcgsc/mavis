@@ -10,7 +10,7 @@ import pandas as pd
 from Bio import SeqIO
 from snakemake.utils import validate as snakemake_validate
 
-from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, translate
+from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
 from ..types import ReferenceAnnotations, ReferenceGenome
 from ..util import logger
@@ -113,6 +113,8 @@ def parse_annotations_json(
         raise AssertionError(short_msg)
 
     genes_by_chr: ReferenceAnnotations = {}
+    tx_skipped = 0
+    domain_errors = 0
 
     for gene_dict in data['genes']:
 
@@ -127,10 +129,13 @@ def parse_annotations_json(
 
         has_best = False
         for transcript in gene_dict['transcripts']:
-            transcript.setdefault('exons', [])
-            exons = [Exon(strand=gene.strand, **ex) for ex in transcript['exons']]
+            exons = []
+            for ex in transcript.get('exons', []):
+                exons.append(
+                    Exon(strand=gene.strand, start=ex['start'], end=ex['end'], name=ex.get('name'))
+                )
             if not exons:
-                exons = [(transcript['start'], transcript['end'])]
+                exons = [Exon(transcript['start'], transcript['end'], strand=gene.strand)]
             pre_transcript = PreTranscript(
                 name=transcript['name'],
                 gene=gene,
@@ -148,57 +153,92 @@ def parse_annotations_json(
                 spl_tx = Transcript(pre_transcript, spl_patt)
                 pre_transcript.spliced_transcripts.append(spl_tx)
 
-                if (
-                    transcript.get('cdna_coding_end', None) is None
-                    or transcript.get('cdna_coding_start', None) is None
-                ):
-                    continue
-                tx_length = transcript['cdna_coding_end'] - transcript['cdna_coding_start'] + 1
-                # check that the translation makes sense before including it
-                if tx_length % CODON_SIZE != 0:
-                    logger.warning(
-                        'Ignoring translation. The translated region is not a multiple of three'
-                    )
-                    continue
-                tx_length = tx_length // CODON_SIZE
-                domains = []
-                for dom in transcript['domains']:
+                for translation in transcript.get('translations', []):
                     try:
-                        regions = [Interval(r['start'], r['end']) for r in dom['regions']]
-                        regions = Interval.min_nonoverlapping(*regions)
-                        for region in regions:
-                            if region.start < 1 or region.end > tx_length:
-                                raise AssertionError(
-                                    'region cannot be outside the translated length'
+                        if (
+                            'cdna_coding_end' not in translation
+                            or 'cdna_coding_start' not in translation
+                        ):
+                            if 'cdna_coding_end' not in translation:
+                                translation['cdna_coding_end'] = spl_tx.convert_genomic_to_cdna(
+                                    translation['end']
                                 )
-                        domains.append(
-                            Domain(
-                                name=dom['name'],
-                                data={'desc': dom.get('desc', None)},
-                                regions=regions,
-                            )
+                            if 'cdna_coding_start' not in translation:
+                                translation['cdna_coding_start'] = spl_tx.convert_genomic_to_cdna(
+                                    translation['start']
+                                )
+
+                            if gene.strand == STRAND.NEG:
+                                translation['cdna_coding_start'], translation['cdna_coding_end'] = (
+                                    translation['cdna_coding_end'],
+                                    translation['cdna_coding_start'],
+                                )
+
+                    except IndexError as err:
+                        raise IndexError(
+                            f'Invalid specification of CDS ({translation["name"]}: {translation["start"]}-{translation["end"]}) '
+                            f'region on transcript ({transcript["name"]}: {transcript["start"]}-{transcript["end"]}): {err}'
                         )
-                    except AssertionError as err:
-                        logger.warning(repr(err))
-                translation = Translation(
-                    transcript['cdna_coding_start'],
-                    transcript['cdna_coding_end'],
-                    transcript=spl_tx,
-                    domains=domains,
-                )
-                if reference_genome and gene.chr in reference_genome:
-                    # get the sequence near here to see why these are wrong?
-                    seq = pre_transcript.get_cdna_seq(spl_tx.splicing_pattern, reference_genome)
-                    met = seq[translation.start - 1 : translation.start + 2]
-                    stop = seq[translation.end - CODON_SIZE : translation.end]
-                    if translate(met) != START_AA or translate(stop) != STOP_AA:
-                        logger.warning(
-                            'Sequence error. The sequence computed from the reference does look like a valid translation'
+
+                    tx_length = (
+                        translation['cdna_coding_end'] - translation['cdna_coding_start'] + 1
+                    )
+                    # check that the translation makes sense before including it
+                    if tx_length % CODON_SIZE != 0:
+                        tx_skipped += 1
+                        logger.debug(
+                            f'Ignoring translation ({translation.get("name")}). The translated region is not a multiple of three (length={tx_length})'
                         )
                         continue
-                spl_tx.translations.append(translation)
+                    tx_length = tx_length // CODON_SIZE
+                    domains = []
+                    for dom in translation.get('domains', []):
+                        try:
+                            regions = [Interval(r['start'], r['end']) for r in dom['regions']]
+                            regions = Interval.min_nonoverlapping(*regions)
+                            for region in regions:
+                                if region.start < 1 or region.end > tx_length:
+                                    raise AssertionError(
+                                        f'region ({dom["name"]}:{region.start}-{region.end}) cannot be outside the translated length ({tx_length})'
+                                    )
+                            domains.append(
+                                Domain(
+                                    name=dom['name'],
+                                    data={'desc': dom.get('desc', None)},
+                                    regions=regions,
+                                )
+                            )
+                        except AssertionError as err:
+                            domain_errors += 1
+                            logger.debug(repr(err))
+                    translation = Translation(
+                        start=translation['cdna_coding_start'],
+                        end=translation['cdna_coding_end'],
+                        transcript=spl_tx,
+                        domains=domains,
+                        name=translation.get('name'),
+                    )
+                    if reference_genome and gene.chr in reference_genome:
+                        # get the sequence near here to see why these are wrong?
+                        seq = pre_transcript.get_cdna_seq(spl_tx.splicing_pattern, reference_genome)
+                        met = seq[translation.start - 1 : translation.start + 2]
+                        stop = seq[translation.end - CODON_SIZE : translation.end]
+                        if translate(met) != START_AA or translate(stop) != STOP_AA:
+                            logger.warning(
+                                'Sequence error. The sequence computed from the reference does look like a valid translation'
+                            )
+                            continue
+                    spl_tx.translations.append(translation)
         if not best_transcripts_only or has_best:
             genes_by_chr.setdefault(gene.chr, []).append(gene)
+    if tx_skipped:
+        logger.warning(
+            f'Skipped {tx_skipped} translations where the CDS length was not a multiple of 3'
+        )
+    if domain_errors:
+        logger.warning(
+            f'Skipped {domain_errors} domains due to errors (coordinates defined outside the translated region)'
+        )
     return genes_by_chr
 
 
@@ -323,7 +363,7 @@ class ReferenceFile:
         Args:
             *filepaths: list of paths to load
             file_type: Type of file to load
-            eager_load: load the files immeadiately
+            eager_load: load the files immediately
             assert_exists: check that all files exist
             **opt: key word arguments to be passed to the load function and used as part of the file cache key
 

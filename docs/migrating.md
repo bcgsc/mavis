@@ -22,10 +22,20 @@ MAVIS is now integrated with snakemake instead of handling its own scheduling
 
 ## Reference Annotation Files
 
-MAVIS no longer supports the previously deprecated tab-delimited format of the annotations file. If you are still using these files in your project we have provided a script to automatically convert them to the newer format in the tools directory
+MAVIS no longer supports the previously deprecated tab-delimited format of the annotations file. If you are still using these files in your project we have provided a script to automatically convert them to the newer format in the tools directory.
 
 ```bash
-python src/tools/migrate_mavis_annotations_to_jsonl.py \
+python src/tools/convert_annotations_format.py \
     /path/to/tab/file.tab \
+    --input_type v2-tab \
+    /path/to/new/json/file.json
+```
+
+In v3 the JSON files are slightly different to support multiple translations per transcript. You old v3 files can be automatically converted to the new format with the same script
+
+```bash
+python src/tools/convert_annotations_format.py \
+    /path/to/json/file.json \
+    --input_type v2-json \
     /path/to/new/json/file.json
 ```

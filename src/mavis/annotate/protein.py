@@ -256,8 +256,8 @@ class Translation(BioInterval):
         end: int,
         transcript: Optional['Transcript'] = None,
         domains: Optional[List[Domain]] = None,
-        seq=None,
-        name=None,
+        seq: Optional[str] = None,
+        name: Optional[str] = None,
     ):
         """
         describes the splicing pattern and cds start and end with reference to a particular transcript
@@ -279,7 +279,7 @@ class Translation(BioInterval):
             raise AttributeError('start must be a positive integer', start)
         if transcript and end > len(transcript):
             raise AttributeError(
-                'translation cannot be outside of related transcript range', end, len(transcript)
+                f'translation ({self.name}) cannot be outside of related transcript range ({end} > {len(transcript)})'
             )
 
         for domain in domains:
