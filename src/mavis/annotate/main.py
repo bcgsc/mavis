@@ -256,26 +256,27 @@ def main(
                 else:
                     temp_row.update(ann_row)
                     rows.append(temp_row)
+            if config['annotate.skip_illustrate'] == False:
             # draw the annotation and add the path to all applicable rows (one drawing for multiple annotated_events)
-            if any(
-                [
-                    not ann.fusion and not config['annotate.draw_fusions_only'],
-                    ann.fusion and not config['annotate.draw_non_synonymous_cdna_only'],
-                    ann.fusion
-                    and config['annotate.draw_non_synonymous_cdna_only']
-                    and not cdna_synon_all,
-                ]
-            ):
-                drawing, legend = draw(
-                    drawing_config,
-                    ann,
-                    reference_genome.content,
-                    template_metadata.content,
-                    drawings_directory,
-                )
-                for row in rows + [ann_row]:
-                    row[COLUMNS.annotation_figure] = drawing
-                    row[COLUMNS.annotation_figure_legend] = legend
+                if any(
+                    [
+                        not ann.fusion and not config['annotate.draw_fusions_only'],
+                        ann.fusion and not config['annotate.draw_non_synonymous_cdna_only'],
+                        ann.fusion
+                        and config['annotate.draw_non_synonymous_cdna_only']
+                        and not cdna_synon_all,
+                    ]
+                ):
+                    drawing, legend = draw(
+                        drawing_config,
+                        ann,
+                        reference_genome.content,
+                        template_metadata.content,
+                        drawings_directory,
+                    )
+                    for row in rows + [ann_row]:
+                        row[COLUMNS.annotation_figure] = drawing
+                        row[COLUMNS.annotation_figure_legend] = legend
             if not rows:
                 rows = [ann_row]
             for row in rows:

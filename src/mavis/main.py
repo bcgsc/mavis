@@ -129,6 +129,11 @@ def create_parser(argv):
             '--library', '-l', required=True, help='The library to run the current step on'
         )
 
+    # annotate arguments 
+    optional[SUBCOMMAND.ANNOTATE].add_argument(
+        '--skip_illustrate', default=False,help='Skip illustration within the annotation step'
+        )
+
     # overlay arguments
     required[SUBCOMMAND.OVERLAY].add_argument('gene_name', help='Gene ID or gene alias to be drawn')
     optional[SUBCOMMAND.OVERLAY].add_argument(
@@ -211,6 +216,7 @@ def main(argv: Optional[List[str]] = None):
     # try checking the input files exist
     try:
         args.inputs = _util.bash_expands(*args.inputs)
+        print(args.inputs)
     except AttributeError:
         pass
     except FileNotFoundError:
