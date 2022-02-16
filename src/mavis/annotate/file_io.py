@@ -428,4 +428,4 @@ class ReferenceFile:
 
     @classmethod
     def load_from_config(cls, config, file_type: str, **kwargs):
-        return ReferenceFile(file_type, *config[f'reference.{file_type}'], **kwargs)
+        return ReferenceFile(file_type, *config.get(f'reference.{file_type}', []), **kwargs)
