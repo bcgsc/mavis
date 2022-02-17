@@ -16,7 +16,7 @@ The simplest way to use MAVIS is via Singularity. The MAVIS docker container use
 by singularity will take care of installing the aligner as well.
 
 ```bash
-pip install -U setuptools pip
+pip install -U setuptools pip wheel
 pip install mavis_config  # also installs snakemake
 ```
 
