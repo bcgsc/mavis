@@ -45,8 +45,5 @@
     ],
     "reference.reference_genome": [
         "tests/data/mock_reference_genome.fa"
-    ],
-    "reference.template_metadata": [
-        "tests/data/cytoBand.txt"
     ]
 }
