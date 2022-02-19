@@ -1,0 +1,2683 @@
+{
+    "genes": [
+        {
+            "biotype": "gene",
+            "chr": "AB027020.1",
+            "end": 2790,
+            "name": "E1",
+            "start": 886,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2787,
+                    "name": "AB027020.1_E1_T",
+                    "start": 886,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2787,
+                            "name": "BAA90729.1",
+                            "start": 886
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "J04353.1",
+            "end": 2751,
+            "name": "E1",
+            "start": 862,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2748,
+                    "name": "J04353.1_E1_T",
+                    "start": 862,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2748,
+                            "name": "AAA46952.1",
+                            "start": 862
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 2813,
+            "name": "E1",
+            "start": 865,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2810,
+                    "name": "K02718.1_E1_T",
+                    "start": 865,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2810,
+                            "name": "AAA46936.1",
+                            "start": 865
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M12732.1",
+            "end": 2813,
+            "name": "E1",
+            "start": 879,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2810,
+                    "name": "M12732.1_E1_T",
+                    "start": 879,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2810,
+                            "name": "AAA46960.1",
+                            "start": 879
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M62849.1",
+            "end": 2871,
+            "name": "E1",
+            "start": 928,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2868,
+                    "name": "M62849.1_E1_T",
+                    "start": 928,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2868,
+                            "name": "AAA47052.1",
+                            "start": 928
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "U21941.1",
+            "end": 2886,
+            "name": "E1",
+            "start": 928,
+            "strand": "+"
+        },
+        {
+            "biotype": "gene",
+            "chr": "X05015.1",
+            "end": 2887,
+            "name": "E1",
+            "start": 914,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2884,
+                    "name": "X05015.1_E1_T",
+                    "start": 914,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2884,
+                            "name": "CAA28666.1",
+                            "start": 914
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74464.1",
+            "end": 2734,
+            "name": "E1",
+            "start": 917,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2731,
+                    "name": "X74464.1_E1_T",
+                    "start": 917,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2731,
+                            "name": "CAA52485.1",
+                            "start": 917
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74474.1",
+            "end": 2785,
+            "name": "E1",
+            "start": 890,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2782,
+                    "name": "X74474.1_E1_T",
+                    "start": 890,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2782,
+                            "name": "CAA52545.1",
+                            "start": 890
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74477.1",
+            "end": 2781,
+            "name": "E1",
+            "start": 868,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2778,
+                    "name": "X74477.1_E1_T",
+                    "start": 868,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2778,
+                            "name": "CAA52563.1",
+                            "start": 868
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74481.1",
+            "end": 2807,
+            "name": "E1",
+            "start": 864,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2804,
+                    "name": "X74481.1_E1_T",
+                    "start": 864,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2804,
+                            "name": "CAA52587.1",
+                            "start": 864
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X94165.1",
+            "end": 2802,
+            "name": "E1",
+            "start": 850,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2799,
+                    "name": "X94165.1_E1_T",
+                    "start": 850,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2799,
+                            "name": "CAA63884.1",
+                            "start": 850
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "AB027020.1",
+            "end": 3838,
+            "name": "E2",
+            "start": 2732,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3835,
+                    "name": "AB027020.1_E2_T",
+                    "start": 2732,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3835,
+                            "name": "BAA90730.1",
+                            "start": 2732
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "J04353.1",
+            "end": 3811,
+            "name": "E2",
+            "start": 2693,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3808,
+                    "name": "J04353.1_E2_T",
+                    "start": 2693,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3808,
+                            "name": "AAA46953.1",
+                            "start": 2693
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 3852,
+            "name": "E2",
+            "start": 2755,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3849,
+                    "name": "K02718.1_E2_T",
+                    "start": 2755,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3849,
+                            "name": "AAA46941.1",
+                            "start": 2755
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M12732.1",
+            "end": 3810,
+            "name": "E2",
+            "start": 2749,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3807,
+                    "name": "M12732.1_E2_T",
+                    "start": 2749,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3807,
+                            "name": "AAA46961.1",
+                            "start": 2749
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M62849.1",
+            "end": 3910,
+            "name": "E2",
+            "start": 2798,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3907,
+                    "name": "M62849.1_E2_T",
+                    "start": 2798,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3907,
+                            "name": "AAA47053.1",
+                            "start": 2798
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "U21941.1",
+            "end": 3895,
+            "name": "E2",
+            "start": 2813,
+            "strand": "+"
+        },
+        {
+            "biotype": "gene",
+            "chr": "X05015.1",
+            "end": 3914,
+            "name": "E2",
+            "start": 2817,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3911,
+                    "name": "X05015.1_E2_T",
+                    "start": 2817,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3911,
+                            "name": "CAA28667.1",
+                            "start": 2817
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74464.1",
+            "end": 4061,
+            "name": "E2",
+            "start": 2676,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4058,
+                    "name": "X74464.1_E2_T",
+                    "start": 2676,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4058,
+                            "name": "CAA52486.1",
+                            "start": 2676
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74474.1",
+            "end": 3863,
+            "name": "E2",
+            "start": 2727,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3860,
+                    "name": "X74474.1_E2_T",
+                    "start": 2727,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3860,
+                            "name": "CAA52546.1",
+                            "start": 2727
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74477.1",
+            "end": 2717,
+            "name": "E2",
+            "start": 2714,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2714,
+                    "name": "X74477.1_E2_T",
+                    "start": 2714,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2714,
+                            "name": "CAA52564.1",
+                            "start": 2714
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74481.1",
+            "end": 3849,
+            "name": "E2",
+            "start": 2743,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3846,
+                    "name": "X74481.1_E2_T",
+                    "start": 2743,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3846,
+                            "name": "CAA52588.1",
+                            "start": 2743
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74483.1",
+            "end": 3850,
+            "name": "E2",
+            "start": 2918,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3847,
+                    "name": "X74483.1_E2_T",
+                    "start": 2918,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3847,
+                            "name": "CAA52598.1",
+                            "start": 2918
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X94165.1",
+            "end": 3793,
+            "name": "E2",
+            "start": 2741,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3790,
+                    "name": "X94165.1_E2_T",
+                    "start": 2741,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3790,
+                            "name": "CAA63885.1",
+                            "start": 2741
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "AB027020.1",
+            "end": 3614,
+            "name": "E4",
+            "start": 3309,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3611,
+                    "name": "AB027020.1_E4_T",
+                    "start": 3309,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3611,
+                            "name": "BAA90731.1",
+                            "start": 3309
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "J04353.1",
+            "end": 3578,
+            "name": "E4",
+            "start": 3270,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3575,
+                    "name": "J04353.1_E4_T",
+                    "start": 3270,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3575,
+                            "name": "AAA46949.1",
+                            "start": 3270
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 3619,
+            "name": "E4",
+            "start": 3332,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3616,
+                    "name": "K02718.1_E4_T",
+                    "start": 3332,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3616,
+                            "name": "AAA46937.1",
+                            "start": 3332
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M12732.1",
+            "end": 3577,
+            "name": "E4",
+            "start": 3326,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3574,
+                    "name": "M12732.1_E4_T",
+                    "start": 3326,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3574,
+                            "name": "AAA46957.1",
+                            "start": 3326
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M62849.1",
+            "end": 3677,
+            "name": "E4",
+            "start": 3393,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3674,
+                    "name": "M62849.1_E4_T",
+                    "start": 3393,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3674,
+                            "name": "AAA47049.1",
+                            "start": 3393
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "U21941.1",
+            "end": 3662,
+            "name": "E4",
+            "start": 3408,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3659,
+                    "name": "U21941.1_E4_T",
+                    "start": 3408,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3659,
+                            "name": "AAC54854.1",
+                            "start": 3408
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X05015.1",
+            "end": 3684,
+            "name": "E4",
+            "start": 3418,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3681,
+                    "name": "X05015.1_E4_T",
+                    "start": 3418,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3681,
+                            "name": "CAA28668.1",
+                            "start": 3418
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X94165.1",
+            "end": 3560,
+            "name": "E4",
+            "start": 3324,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "biotype": "transcript",
+                    "end": 3560,
+                    "name": "X94165.1_unassigned_transcript_5",
+                    "start": 3324
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "AB027020.1",
+            "end": 4142,
+            "name": "E5",
+            "start": 3846,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4139,
+                    "name": "AB027020.1_E5_T",
+                    "start": 3846,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4139,
+                            "name": "BAA90732.1",
+                            "start": 3846
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "J04353.1",
+            "end": 4070,
+            "name": "E5",
+            "start": 3816,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4067,
+                    "name": "J04353.1_E5_T",
+                    "start": 3816,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4067,
+                            "name": "AAA46954.1",
+                            "start": 3816
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 4099,
+            "name": "E5",
+            "start": 3863,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4096,
+                    "name": "K02718.1_E5_T",
+                    "start": 3863,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4096,
+                            "name": "AAA46938.1",
+                            "start": 3863
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M12732.1",
+            "end": 4081,
+            "name": "E5",
+            "start": 3854,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4078,
+                    "name": "M12732.1_E5_T",
+                    "start": 3854,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4078,
+                            "name": "AAA46962.1",
+                            "start": 3854
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M62849.1",
+            "end": 4176,
+            "name": "E5",
+            "start": 3958,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4173,
+                    "name": "M62849.1_E5_T",
+                    "start": 3958,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4173,
+                            "name": "AAA47054.1",
+                            "start": 3958
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "U21941.1",
+            "end": 4145,
+            "name": "E5",
+            "start": 3909,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4142,
+                    "name": "U21941.1_E5_T",
+                    "start": 3909,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4142,
+                            "name": "AAC54855.1",
+                            "start": 3909
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X05015.1",
+            "end": 4157,
+            "name": "E5",
+            "start": 3936,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4154,
+                    "name": "X05015.1_E5_T",
+                    "start": 3936,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4154,
+                            "name": "CAA28669.1",
+                            "start": 3936
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "AB027020.1",
+            "end": 557,
+            "name": "E6",
+            "start": 102,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 554,
+                    "name": "AB027020.1_E6_T",
+                    "start": 102,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 554,
+                            "name": "BAA90727.1",
+                            "start": 102
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "J04353.1",
+            "end": 557,
+            "name": "E6",
+            "start": 108,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 554,
+                    "name": "J04353.1_E6_T",
+                    "start": 108,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 554,
+                            "name": "AAA46950.1",
+                            "start": 108
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 559,
+            "name": "E6",
+            "start": 83,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 556,
+                    "name": "K02718.1_E6_T",
+                    "start": 83,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 556,
+                            "name": "AAA46939.1",
+                            "start": 83
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M12732.1",
+            "end": 558,
+            "name": "E6",
+            "start": 109,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 555,
+                    "name": "M12732.1_E6_T",
+                    "start": 109,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 555,
+                            "name": "AAA46958.1",
+                            "start": 109
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M62849.1",
+            "end": 583,
+            "name": "E6",
+            "start": 107,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 580,
+                    "name": "M62849.1_E6_T",
+                    "start": 107,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 580,
+                            "name": "AAA47050.1",
+                            "start": 107
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "U21941.1",
+            "end": 583,
+            "name": "E6",
+            "start": 107,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 580,
+                    "name": "U21941.1_E6_T",
+                    "start": 107,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 580,
+                            "name": "AAC54850.1",
+                            "start": 107
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X05015.1",
+            "end": 581,
+            "name": "E6",
+            "start": 105,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 578,
+                    "name": "X05015.1_E6_T",
+                    "start": 105,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 578,
+                            "name": "CAA28664.1",
+                            "start": 105
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74464.1",
+            "end": 646,
+            "name": "E6",
+            "start": 200,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 643,
+                    "name": "X74464.1_E6_T",
+                    "start": 200,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 643,
+                            "name": "CAA52482.1",
+                            "start": 200
+                        },
+                        {
+                            "biotype": "CDS",
+                            "end": 643,
+                            "name": "CAA52483.1",
+                            "start": 221
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74474.1",
+            "end": 563,
+            "name": "E6",
+            "start": 102,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 560,
+                    "name": "X74474.1_E6_T",
+                    "start": 102,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 560,
+                            "name": "CAA52543.1",
+                            "start": 102
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74477.1",
+            "end": 559,
+            "name": "E6",
+            "start": 110,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 556,
+                    "name": "X74477.1_E6_T",
+                    "start": 110,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 556,
+                            "name": "CAA52561.1",
+                            "start": 110
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74481.1",
+            "end": 548,
+            "name": "E6",
+            "start": 102,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 545,
+                    "name": "X74481.1_E6_T",
+                    "start": 102,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 545,
+                            "name": "CAA52585.1",
+                            "start": 102
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74483.1",
+            "end": 566,
+            "name": "E6",
+            "start": 102,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 563,
+                    "name": "X74483.1_E6_T",
+                    "start": 102,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 563,
+                            "name": "CAA52596.1",
+                            "start": 102
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X94165.1",
+            "end": 548,
+            "name": "E6",
+            "start": 102,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 545,
+                    "name": "X94165.1_E6_T",
+                    "start": 102,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 545,
+                            "name": "CAA63882.1",
+                            "start": 102
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "AB027020.1",
+            "end": 878,
+            "name": "E7",
+            "start": 564,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 875,
+                    "name": "AB027020.1_E7_T",
+                    "start": 564,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 875,
+                            "name": "BAA90728.1",
+                            "start": 564
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "J04353.1",
+            "end": 856,
+            "name": "E7",
+            "start": 560,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 853,
+                    "name": "J04353.1_E7_T",
+                    "start": 560,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 853,
+                            "name": "AAA46951.1",
+                            "start": 560
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 858,
+            "name": "E7",
+            "start": 562,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 855,
+                    "name": "K02718.1_E7_T",
+                    "start": 562,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 855,
+                            "name": "AAA46940.1",
+                            "start": 562
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M12732.1",
+            "end": 866,
+            "name": "E7",
+            "start": 573,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 863,
+                    "name": "M12732.1_E7_T",
+                    "start": 573,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 863,
+                            "name": "AAA46959.1",
+                            "start": 573
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M62849.1",
+            "end": 921,
+            "name": "E7",
+            "start": 592,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 918,
+                    "name": "M62849.1_E7_T",
+                    "start": 592,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 918,
+                            "name": "AAA47051.1",
+                            "start": 592
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "U21941.1",
+            "end": 921,
+            "name": "E7",
+            "start": 592,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 918,
+                    "name": "U21941.1_E7_T",
+                    "start": 592,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 918,
+                            "name": "AAC54851.1",
+                            "start": 592
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X05015.1",
+            "end": 907,
+            "name": "E7",
+            "start": 590,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 904,
+                    "name": "X05015.1_E7_T",
+                    "start": 590,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 904,
+                            "name": "CAA28665.1",
+                            "start": 590
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74464.1",
+            "end": 924,
+            "name": "E7",
+            "start": 643,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 921,
+                    "name": "X74464.1_E7_T",
+                    "start": 643,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 921,
+                            "name": "CAA52484.1",
+                            "start": 643
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74474.1",
+            "end": 883,
+            "name": "E7",
+            "start": 566,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 880,
+                    "name": "X74474.1_E7_T",
+                    "start": 566,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 880,
+                            "name": "CAA52544.1",
+                            "start": 566
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74477.1",
+            "end": 861,
+            "name": "E7",
+            "start": 562,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 858,
+                    "name": "X74477.1_E7_T",
+                    "start": 562,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 858,
+                            "name": "CAA52562.1",
+                            "start": 562
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74481.1",
+            "end": 852,
+            "name": "E7",
+            "start": 553,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 849,
+                    "name": "X74481.1_E7_T",
+                    "start": 553,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 849,
+                            "name": "CAA52586.1",
+                            "start": 553
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74483.1",
+            "end": 889,
+            "name": "E7",
+            "start": 572,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 886,
+                    "name": "X74483.1_E7_T",
+                    "start": 572,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 886,
+                            "name": "CAA52597.1",
+                            "start": 572
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X94165.1",
+            "end": 843,
+            "name": "E7",
+            "start": 550,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 840,
+                    "name": "X94165.1_E7_T",
+                    "start": 550,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 840,
+                            "name": "CAA63883.1",
+                            "start": 550
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "AB027020.1",
+            "end": 7064,
+            "name": "L1",
+            "start": 5541,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7061,
+                    "name": "AB027020.1_L1_T",
+                    "start": 5541,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7061,
+                            "name": "BAA90734.1",
+                            "start": 5541
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "J04353.1",
+            "end": 7066,
+            "name": "L1",
+            "start": 5552,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7063,
+                    "name": "J04353.1_L1_T",
+                    "start": 5552,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7063,
+                            "name": "AAA46956.1",
+                            "start": 5552
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 7154,
+            "name": "L1",
+            "start": 5559,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7151,
+                    "name": "K02718.1_L1_T",
+                    "start": 5559,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7151,
+                            "name": "AAA46943.1",
+                            "start": 5559
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M12732.1",
+            "end": 7093,
+            "name": "L1",
+            "start": 5594,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7090,
+                    "name": "M12732.1_L1_T",
+                    "start": 5594,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7090,
+                            "name": "AAA46964.1",
+                            "start": 5594
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M62849.1",
+            "end": 7160,
+            "name": "L1",
+            "start": 5643,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7157,
+                    "name": "M62849.1_L1_T",
+                    "start": 5643,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7157,
+                            "name": "AAA47056.1",
+                            "start": 5643
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "U21941.1",
+            "end": 7104,
+            "name": "L1",
+            "start": 5590,
+            "strand": "+"
+        },
+        {
+            "biotype": "gene",
+            "chr": "X05015.1",
+            "end": 7136,
+            "name": "L1",
+            "start": 5430,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7133,
+                    "name": "X05015.1_L1_T",
+                    "start": 5430,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7133,
+                            "name": "CAA28671.1",
+                            "start": 5430
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74464.1",
+            "end": 7268,
+            "name": "L1",
+            "start": 5745,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7265,
+                    "name": "X74464.1_L1_T",
+                    "start": 5745,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7265,
+                            "name": "CAA52488.1",
+                            "start": 5745
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74474.1",
+            "end": 7157,
+            "name": "L1",
+            "start": 5631,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7154,
+                    "name": "X74474.1_L1_T",
+                    "start": 5631,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7154,
+                            "name": "CAA52548.1",
+                            "start": 5631
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74477.1",
+            "end": 7109,
+            "name": "L1",
+            "start": 5601,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7106,
+                    "name": "X74477.1_L1_T",
+                    "start": 5601,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7106,
+                            "name": "CAA52566.1",
+                            "start": 5601
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74481.1",
+            "end": 7154,
+            "name": "L1",
+            "start": 5565,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7151,
+                    "name": "X74481.1_L1_T",
+                    "start": 5565,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7151,
+                            "name": "CAA52590.1",
+                            "start": 5565
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74483.1",
+            "end": 7096,
+            "name": "L1",
+            "start": 5492,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7093,
+                    "name": "X74483.1_L1_T",
+                    "start": 5492,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7093,
+                            "name": "CAA52600.1",
+                            "start": 5492
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X94165.1",
+            "end": 7005,
+            "name": "L1",
+            "start": 5494,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7002,
+                    "name": "X94165.1_L1_T",
+                    "start": 5494,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7002,
+                            "name": "CAA63887.1",
+                            "start": 5494
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "AB027020.1",
+            "end": 5560,
+            "name": "L2",
+            "start": 4157,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5557,
+                    "name": "AB027020.1_L2_T",
+                    "start": 4157,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5557,
+                            "name": "BAA90733.1",
+                            "start": 4157
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "J04353.1",
+            "end": 5571,
+            "name": "L2",
+            "start": 4171,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5568,
+                    "name": "J04353.1_L2_T",
+                    "start": 4171,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5568,
+                            "name": "AAA46955.1",
+                            "start": 4171
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 5656,
+            "name": "L2",
+            "start": 4235,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5653,
+                    "name": "K02718.1_L2_T",
+                    "start": 4235,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5653,
+                            "name": "AAA46942.1",
+                            "start": 4235
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M12732.1",
+            "end": 5613,
+            "name": "L2",
+            "start": 4210,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5610,
+                    "name": "M12732.1_L2_T",
+                    "start": 4210,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5610,
+                            "name": "AAA46963.1",
+                            "start": 4210
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "M62849.1",
+            "end": 5662,
+            "name": "L2",
+            "start": 4250,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5659,
+                    "name": "M62849.1_L2_T",
+                    "start": 4250,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5659,
+                            "name": "AAA47055.1",
+                            "start": 4250
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "U21941.1",
+            "end": 5609,
+            "name": "L2",
+            "start": 4209,
+            "strand": "+"
+        },
+        {
+            "biotype": "gene",
+            "chr": "X05015.1",
+            "end": 5632,
+            "name": "L2",
+            "start": 4244,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5629,
+                    "name": "X05015.1_L2_T",
+                    "start": 4244,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5629,
+                            "name": "CAA28670.1",
+                            "start": 4244
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74464.1",
+            "end": 5730,
+            "name": "L2",
+            "start": 4129,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5727,
+                    "name": "X74464.1_L2_T",
+                    "start": 4129,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5727,
+                            "name": "CAA52487.1",
+                            "start": 4129
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74474.1",
+            "end": 5671,
+            "name": "L2",
+            "start": 4280,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5668,
+                    "name": "X74474.1_L2_T",
+                    "start": 4280,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5668,
+                            "name": "CAA52547.1",
+                            "start": 4280
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74477.1",
+            "end": 5620,
+            "name": "L2",
+            "start": 4211,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5617,
+                    "name": "X74477.1_L2_T",
+                    "start": 4211,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5617,
+                            "name": "CAA52565.1",
+                            "start": 4211
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74481.1",
+            "end": 5662,
+            "name": "L2",
+            "start": 4262,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5659,
+                    "name": "X74481.1_L2_T",
+                    "start": 4262,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5659,
+                            "name": "CAA52589.1",
+                            "start": 4262
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X74483.1",
+            "end": 5616,
+            "name": "L2",
+            "start": 4222,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5613,
+                    "name": "X74483.1_L2_T",
+                    "start": 4222,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5613,
+                            "name": "CAA52599.1",
+                            "start": 4222
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X94165.1",
+            "end": 5510,
+            "name": "L2",
+            "start": 4083,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5507,
+                    "name": "X94165.1_L2_T",
+                    "start": 4083,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5507,
+                            "name": "CAA63886.1",
+                            "start": 4083
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X77858.1",
+            "end": 2806,
+            "name": "ORF putative E1",
+            "start": 872,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2803,
+                    "name": "X77858.1_ORF putative E1_T",
+                    "start": 872,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2803,
+                            "name": "CAA54851.1",
+                            "start": 872
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X77858.1",
+            "end": 3848,
+            "name": "ORF putative E2",
+            "start": 2736,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3845,
+                    "name": "X77858.1_ORF putative E2_T",
+                    "start": 2736,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3845,
+                            "name": "CAA54852.1",
+                            "start": 2736
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X77858.1",
+            "end": 3615,
+            "name": "ORF putative E4",
+            "start": 3268,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3612,
+                    "name": "X77858.1_ORF putative E4_T",
+                    "start": 3268,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3612,
+                            "name": "CAA54853.1",
+                            "start": 3268
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X77858.1",
+            "end": 4129,
+            "name": "ORF putative E5",
+            "start": 3908,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4126,
+                    "name": "X77858.1_ORF putative E5_T",
+                    "start": 3908,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4126,
+                            "name": "CAA54854.1",
+                            "start": 3908
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X77858.1",
+            "end": 537,
+            "name": "ORF putative E6",
+            "start": 55,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 534,
+                    "name": "X77858.1_ORF putative E6_T",
+                    "start": 55,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 534,
+                            "name": "CAA54849.1",
+                            "start": 55
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X77858.1",
+            "end": 865,
+            "name": "ORF putative E7",
+            "start": 542,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 862,
+                    "name": "X77858.1_ORF putative E7_T",
+                    "start": 542,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 862,
+                            "name": "CAA54850.1",
+                            "start": 542
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X77858.1",
+            "end": 7132,
+            "name": "ORF putative L1",
+            "start": 5606,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7129,
+                    "name": "X77858.1_ORF putative L1_T",
+                    "start": 5606,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7129,
+                            "name": "CAA54856.1",
+                            "start": 5606
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "X77858.1",
+            "end": 5625,
+            "name": "ORF putative L2",
+            "start": 4231,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5622,
+                    "name": "X77858.1_ORF putative L2_T",
+                    "start": 4231,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5622,
+                            "name": "CAA54855.1",
+                            "start": 4231
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "U21941.1",
+            "end": 2883,
+            "name": "G_AAC54852.1",
+            "start": 928,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2883,
+                    "name": "U21941.1_G_AAC54852.1_T",
+                    "start": 928,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2883,
+                            "name": "AAC54852.1",
+                            "start": 928
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "U21941.1",
+            "end": 3892,
+            "name": "G_AAC54853.1",
+            "start": 2813,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3892,
+                    "name": "U21941.1_G_AAC54853.1_T",
+                    "start": 2813,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3892,
+                            "name": "AAC54853.1",
+                            "start": 2813
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "U21941.1",
+            "end": 5606,
+            "name": "G_AAC54856.1",
+            "start": 4209,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5606,
+                    "name": "U21941.1_G_AAC54856.1_T",
+                    "start": 4209,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5606,
+                            "name": "AAC54856.1",
+                            "start": 4209
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "U21941.1",
+            "end": 7101,
+            "name": "G_AAC54857.1",
+            "start": 5590,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7101,
+                    "name": "U21941.1_G_AAC54857.1_T",
+                    "start": 5590,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7101,
+                            "name": "AAC54857.1",
+                            "start": 5590
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "DQ080079.1",
+            "end": 474,
+            "name": "G_AAZ39491.1",
+            "start": 1,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 474,
+                    "name": "DQ080079.1_G_AAZ39491.1_T",
+                    "start": 1,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 474,
+                            "name": "AAZ39491.1",
+                            "start": 1
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "DQ080079.1",
+            "end": 813,
+            "name": "G_AAZ39492.1",
+            "start": 484,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 813,
+                    "name": "DQ080079.1_G_AAZ39492.1_T",
+                    "start": 484,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 813,
+                            "name": "AAZ39492.1",
+                            "start": 484
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "DQ080079.1",
+            "end": 2742,
+            "name": "G_AAZ39493.1",
+            "start": 823,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2742,
+                    "name": "DQ080079.1_G_AAZ39493.1_T",
+                    "start": 823,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2742,
+                            "name": "AAZ39493.1",
+                            "start": 823
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "DQ080079.1",
+            "end": 3781,
+            "name": "G_AAZ39494.1",
+            "start": 2672,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3781,
+                    "name": "DQ080079.1_G_AAZ39494.1_T",
+                    "start": 2672,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3781,
+                            "name": "AAZ39494.1",
+                            "start": 2672
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "DQ080079.1",
+            "end": 3548,
+            "name": "G_AAZ39495.1",
+            "start": 3267,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3548,
+                    "name": "DQ080079.1_G_AAZ39495.1_T",
+                    "start": 3267,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3548,
+                            "name": "AAZ39495.1",
+                            "start": 3267
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "DQ080079.1",
+            "end": 4048,
+            "name": "G_AAZ39496.1",
+            "start": 3830,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4048,
+                    "name": "DQ080079.1_G_AAZ39496.1_T",
+                    "start": 3830,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4048,
+                            "name": "AAZ39496.1",
+                            "start": 3830
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "DQ080079.1",
+            "end": 5504,
+            "name": "G_AAZ39497.1",
+            "start": 4098,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5504,
+                    "name": "DQ080079.1_G_AAZ39497.1_T",
+                    "start": 4098,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5504,
+                            "name": "AAZ39497.1",
+                            "start": 4098
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "DQ080079.1",
+            "end": 7002,
+            "name": "G_AAZ39498.1",
+            "start": 5488,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7002,
+                    "name": "DQ080079.1_G_AAZ39498.1_T",
+                    "start": 5488,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7002,
+                            "name": "AAZ39498.1",
+                            "start": 5488
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "D90400.1",
+            "end": 3602,
+            "name": "G_BAA14396.1",
+            "start": 3330,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3602,
+                    "name": "D90400.1_G_BAA14396.1_T",
+                    "start": 3330,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3602,
+                            "name": "BAA14396.1",
+                            "start": 3330
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "D90400.1",
+            "end": 556,
+            "name": "G_BAA31845.1",
+            "start": 110,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 556,
+                    "name": "D90400.1_G_BAA31845.1_T",
+                    "start": 110,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 556,
+                            "name": "BAA31845.1",
+                            "start": 110
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "D90400.1",
+            "end": 867,
+            "name": "G_BAA31846.1",
+            "start": 574,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 867,
+                    "name": "D90400.1_G_BAA31846.1_T",
+                    "start": 574,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 867,
+                            "name": "BAA31846.1",
+                            "start": 574
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "D90400.1",
+            "end": 2814,
+            "name": "G_BAA31847.1",
+            "start": 883,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2814,
+                    "name": "D90400.1_G_BAA31847.1_T",
+                    "start": 883,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2814,
+                            "name": "BAA31847.1",
+                            "start": 883
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "D90400.1",
+            "end": 3826,
+            "name": "G_BAA31848.1",
+            "start": 2753,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3826,
+                    "name": "D90400.1_G_BAA31848.1_T",
+                    "start": 2753,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3826,
+                            "name": "BAA31848.1",
+                            "start": 2753
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "D90400.1",
+            "end": 4119,
+            "name": "G_BAA31849.1",
+            "start": 3892,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4119,
+                    "name": "D90400.1_G_BAA31849.1_T",
+                    "start": 3892,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4119,
+                            "name": "BAA31849.1",
+                            "start": 3892
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "D90400.1",
+            "end": 5659,
+            "name": "G_BAA31850.1",
+            "start": 4244,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5659,
+                    "name": "D90400.1_G_BAA31850.1_T",
+                    "start": 4244,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5659,
+                            "name": "BAA31850.1",
+                            "start": 4244
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "chr": "D90400.1",
+            "end": 7136,
+            "name": "G_BAA31851.1",
+            "start": 5565,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7136,
+                    "name": "D90400.1_G_BAA31851.1_T",
+                    "start": 5565,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7136,
+                            "name": "BAA31851.1",
+                            "start": 5565
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
