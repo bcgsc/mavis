@@ -2678,6 +2678,256 @@
                     ]
                 }
             ]
+        },
+        {
+            "aliases": [
+                "KRAS"
+            ],
+            "biotype": "gene",
+            "chr": "chr12",
+            "end": 25250936,
+            "name": "ENSG00000133703",
+            "start": 25205246,
+            "strand": "-",
+            "transcripts": [
+                {
+                    "aliases": [
+                        "KRAS-201"
+                    ],
+                    "biotype": "transcript",
+                    "end": 25250929,
+                    "exons": [
+                        {
+                            "end": 25250929,
+                            "name": "ENSE00000000028",
+                            "number": "1",
+                            "start": 25250751,
+                            "version": "2"
+                        },
+                        {
+                            "end": 25245395,
+                            "name": "ENSE00000936617",
+                            "number": "2",
+                            "start": 25245274,
+                            "version": "1"
+                        },
+                        {
+                            "end": 25215560,
+                            "name": "ENSE00001189807",
+                            "number": "5",
+                            "start": 25215437,
+                            "version": "5"
+                        },
+                        {
+                            "end": 25225773,
+                            "name": "ENSE00001644818",
+                            "number": "4",
+                            "start": 25225614,
+                            "version": "1"
+                        },
+                        {
+                            "end": 25227412,
+                            "name": "ENSE00001719809",
+                            "number": "3",
+                            "start": 25227234,
+                            "version": "1"
+                        },
+                        {
+                            "end": 25209911,
+                            "name": "ENSE00002477035",
+                            "number": "6",
+                            "start": 25205246,
+                            "version": "3"
+                        }
+                    ],
+                    "name": "ENST00000256078",
+                    "start": 25205246,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 25245384,
+                            "name": "ENSP00000256078",
+                            "start": 25215444,
+                            "version": "5"
+                        }
+                    ],
+                    "version": "10"
+                },
+                {
+                    "aliases": [
+                        "KRAS-202"
+                    ],
+                    "biotype": "transcript",
+                    "end": 25250929,
+                    "exons": [
+                        {
+                            "end": 25245395,
+                            "name": "ENSE00000936617",
+                            "number": "2",
+                            "start": 25245274,
+                            "version": "1"
+                        },
+                        {
+                            "end": 25250929,
+                            "name": "ENSE00001189804",
+                            "number": "1",
+                            "start": 25250751,
+                            "version": "5"
+                        },
+                        {
+                            "end": 25225773,
+                            "name": "ENSE00001644818",
+                            "number": "4",
+                            "start": 25225614,
+                            "version": "1"
+                        },
+                        {
+                            "end": 25227412,
+                            "name": "ENSE00001719809",
+                            "number": "3",
+                            "start": 25227234,
+                            "version": "1"
+                        },
+                        {
+                            "end": 25209911,
+                            "name": "ENSE00002456976",
+                            "number": "5",
+                            "start": 25205246,
+                            "version": "2"
+                        }
+                    ],
+                    "name": "ENST00000311936",
+                    "start": 25205246,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 25245384,
+                            "name": "ENSP00000308495",
+                            "start": 25209798,
+                            "version": "3"
+                        }
+                    ],
+                    "version": "8"
+                },
+                {
+                    "aliases": [
+                        "KRAS-203"
+                    ],
+                    "biotype": "transcript",
+                    "end": 25250929,
+                    "exons": [
+                        {
+                            "end": 25245395,
+                            "name": "ENSE00000936617",
+                            "number": "2",
+                            "start": 25245274,
+                            "version": "1"
+                        },
+                        {
+                            "end": 25235226,
+                            "name": "ENSE00002478081",
+                            "number": "3",
+                            "start": 25233819,
+                            "version": "1"
+                        },
+                        {
+                            "end": 25250929,
+                            "name": "ENSE00002530521",
+                            "number": "1",
+                            "start": 25250764,
+                            "version": "1"
+                        }
+                    ],
+                    "name": "ENST00000556131",
+                    "start": 25233819,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 25245384,
+                            "name": "ENSP00000451856",
+                            "start": 25235209,
+                            "version": "1"
+                        }
+                    ],
+                    "version": "1"
+                },
+                {
+                    "aliases": [
+                        "KRAS-204"
+                    ],
+                    "biotype": "transcript",
+                    "end": 25250936,
+                    "exons": [
+                        {
+                            "end": 25245395,
+                            "name": "ENSE00000936617",
+                            "number": "2",
+                            "start": 25245274,
+                            "version": "1"
+                        },
+                        {
+                            "end": 25250936,
+                            "name": "ENSE00002446502",
+                            "number": "1",
+                            "start": 25250751,
+                            "version": "1"
+                        },
+                        {
+                            "end": 25209911,
+                            "name": "ENSE00002464674",
+                            "number": "3",
+                            "start": 25209168,
+                            "version": "1"
+                        }
+                    ],
+                    "name": "ENST00000557334",
+                    "start": 25209168,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 25245384,
+                            "name": "ENSP00000452512",
+                            "start": 25209798,
+                            "version": "1"
+                        }
+                    ],
+                    "version": "5"
+                }
+            ],
+            "version": "13"
+        },
+        {
+            "aliases": [
+                "KRASP1"
+            ],
+            "biotype": "gene",
+            "chr": "chr6",
+            "end": 54771134,
+            "name": "ENSG00000220635",
+            "start": 54770583,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "aliases": [
+                        "KRASP1-201"
+                    ],
+                    "biotype": "transcript",
+                    "end": 54771134,
+                    "exons": [
+                        {
+                            "end": 54771134,
+                            "name": "ENSE00001550689",
+                            "number": "1",
+                            "start": 54770583,
+                            "version": "2"
+                        }
+                    ],
+                    "name": "ENST00000407852",
+                    "start": 54770583,
+                    "version": "2"
+                }
+            ],
+            "version": "2"
         }
     ]
 }

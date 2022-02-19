@@ -472,8 +472,13 @@ def enforce_uniq_transcript_ids(input_df) -> pd.DataFrame:
         return df
 
     # there are some non-unique transcript IDs, make them all pre-pend the seqid
-    df.loc[df.type == 'transcript', 'feature_id'] = df.seqid + GFF_ID_DELIMITER + df.feature_id
-    df.loc[df.parent_type == 'transcript', 'parent_id'] = df.seqid + GFF_ID_DELIMITER + df.parent_id
+    # do not change ensembl transcript IDs since they should already be unique
+    df.loc[(df.type == 'transcript') & (~df.feature_id.str.startswith('ENST')), 'feature_id'] = (
+        df.seqid + GFF_ID_DELIMITER + df.feature_id
+    )
+    df.loc[
+        (df.parent_type == 'transcript') & (~df.parent_id.str.startswith('ENST')), 'parent_id'
+    ] = (df.seqid + GFF_ID_DELIMITER + df.parent_id)
     duplicates = df[df.type == 'transcript'].drop_duplicates(['seqid', 'parent_id', 'feature_id'])
 
     if duplicates.shape[0] == duplicates.feature_id.nunique():
