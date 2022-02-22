@@ -11,7 +11,7 @@ from mavis_config import (
 from mavis_config.constants import SUBCOMMAND
 
 # env variable mainly for CI/CD
-CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://bcgsc/mavis:latest')
+CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://bcgsc/mavis:v3.0.0')
 MAX_TIME = 57600
 DEFAULT_MEMORY_MB = 16000
 
