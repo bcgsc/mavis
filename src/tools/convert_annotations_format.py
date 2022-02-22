@@ -464,6 +464,31 @@ def validate_gff_coordinates(nodes_df, links_df):
         raise ValueError(f'{errors.shape[0]} entries with impossible coordinates')
 
 
+def enforce_uniq_transcript_ids(input_df) -> pd.DataFrame:
+    df = input_df.copy()
+    duplicates = df[df.type == 'transcript'].drop_duplicates(['seqid', 'parent_id', 'feature_id'])
+
+    if duplicates.shape[0] == duplicates.feature_id.nunique():
+        return df
+
+    # there are some non-unique transcript IDs, make them all pre-pend the seqid
+    # do not change ensembl transcript IDs since they should already be unique
+    df.loc[(df.type == 'transcript') & (~df.feature_id.str.startswith('ENST')), 'feature_id'] = (
+        df.seqid + GFF_ID_DELIMITER + df.feature_id
+    )
+    df.loc[
+        (df.parent_type == 'transcript') & (~df.parent_id.str.startswith('ENST')), 'parent_id'
+    ] = (df.seqid + GFF_ID_DELIMITER + df.parent_id)
+    duplicates = df[df.type == 'transcript'].drop_duplicates(['seqid', 'parent_id', 'feature_id'])
+
+    if duplicates.shape[0] == duplicates.feature_id.nunique():
+        return df.copy()
+
+    raise ValueError(
+        f'Unable to enforce unique transcript IDs: ({duplicates.shape[0]},{duplicates.feature_id.nunique()})'
+    )
+
+
 def convert_pandas_gff_to_mavis(df) -> Dict:
     df['error'] = ''
     df.loc[~df.type.isin(GFF_ALL_FEATURES), 'error'] = 'unrecognized type ' + df.type
@@ -530,8 +555,13 @@ def convert_pandas_gff_to_mavis(df) -> Dict:
     nodes_df, links_df = fix_orphan_elements(nodes_df, links_df)
     nodes_df, links_df = insert_missing_transcripts(nodes_df, links_df)
     validate_gff_coordinates(nodes_df, links_df)
+    df = nodes_df.merge(
+        links_df[GFF_KEY_COLS + ['parent_type', 'parent_id']].drop_duplicates(),
+        how='outer',
+        on=GFF_KEY_COLS,
+    ).fillna('')
 
-    df = nodes_df.merge(links_df, how='outer', on=GFF_KEY_COLS).fillna('')
+    df = enforce_uniq_transcript_ids(df)
 
     def feature_key(row, parent=False):
         if not parent:
@@ -783,6 +813,8 @@ def convert_gff2_to_mavis(filename: str, no_alt=False) -> Dict:
     df.loc[df.type == 'gene', 'Name'] = df.gene_name
     df.loc[df.type == 'transcript', 'Name'] = df.transcript_name
     df['strand'] = df.strand.fillna('')
+    df['gene_id'] = df.gene_id.astype(str)
+    df.loc[df.gene_id.str.startswith('unassigned_gene_'), 'gene_id'] = ''
 
     df['Parent'] = ''
     df.loc[(df.type == 'transcript') & (df.gene_id != ''), 'Parent'] = 'gene:' + df.gene_id
@@ -868,8 +900,8 @@ def main():
     parser.add_argument('--input_type', default='v2', choices=['v2-tab', 'v2-json', 'gff3', 'gtf'])
     parser.add_argument('output', help='path to the JSON output file')
     parser.add_argument(
-        '--keep_alt',
-        help='do not filter out chromosome/seqid names starting with GL or KI',
+        '--filter_alt',
+        help='filter out chromosome/seqid names starting with GL or KI',
         action='store_true',
         default=False,
     )
@@ -889,9 +921,9 @@ def main():
     elif args.input_type == 'v2-json':
         annotations = convert_mavis_json_2to3(args.input)
     elif args.input_type == 'gtf':
-        annotations = convert_gff2_to_mavis(args.input, not args.keep_alt)
+        annotations = convert_gff2_to_mavis(args.input, args.filter_alt)
     else:
-        annotations = convert_gff3_to_mavis(args.input, not args.keep_alt)
+        annotations = convert_gff3_to_mavis(args.input, args.filter_alt)
 
     logging.info(f'writing: {args.output}')
     with open(args.output, 'w') as fh:

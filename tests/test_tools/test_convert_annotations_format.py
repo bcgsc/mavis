@@ -51,6 +51,7 @@ def sort_elements(data):
             'ensembl69_hg19_annotations.kras.tab.json',
             'v2-tab',
         ],
+        ['viral.gtf', 'viral.gtf.json', 'gtf'],
     ],
 )
 def test_gff_examples(filename, expected_file, input_type):
