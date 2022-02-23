@@ -1,0 +1,154 @@
+{
+    "genes": [
+        {
+            "aliases": [
+            ],
+            "chr": "fake",
+            "end": 200,
+            "name": "GENE-A",
+            "start": 100,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "aliases": [
+                    ],
+                    "cdna_coding_end": null,
+                    "cdna_coding_start": null,
+                    "domains": [
+                    ],
+                    "end": 200,
+                    "exons": [
+                    ],
+                    "is_best_transcript": true,
+                    "name": "TRANSCRIPT-A",
+                    "start": 100
+                }
+            ]
+        },
+        {
+            "aliases": [
+            ],
+            "chr": "fake",
+            "end": 350,
+            "name": "GENE-B",
+            "start": 250,
+            "strand": "-",
+            "transcripts": [
+                {
+                    "aliases": [
+                    ],
+                    "cdna_coding_end": null,
+                    "cdna_coding_start": null,
+                    "domains": [
+                    ],
+                    "end": 350,
+                    "exons": [
+                    ],
+                    "is_best_transcript": true,
+                    "name": "TRANSCRIPT-B",
+                    "start": 250
+                }
+            ]
+        },
+        {
+            "aliases": [
+            ],
+            "chr": "fake",
+            "end": 400,
+            "name": "GENE-C",
+            "start": 300,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "aliases": [
+                    ],
+                    "cdna_coding_end": null,
+                    "cdna_coding_start": null,
+                    "domains": [
+                    ],
+                    "end": 400,
+                    "exons": [
+                    ],
+                    "is_best_transcript": true,
+                    "name": "TRANSCRIPT-C",
+                    "start": 300
+                }
+            ]
+        },
+        {
+            "aliases": [
+            ],
+            "chr": "fake",
+            "end": 550,
+            "name": "GENE-D",
+            "start": 450,
+            "strand": "-",
+            "transcripts": [
+                {
+                    "aliases": [
+                    ],
+                    "cdna_coding_end": null,
+                    "cdna_coding_start": null,
+                    "domains": [
+                    ],
+                    "end": 550,
+                    "exons": [
+                    ],
+                    "is_best_transcript": true,
+                    "name": "TRANSCRIPT-D",
+                    "start": 450
+                }
+            ]
+        },
+        {
+            "aliases": [
+            ],
+            "chr": "fake",
+            "end": 600,
+            "name": "GENE-E",
+            "start": 500,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "aliases": [
+                    ],
+                    "cdna_coding_end": null,
+                    "cdna_coding_start": null,
+                    "domains": [
+                    ],
+                    "end": 600,
+                    "exons": [
+                    ],
+                    "is_best_transcript": true,
+                    "name": "TRANSCRIPT-E",
+                    "start": 500
+                }
+            ]
+        },
+        {
+            "aliases": [
+            ],
+            "chr": "fake",
+            "end": 650,
+            "name": "GENE-F",
+            "start": 550,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "aliases": [
+                    ],
+                    "cdna_coding_end": null,
+                    "cdna_coding_start": null,
+                    "domains": [
+                    ],
+                    "end": 650,
+                    "exons": [
+                    ],
+                    "is_best_transcript": true,
+                    "name": "TRANSCRIPT-F",
+                    "start": 550
+                }
+            ]
+        }
+    ]
+}

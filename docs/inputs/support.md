@@ -11,28 +11,7 @@ to be compatible with MAVIS.
 
 ## Job Schedulers
 
-MAVIS can be run locally without a job scheduler
-(`MAVIS_SCHEDULER=LOCAL`) however, due to the computational resources
-generally required, it is recommended that you use one of the supported
-schedulers listed below.
-
-| Name                             | Version(s)  | Environment Setting      |
-| -------------------------------- | ----------- | ------------------------ |
-| [TORQUE](../../glossary/#torque) | `6.1.2`     | `MAVIS_SCHEDULER=TORQUE` |
-| [SGE](../../glossary/#sge)       | `8.1.8`     | `MAVIS_SCHEDULER=SGE`    |
-| [SLURM](../../glossary/#slurm)   | `17.02.1-2` | `MAVIS_SCHEDULER=SLURM`  |
-
-Users requiring support for other schedulers may make a request by
-[submitting an issue to our github
-page](https://github.com/bcgsc/mavis/issues). Additionally, developers
-looking to extend the functionality may submit a pull request (Please
-see the
-[guidelines for contributors](../../development/)
-
-MAVIS running locally uses the python
-`concurrent.futures` library to manage
-jobs.
-##
+MAVIS v3 uses [snakemake](https://snakemake.readthedocs.io/en/stable/) to handle job scheduling
 
 ## Aligners
 

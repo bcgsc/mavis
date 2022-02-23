@@ -1,0 +1,249 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": true,
+    "properties": {
+        "best_transcript_file": {
+            "type": "string"
+        },
+        "ensembl_version": {
+            "type": "integer"
+        },
+        "generation_time": {
+            "type": "string"
+        },
+        "genes": {
+            "items": {
+                "additionalProperties": true,
+                "properties": {
+                    "aliases": {
+                        "default": [
+                        ],
+                        "items": {
+                            "minLength": 1,
+                            "type": "string"
+                        },
+                        "type": "array"
+                    },
+                    "chr": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "end": {
+                        "minimum": 1,
+                        "type": "integer"
+                    },
+                    "name": {
+                        "minLength": 1,
+                        "type": "string"
+                    },
+                    "start": {
+                        "minimum": 1,
+                        "type": "integer"
+                    },
+                    "strand": {
+                        "enum": [
+                            "+",
+                            "-"
+                        ],
+                        "type": "string"
+                    },
+                    "transcripts": {
+                        "default": [
+                        ],
+                        "items": {
+                            "additionalProperties": true,
+                            "properties": {
+                                "aliases": {
+                                    "default": [
+                                    ],
+                                    "items": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                    },
+                                    "type": "array"
+                                },
+                                "end": {
+                                    "minimum": 1,
+                                    "type": "integer"
+                                },
+                                "exons": {
+                                    "default": [
+                                    ],
+                                    "items": {
+                                        "additionalProperties": true,
+                                        "properties": {
+                                            "aliases": {
+                                                "default": [
+                                                ],
+                                                "items": {
+                                                    "minLength": 1,
+                                                    "type": "string"
+                                                },
+                                                "type": "array"
+                                            },
+                                            "end": {
+                                                "minimum": 1,
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "start": {
+                                                "minimum": 1,
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "required": [
+                                            "start",
+                                            "end"
+                                        ],
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                },
+                                "is_best_transcript": {
+                                    "default": false,
+                                    "type": "boolean"
+                                },
+                                "name": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                },
+                                "start": {
+                                    "minimum": 1,
+                                    "type": "integer"
+                                },
+                                "translations": {
+                                    "default": [
+                                    ],
+                                    "items": {
+                                        "additionalProperties": true,
+                                        "anyOf": [
+                                            {
+                                                "required": [
+                                                    "start",
+                                                    "end"
+                                                ]
+                                            },
+                                            {
+                                                "required": [
+                                                    "cdna_coding_end",
+                                                    "cdna_coding_start"
+                                                ]
+                                            }
+                                        ],
+                                        "properties": {
+                                            "aliases": {
+                                                "default": [
+                                                ],
+                                                "items": {
+                                                    "minLength": 1,
+                                                    "type": "string"
+                                                },
+                                                "type": "array"
+                                            },
+                                            "cdna_coding_end": {
+                                                "description": "coding start position relative to its parent transcript sequence",
+                                                "minimum": 1,
+                                                "type": "integer"
+                                            },
+                                            "cdna_coding_start": {
+                                                "description": "coding end position relative to its parent transcript sequence",
+                                                "minimum": 1,
+                                                "type": "integer"
+                                            },
+                                            "domains": {
+                                                "default": [
+                                                ],
+                                                "items": {
+                                                    "additionalProperties": true,
+                                                    "properties": {
+                                                        "desc": {
+                                                            "type": "string"
+                                                        },
+                                                        "name": {
+                                                            "minLength": 1,
+                                                            "type": "string"
+                                                        },
+                                                        "regions": {
+                                                            "minItems": 1,
+                                                            "properties": {
+                                                                "end": {
+                                                                    "description": "end of the protein domain region in AA coordinates",
+                                                                    "minimum": 1,
+                                                                    "type": "integer"
+                                                                },
+                                                                "start": {
+                                                                    "description": "start of the protein domain region in AA coordinates",
+                                                                    "minimum": 1,
+                                                                    "type": "integer"
+                                                                }
+                                                            },
+                                                            "type": "array"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "name",
+                                                        "regions"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                "type": "array"
+                                            },
+                                            "end": {
+                                                "description": "coding start position in genomic coordinates",
+                                                "minimum": 1,
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "minLength": 1,
+                                                "type": "string"
+                                            },
+                                            "start": {
+                                                "description": "coding start position in genomic coordinates",
+                                                "minimum": 1,
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                }
+                            },
+                            "required": [
+                                "start",
+                                "end",
+                                "name"
+                            ],
+                            "type": "object"
+                        },
+                        "type": "array"
+                    }
+                },
+                "required": [
+                    "chr",
+                    "start",
+                    "end",
+                    "name",
+                    "strand"
+                ],
+                "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+        },
+        "hugo_mapping_file": {
+            "type": "string"
+        },
+        "script": {
+            "type": "string"
+        },
+        "script_version": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "genes"
+    ],
+    "type": "object"
+}

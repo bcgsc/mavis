@@ -1,0 +1,98 @@
+{
+    "annotate.draw_fusions_only": true,
+    "cluster.min_clusters_per_file": 100,
+    "cluster.uninformative_filter": true,
+    "convert": {
+        "breakdancer": {
+            "assume_no_untemplated": true,
+            "file_type": "breakdancer",
+            "inputs": [
+                "tutorial_data/breakdancer-1.4.5/*txt"
+            ]
+        },
+        "breakseq": {
+            "assume_no_untemplated": true,
+            "file_type": "breakseq",
+            "inputs": [
+                "tutorial_data/breakseq-2.2/breakseq.vcf.gz"
+            ]
+        },
+        "chimerascan": {
+            "assume_no_untemplated": true,
+            "file_type": "chimerascan",
+            "inputs": [
+                "tutorial_data/chimerascan-0.4.5/chimeras.bedpe"
+            ]
+        },
+        "defuse": {
+            "assume_no_untemplated": true,
+            "file_type": "defuse",
+            "inputs": [
+                "tutorial_data/defuse-0.6.2/results.classify.tsv"
+            ]
+        },
+        "manta": {
+            "assume_no_untemplated": true,
+            "file_type": "manta",
+            "inputs": [
+                "tutorial_data/manta-1.0.0/diploidSV.vcf.gz",
+                "tutorial_data/manta-1.0.0/somaticSV.vcf"
+            ]
+        }
+    },
+    "libraries": {
+        "L1522785992-normal": {
+            "assign": [
+                "breakdancer",
+                "breakseq",
+                "manta"
+            ],
+            "bam_file": "tutorial_data/L1522785992_normal.sorted.bam",
+            "disease_status": "normal",
+            "protocol": "genome"
+        },
+        "L1522785992-trans": {
+            "assign": [
+                "chimerascan",
+                "defuse"
+            ],
+            "bam_file": "tutorial_data/L1522785992_trans.sorted.bam",
+            "disease_status": "diseased",
+            "protocol": "transcriptome",
+            "strand_specific": true
+        },
+        "L1522785992-tumour": {
+            "assign": [
+                "breakdancer",
+                "breakseq",
+                "manta"
+            ],
+            "bam_file": "tutorial_data/L1522785992_tumour.sorted.bam",
+            "disease_status": "diseased",
+            "protocol": "genome"
+        }
+    },
+    "output_dir": "output_dir_full",
+    "reference.aligner_reference": [
+        "reference_inputs/hg19.2bit"
+    ],
+    "reference.annotations": [
+        "reference_inputs/ensembl69_hg19_annotations.v3.json"
+    ],
+    "reference.dgv_annotation": [
+        "reference_inputs/dgv_hg19_variants.tab"
+    ],
+    "reference.masking": [
+        "reference_inputs/hg19_masking.tab"
+    ],
+    "reference.reference_genome": [
+        "reference_inputs/hg19.fa"
+    ],
+    "reference.template_metadata": [
+        "reference_inputs/cytoBand.txt"
+    ],
+    "summary.filter_min_flanking_reads": 10,
+    "summary.filter_min_linking_split_reads": 1,
+    "summary.filter_min_remapped_reads": 5,
+    "summary.filter_min_spanning_reads": 5
+}

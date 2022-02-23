@@ -1,7 +1,7 @@
 # python generated files
 /.eggs
 /coverage
-/venv
+/venv*
 /.coverage
 *.pyc
 *__pycache__
@@ -15,6 +15,7 @@ junit
 .tox
 *eggs/
 .mypy_cache
+.snakemake
 
 # aligners
 blat
@@ -32,3 +33,12 @@ junit
 /docs/package/mavis/*/*.md
 # don't ignore subpackage summary files
 !/docs/package/mavis/*/index.md
+docs/configuration/settings.md
+
+.snakemake
+output_dir*
+bin
+dag*
+tutorial_data
+reference_inputs
+tmp

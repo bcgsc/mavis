@@ -3,15 +3,20 @@
 
 name: build
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
-
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
+    name: python-${{ matrix.python-version }}
     steps:
     - uses: actions/checkout@v2
     - name: install machine dependencies
@@ -22,18 +27,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip "setuptools<58" wheel
-        pip install .[test]
-    - name: Lint with flake8
-      run: |
-        pip install flake8
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 mavis --count --select=E9,F63,F7,F82 --show-source --statistics
-    - name: Lint with black
-      run: |
-        pip install black
-        # stop the build if black needs to be run
-        black mavis -S -l 100 --check
+        python -m pip install --upgrade pip setuptools
+        pip install -e .[test]  # need editable to make sure the coverage reports correctly
     - name: install bwa
       run: |
         git clone https://github.com/lh3/bwa.git
@@ -45,20 +40,24 @@ jobs:
       run: |
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat
         chmod a+x blat
-    - name: run short tests with pytest
+    - name: set up .pth file
       run: |
-        export PATH=$PATH:$(pwd):$(pwd)/bwa
-        pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov mavis --cov-report term --cov-report xml --durations=10
-      env:
-        RUN_FULL: 0
-      if: github.event_name != 'pull_request'
+        python tests/setup_subprocess_cov.py
     - name: run full tests with pytest
       run: |
         export PATH=$PATH:$(pwd):$(pwd)/bwa
-        pytest tests -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov mavis --cov-report term --cov-report xml --durations=10
+        export COVERAGE_PROCESS_START=$(pwd)/.coveragerc
+
+        pytest tests -v \
+          --junitxml=junit/test-results-${{ matrix.python-version }}.xml \
+          --cov mavis \
+          --cov tools.convert_annotations_format \
+          --cov-report term-missing \
+          --cov-report xml \
+          --durations=10 \
+          --cov-branch
       env:
         RUN_FULL: 1
-      if: github.event_name == 'pull_request'
     - name: Upload pytest test results
       uses: actions/upload-artifact@master
       with:
@@ -76,3 +75,34 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: true
       if: matrix.python-version == 3.8
+  docker:
+    runs-on: ubuntu-latest
+    name: docker build
+    steps:
+      - uses: actions/checkout@v2
+      - name: build the docker container
+        run: |
+          docker build --file Dockerfile --tag bcgsc/mavis:latest .
+      - name: test the help menu
+        run: |
+          docker run bcgsc/mavis -h
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Install workflow dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install mavis_config pandas snakemake
+      - uses: eWaterCycle/setup-singularity@v6
+        with:
+          singularity-version: 3.6.4
+      - name: docker2singularity
+        run:
+          docker run --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock --mount type=bind,source="$(pwd)",target=/output --privileged -t --rm singularityware/docker2singularity bcgsc/mavis:latest
+      - name: Run analysis with snakemake & singularity
+        run: |
+          # get the SIMG filename
+          export SNAKEMAKE_CONTAINER=$(ls *mavis*.simg)
+          snakemake -j 2 --configfile tests/mini-tutorial.config.json --use-singularity
+        if: always()

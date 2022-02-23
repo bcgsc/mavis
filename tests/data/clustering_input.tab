@@ -1,3 +1,3 @@
-#tracking_id	event_type	break1_chromosome	break1_position_start	break1_position_end	break1_orientation	break1_strand	break1_seq	break2_chromosome	break2_position_start	break2_position_end	break2_orientation	break2_strand	break2_seq	opposing_strands	stranded	tools	protocol
+tracking_id	event_type	break1_chromosome	break1_position_start	break1_position_end	break1_orientation	break1_strand	break1_seq	break2_chromosome	break2_position_start	break2_position_end	break2_orientation	break2_strand	break2_seq	opposing_strands	stranded	tools	protocol
 manta-MantaDEL:175574:0:0:0:0:0	deletion	15	67333523	67333619	L	?	None	15	67333581	67333581	R	?	None	False	False	manta	genome
 strelka-TyeSomZhWTRakEu6ZJ7up6	deletion	15	67333623	67333623	L	?	None	15	67333625	67333625	R	?	None	False	False	strelka	genome
