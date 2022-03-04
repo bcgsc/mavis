@@ -195,7 +195,7 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
             )
         elif (
             info.get('CILEN') != None
-        ):  # as per https://github.com/samtools/hts-specs/issues/615, CILEN takes priority over CIPOS in dictating break2
+        ):  # as per https://github.com/samtools/hts-specs/issues/615, CILEN takes priority over CIPOS in dictating breakpoint2
             std_row.update(
                 {
                     COLUMNS.break1_position_start: max(
@@ -206,6 +206,10 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                     COLUMNS.break2_position_end: end + info.get('CILEN', (0, 0))[1],
                 }
             )
+            if std_row.get("break1_position_end") > std_row.get(
+                "break2_position_end"
+            ):  # truncate breakpoint1 to max lenght of breakpoint2
+                std_row.update({COLUMNS.break1_position_end: std_row.get("break2_position_end")})
         else:
             std_row.update(
                 {
@@ -217,6 +221,10 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                     COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1],
                 }
             )
+            if std_row.get("break1_position_end") > std_row.get(
+                "break2_position_end"
+            ):  # truncate breakpoint1 to max lenght of breakpoint2
+                std_row.update({COLUMNS.break1_position_end: std_row.get("break2_position_end")})
         if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
             # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
             std_row.update({'break1_position_end': 1})
@@ -225,7 +233,6 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
 
         if 'SVTYPE' in info:
             std_row[COLUMNS.event_type] = info['SVTYPE']
-
         try:
             orient1, orient2 = info['CT'].split('to')
             connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
