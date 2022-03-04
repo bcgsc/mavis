@@ -1,3 +1,4 @@
+import itertools
 import os
 import shutil
 import sys
@@ -46,6 +47,15 @@ class TestConvert:
         for pair in read_bpp_from_input_file(outputfile):
             result.setdefault(pair.data['tracking_id'], []).append(pair)
         return result
+
+    def test_straglr(self):
+        result = self.run_main(get_data('straglr.bed'), SUPPORTED_TOOL.STRAGLR, False)
+        assert len(result) == 9
+        for bpp in itertools.chain(*result.values()):
+            assert bpp.break1.chr == bpp.break2.chr
+            assert bpp.break1.start == bpp.break2.start
+            assert bpp.break1.end == bpp.break2.end
+            assert bpp.event_type == SVTYPE.INS
 
     def test_chimerascan(self):
         self.run_main(get_data('chimerascan_output.bedpe'), SUPPORTED_TOOL.CHIMERASCAN, False)
