@@ -56,6 +56,7 @@ class TestConvert:
             assert bpp.break1.start == bpp.break2.start
             assert bpp.break1.end == bpp.break2.end
             assert bpp.event_type == SVTYPE.INS
+            assert bpp.untemplated_seq is None
 
     def test_chimerascan(self):
         self.run_main(get_data('chimerascan_output.bedpe'), SUPPORTED_TOOL.CHIMERASCAN, False)
