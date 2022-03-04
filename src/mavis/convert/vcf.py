@@ -37,6 +37,7 @@ class VcfInfoType(TypedDict, total=False):
     CHR2: str
     CIPOS: Tuple[int, int]
     CIEND: Tuple[int, int]
+    CILEN: Tuple[int, int]
     CT: str
     END: Optional[int]
     PRECISE: bool
@@ -192,6 +193,19 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                     COLUMNS.break2_position_end: end,
                 }
             )
+        elif (
+            info.get('CILEN') != None
+        ):  # as per https://github.com/samtools/hts-specs/issues/615, CILEN takes priority over CIPOS in dictating break2
+            std_row.update(
+                {
+                    COLUMNS.break1_position_start: max(
+                        1, record.pos + info.get('CIPOS', (0, 0))[0]
+                    ),
+                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
+                    COLUMNS.break2_position_start: max(1, end + info.get('CILEN', (0, 0))[0]),
+                    COLUMNS.break2_position_end: end + info.get('CILEN', (0, 0))[1],
+                }
+            )
         else:
             std_row.update(
                 {
@@ -220,7 +234,11 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
         except KeyError:
             pass
         std_row.update(
-            {k: v for k, v in info.items() if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CT'}}
+            {
+                k: v
+                for k, v in info.items()
+                if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CILEN', 'CT'}
+            }
         )
         records.append(std_row)
     return records
@@ -238,7 +256,7 @@ def convert_pandas_rows_to_variants(df: pd.DataFrame) -> List[VcfRecordType]:
 
         # convert info types
         for key in info:
-            if key in {'CIPOS', 'CIEND'}:
+            if key in {'CIPOS', 'CIEND', 'CILEN'}:
                 ci_start, ci_end = info[key].split(',')
                 info[key] = (int(ci_start), int(ci_end))
             elif key == 'END':
