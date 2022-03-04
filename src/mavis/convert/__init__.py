@@ -13,6 +13,7 @@ from .chimerascan import convert_row as _parse_chimerascan
 from .cnvnator import convert_row as _parse_cnvnator
 from .constants import SUPPORTED_TOOL, TOOL_SVTYPE_MAPPING, TRACKING_COLUMN
 from .starfusion import convert_row as _parse_starfusion
+from .straglr import convert_row as _parse_straglr
 from .transabyss import convert_row as _parse_transabyss
 from .vcf import convert_file as read_vcf
 
@@ -141,6 +142,10 @@ def _convert_tool_row(
         std_row.update(
             {k: v for k, v in row.items() if k not in {'Type', 'Chr1', 'Chr2', 'Pos1', 'Pos2'}}
         )
+
+    elif file_type == SUPPORTED_TOOL.STRAGLR:
+
+        std_row.update(_parse_straglr(row))
 
     else:
         raise NotImplementedError('unsupported file type', file_type)
