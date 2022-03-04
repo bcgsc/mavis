@@ -259,11 +259,14 @@ class BreakpointPair:
             >>> BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
             >>> BreakpointPair(Breakpoint('1', 1, strand='+'), Breakpoint('1', 9999, strand='-'))
         """
-
-        if b1.key[:3] > b2.key[:3]:
-            self.break1 = b2
-            self.break2 = b1
-        else:
+        if b1.chr != b2.chr or not Interval.overlaps(b1, b2):
+            if b1.key[:3] > b2.key[:3]:
+                self.break1 = b2
+                self.break2 = b1
+            else:
+                self.break1 = b1
+                self.break2 = b2
+        else:  # handles case whereby overlapping calls should skip sorting https://github.com/bcgsc/mavis/issues/319
             self.break1 = b1
             self.break2 = b2
         self.stranded = stranded
@@ -310,11 +313,12 @@ class BreakpointPair:
         return self.data.get(COLUMNS[colname])
 
     def __str__(self):
-        return 'BPP({}, {}{}{})'.format(
+        return 'BPP({}, {}{}{}{})'.format(
             str(self.break1),
             str(self.break2),
             ', opposing={}'.format(self.opposing_strands) if not self.stranded else '',
             ', seq=' + repr(self.untemplated_seq) if self.untemplated_seq is not None else '',
+            ', tracking_id=' + self.tracking_id if self.tracking_id else '',
         )
 
     def flatten(self):
