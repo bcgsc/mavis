@@ -10,7 +10,7 @@ def test_read_vcf():
     assert df.shape[0] == 106
 
 
-def test_convert_record():
+def test_convert_record_sniffle():
     variant_imprecise = VcfRecordType(
         id='mock-BND-imprecise',
         pos=0,
@@ -60,6 +60,30 @@ def test_convert_record():
     assert precise_records.get('break1_chromosome') == 'chr14_KI270722v1_random'
     assert imprecise_records.get('break1_chromosome') == 'chr14_KI270722v1_random'
 
+    variant_cilen3 = VcfRecordType(
+        id='Sniffle.INS',
+        pos=11184,
+        chrom='chr2',
+        alts=[
+            'AGGAGGCGCACCGGGGCACCGCGCAGGCGCAGAGAGGCGCACCGCGCCCGCGCAGGCGCAGAGAGGCGCACCGCGCCCGCGCAGGCGGCGAGAGAGGCGCGACCGCGCCCGCGTAGGCGCAGAGAGGCGCACCGCGCCCCGCGCAGGCGCAGGCGCACCCGCGCCCGCGCAGGCGCAGAGAGGCGTGACCCGCGCCCGCGCAGG'
+        ],
+        ref='N',
+        info=VcfInfoType(
+            CHR2="chr2",
+            IMPRECISE=True,
+            SVMETHOD="Snifflesv1.0.12",
+            SVTYPE="INS",
+            SUPTYPE="AL",
+            STRANDS="+-",
+            END=11183,
+        ),
+    )
+    variant_ins_cutesv_3 = convert_record(variant_cilen3)
+    assert len(variant_ins_cutesv_3) == 1
+    variant_ins_cutesv_3 = variant_ins_cutesv_3[0]
+    assert variant_ins_cutesv_3.get('break2_position_end') == 11183
+    assert variant_ins_cutesv_3.get('break1_position_end') == 11183
+
 
 def test_convert_record_cuteSV():
     variant_cilen = VcfRecordType(
@@ -84,7 +108,7 @@ def test_convert_record_cuteSV():
     variant_ins_cutesv = convert_record(variant_cilen)
     assert len(variant_ins_cutesv) == 1
     variant_ins_cutesv = variant_ins_cutesv[0]
-    assert variant_ins_cutesv.get('break2_position_start') == 1853342
+    assert variant_ins_cutesv.get('break2_position_start') == 1853377
     assert variant_ins_cutesv.get('break2_position_end') == 1853472
 
     variant_cilen2 = VcfRecordType(
@@ -109,5 +133,7 @@ def test_convert_record_cuteSV():
     variant_ins_cutesv_2 = convert_record(variant_cilen2)
     assert len(variant_ins_cutesv_2) == 1
     variant_ins_cutesv_2 = variant_ins_cutesv_2[0]
-    assert variant_ins_cutesv_2.get('break2_position_end') == 1853472
+    assert variant_ins_cutesv_2.get('break1_position_start') == 1853377
     assert variant_ins_cutesv_2.get('break1_position_end') == 1853472
+    assert variant_ins_cutesv_2.get('break2_position_end') == 1853472
+    assert variant_ins_cutesv_2.get('break2_position_start') == 1853377

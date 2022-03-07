@@ -39,7 +39,6 @@ class Breakpoint(Interval):
             orient (ORIENT): the orientation (which side is retained at the break)
             strand (STRAND): the strand
             seq: the seq
-
         Examples:
             >>> Breakpoint('1', 1, 2)
             >>> Breakpoint('1', 1)
@@ -251,22 +250,17 @@ class BreakpointPair:
             opposing_strands: are the strands at the breakpoint opposite? i.e. +/- instead of +/+
             untemplated_seq: seq between the breakpoints that is not part of either breakpoint
             data: optional dictionary of attributes associated with this pair
-
         Note:
             untemplated_seq should always be given wrt to the positive/forward reference strand
-
         Example:
             >>> BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
             >>> BreakpointPair(Breakpoint('1', 1, strand='+'), Breakpoint('1', 9999, strand='-'))
         """
-        if b1.chr != b2.chr or not Interval.overlaps(b1, b2):
-            if b1.key[:3] > b2.key[:3]:
-                self.break1 = b2
-                self.break2 = b1
-            else:
-                self.break1 = b1
-                self.break2 = b2
-        else:  # handles case whereby overlapping calls should skip sorting https://github.com/bcgsc/mavis/issues/319
+
+        if b1.key[:3] > b2.key[:3]:
+            self.break1 = b2
+            self.break2 = b1
+        else:
             self.break1 = b1
             self.break2 = b2
         self.stranded = stranded
@@ -355,13 +349,11 @@ class BreakpointPair:
         """
         uses the chr, orientations and strands to determine the
         possible structural_variant types that this pair could support
-
         Args:
             pair (BreakpointPair): the pair to classify
             distance: if defined, will be passed to net size to use in narrowing the list of putative types (del vs ins)
         Returns:
             a list of possible SVTYPE
-
         Example:
             >>> bpp = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
             >>> BreakpointPair.classify(bpp)
@@ -369,7 +361,6 @@ class BreakpointPair:
             >>> bpp = BreakpointPair(Breakpoint('1', 1, orient='L'), Breakpoint('1', 9999, orient='R'), opposing_strands=False)
             >>> BreakpointPair.classify(bpp)
             {'deletion', 'insertion'}
-
         Note:
             see [related theory documentation](/background/theory/#classifying-events)
         """
@@ -446,22 +437,16 @@ class BreakpointPair:
         this sequence comparison is done with reference to a reference genome and does not
         use novel or untemplated sequence in the comparison. For this reason, insertions
         will never return any homologous sequence
-
-
             small duplication event CTT => CTTCTT
-
             GATACATTTCTTCTTGAAAA reference
             ---------<========== first breakpoint
             ===========>-------- second breakpoint
             ---------CT-CT------ first break homology
             -------TT-TT-------- second break homology
-
         Args:
             reference_genome: dict of reference sequence by template/chr name
-
         Returns:
             Tuple[str,str]: homologous sequence at the first breakpoint and second breakpoints
-
         Raises:
             AttributeError: for non specific breakpoints
         """
