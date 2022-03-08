@@ -41,7 +41,7 @@ The tools and versions currently supported are given below. Versions listed indi
 | [Pindel (Ye, 2009)](../../background/citations#ye-2009)                     | `0.2.5b9`         | `Tools main output file(s)`                   |
 | [Sniffles (Sedlazeck, 2018)](../../background/citations#sedlazeck-2018)     | `1.0.12b`         | `*.vcf`                                       |
 | [STAR-Fusion (Haas, 2017)](../../background/citations#haas-2017)            | `1.4.0`           | `star-fusion.fusion_predictions.abridged.tsv` |
-| [Straglr (Chiu, 2021)](../../background/citations#chiu-2021)                |                   |
+| [Straglr (Chiu, 2021)](../../background/citations#chiu-2021)                |                   |                                               |
 | [Strelka (Saunders, 2012)](../../background/citations#saunders-2012)        | `1.0.6`           | `passed.somatic.indels.vcf`                   |
 | [Trans-ABySS (Robertson, 2010)](../../background/citations/#robertson-2010) | `1.4.8 (custom)`  | `{indels/events_novel_exons,fusions/*}.tsv`   | `<output_prefix>.bed` |
 
