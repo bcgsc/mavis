@@ -123,53 +123,80 @@ def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def convert_imprecise_break(std_row: Dict, info: Dict) -> Dict:
+def convert_imprecise_break(std_row: Dict, info: Dict, record: List) -> Dict:
     """
-    Checks for known errors caused by callers in IMPRECISE calls, that leveraged uncertainty from the CIPOS/CIEND/CILEN fields.
+    Handles IMPRECISE calls, that leveraged uncertainty from the CIPOS/CIEND/CILEN fields.
 
     bp1_s = breakpoint1 start
     bp1_e = breakpoint1 end
     bp2_s = breakpoint2 start
     bp2_e = breakpoint2 end
 
-    Insertion edge cases include:
-    Scenario 1 - in which bp1_e > bp2_s
+    Insertion and deletion edge case - in which bp1_e > bp2_s
     E.g bp1_s = 1890, bp1_e = 2000, bp2_s = 1900, bp2_e = 1900.
     break1 ------------------------=======================--------------
     break2 ------------------------==========---------------------------
 
-    Scenario 2 - in which bp1_e > bp1_s
+    Insertion edge case - in which bp1_e > bp1_s
     E.g bp1_s = 1890, bp1_e = 1800, bp2_s = 1800, bp2_e = 1800.
     break1 ------------------------==-----------------------------------
     break2 ------------------------=------------------------------------
 
-    Scenario 3 - in which bp1_s > bp2_s
+    Insertion edge case - in which bp1_s > bp2_s
     E.g bp1_s = 1950, bp1_e = 2000, bp2_s = 1900, bp2_e = 3000.
     break1 ------------------------==-----------------------------------
     break2 -----------------------========------------------------------
     """
 
     try:
-        if info.get('IMPRECISE', True):
-            if (
-                std_row['break1_position_end'] > std_row['break2_position_end']
-                and std_row["break1_chromosome"] == std_row["break2_chromosome"]
-                and std_row["event_type"] == 'INS'
-            ):  # bp1_e > bp2_s
-                std_row.update({'break1_position_end': std_row['break2_position_end']})
-            if (
-                std_row['break1_position_start'] > std_row['break2_position_end']
-                and std_row["break1_chromosome"] == std_row["break2_chromosome"]
-                and std_row["event_type"] == 'INS'
-            ):  # bp1_e > bp1_s
-                std_row.update({'break1_position_start': std_row['break2_position_end']})
-            if (
-                std_row['break1_position_start'] > std_row['break2_position_start']
-                and std_row["break1_chromosome"] == std_row["break2_chromosome"]
-                and std_row["event_type"] == 'INS'
-            ):  # bp1_s > bp2_s
-                std_row.update({'break2_position_start': std_row['break1_position_start']})
-            return std_row
+        if info.get(
+            'CILEN'
+        ):  # as per https://github.com/samtools/hts-specs/issues/615, CILEN takes priority over CIPOS in dictating breakpoint2
+            std_row.update(
+                {
+                    COLUMNS.break1_position_start: max(
+                        1, record.pos + info.get('CIPOS', (0, 0))[0]
+                    ),
+                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
+                    COLUMNS.break2_position_start: max(
+                        1, record.stop + info.get('CILEN', (0, 0))[0]
+                    ),
+                    COLUMNS.break2_position_end: record.stop + info.get('CILEN', (0, 0))[1],
+                }
+            )
+        else:
+            std_row.update(
+                {
+                    COLUMNS.break1_position_start: max(
+                        1, record.pos + info.get('CIPOS', (0, 0))[0]
+                    ),
+                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
+                    COLUMNS.break2_position_start: max(
+                        1, record.stop + info.get('CIEND', (0, 0))[0]
+                    ),
+                    COLUMNS.break2_position_end: record.stop + info.get('CIEND', (0, 0))[1],
+                }
+            )
+
+        if (
+            std_row['break1_position_end'] > std_row['break2_position_end']
+            and std_row["break1_chromosome"] == std_row["break2_chromosome"]
+            and (std_row["event_type"] == 'INS')
+        ):  # bp1_e > bp2_e
+            std_row.update({'break1_position_end': std_row['break2_position_end']})
+        if (
+            std_row['break1_position_start'] > std_row['break2_position_end']
+            and std_row["break1_chromosome"] == std_row["break2_chromosome"]
+            and (std_row["event_type"] == 'INS')
+        ):  # bp1_s > bp2_e
+            std_row.update({'break1_position_start': std_row['break2_position_end']})
+        if (
+            std_row['break1_position_start'] > std_row['break2_position_start']
+            and std_row["break1_chromosome"] == std_row["break2_chromosome"]
+            and (std_row["event_type"] == 'INS')
+        ):  # bp1_s > bp2_s
+            std_row.update({'break2_position_start': std_row['break1_position_start']})
+        return std_row
 
     except KeyError as err:
         logger.warn(f'Missing required column inputs: {err}')
@@ -249,31 +276,9 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                     COLUMNS.break2_position_end: end,
                 }
             )
-        elif info.get(
-            'CILEN'
-        ):  # as per https://github.com/samtools/hts-specs/issues/615, CILEN takes priority over CIPOS in dictating breakpoint2
-            std_row.update(
-                {
-                    COLUMNS.break1_position_start: max(
-                        1, record.pos + info.get('CIPOS', (0, 0))[0]
-                    ),
-                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
-                    COLUMNS.break2_position_start: max(1, end + info.get('CILEN', (0, 0))[0]),
-                    COLUMNS.break2_position_end: end + info.get('CILEN', (0, 0))[1],
-                }
-            )
         else:
-            std_row.update(
-                {
-                    COLUMNS.break1_position_start: max(
-                        1, record.pos + info.get('CIPOS', (0, 0))[0]
-                    ),
-                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
-                    COLUMNS.break2_position_start: max(1, end + info.get('CIEND', (0, 0))[0]),
-                    COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1],
-                }
-            )
-        convert_imprecise_break(std_row, info)
+            convert_imprecise_break(std_row, info, record)
+
         if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
             # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
             std_row.update({'break1_position_end': 1})
