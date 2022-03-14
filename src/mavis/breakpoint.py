@@ -39,6 +39,7 @@ class Breakpoint(Interval):
             orient (ORIENT): the orientation (which side is retained at the break)
             strand (STRAND): the strand
             seq: the seq
+
         Examples:
             >>> Breakpoint('1', 1, 2)
             >>> Breakpoint('1', 1)
@@ -250,8 +251,10 @@ class BreakpointPair:
             opposing_strands: are the strands at the breakpoint opposite? i.e. +/- instead of +/+
             untemplated_seq: seq between the breakpoints that is not part of either breakpoint
             data: optional dictionary of attributes associated with this pair
+
         Note:
             untemplated_seq should always be given wrt to the positive/forward reference strand
+
         Example:
             >>> BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
             >>> BreakpointPair(Breakpoint('1', 1, strand='+'), Breakpoint('1', 9999, strand='-'))

@@ -123,7 +123,9 @@ def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def convert_imprecise_break(std_row: Dict, info: Dict, record: List) -> Dict:
+def convert_imprecise_break(
+    std_row: Dict, info: Dict, record: List[VcfRecordType], bp_end: int
+) -> Dict:
     """
     Handles IMPRECISE calls, that leveraged uncertainty from the CIPOS/CIEND/CILEN fields.
 
@@ -158,10 +160,8 @@ def convert_imprecise_break(std_row: Dict, info: Dict, record: List) -> Dict:
                         1, record.pos + info.get('CIPOS', (0, 0))[0]
                     ),
                     COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
-                    COLUMNS.break2_position_start: max(
-                        1, record.stop + info.get('CILEN', (0, 0))[0]
-                    ),
-                    COLUMNS.break2_position_end: record.stop + info.get('CILEN', (0, 0))[1],
+                    COLUMNS.break2_position_start: max(1, bp_end + info.get('CILEN', (0, 0))[0]),
+                    COLUMNS.break2_position_end: bp_end + info.get('CILEN', (0, 0))[1],
                 }
             )
         else:
@@ -171,29 +171,27 @@ def convert_imprecise_break(std_row: Dict, info: Dict, record: List) -> Dict:
                         1, record.pos + info.get('CIPOS', (0, 0))[0]
                     ),
                     COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
-                    COLUMNS.break2_position_start: max(
-                        1, record.stop + info.get('CIEND', (0, 0))[0]
-                    ),
-                    COLUMNS.break2_position_end: record.stop + info.get('CIEND', (0, 0))[1],
+                    COLUMNS.break2_position_start: max(1, bp_end + info.get('CIEND', (0, 0))[0]),
+                    COLUMNS.break2_position_end: bp_end + info.get('CIEND', (0, 0))[1],
                 }
             )
 
         if (
             std_row['break1_position_end'] > std_row['break2_position_end']
             and std_row["break1_chromosome"] == std_row["break2_chromosome"]
-            and (std_row["event_type"] == 'INS')
+            and std_row["event_type"] == 'INS'
         ):  # bp1_e > bp2_e
             std_row.update({'break1_position_end': std_row['break2_position_end']})
         if (
             std_row['break1_position_start'] > std_row['break2_position_end']
             and std_row["break1_chromosome"] == std_row["break2_chromosome"]
-            and (std_row["event_type"] == 'INS')
+            and std_row["event_type"] == 'INS'
         ):  # bp1_s > bp2_e
             std_row.update({'break1_position_start': std_row['break2_position_end']})
         if (
             std_row['break1_position_start'] > std_row['break2_position_start']
             and std_row["break1_chromosome"] == std_row["break2_chromosome"]
-            and (std_row["event_type"] == 'INS')
+            and std_row["event_type"] == 'INS'
         ):  # bp1_s > bp2_s
             std_row.update({'break2_position_start': std_row['break1_position_start']})
         return std_row
@@ -277,7 +275,7 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                 }
             )
         else:
-            convert_imprecise_break(std_row, info, record)
+            convert_imprecise_break(std_row, info, record, end)
 
         if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
             # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
