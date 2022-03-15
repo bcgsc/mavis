@@ -4,7 +4,7 @@ module which holds all functions relating to loading reference files
 import json
 import os
 import re
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, TYPE_CHECKING
 
 import pandas as pd
 from Bio import SeqIO
@@ -17,6 +17,9 @@ from ..util import logger, read_bpp_from_input_file
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, PreTranscript, Template, Transcript
 from .protein import Domain, Translation
+
+if TYPE_CHECKING:
+    from ..breakpoint import BreakpointPair
 
 
 def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
