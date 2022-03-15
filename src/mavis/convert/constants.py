@@ -28,6 +28,7 @@ class SUPPORTED_TOOL(MavisNamespace):
     STRELKA = 'strelka'
     STARFUSION = 'starfusion'
     STRAGLR = 'straglr'
+    DGV = 'dgv'
 
 
 TOOL_SVTYPE_MAPPING = {v: [v] for v in SVTYPE.values()}  # type: ignore

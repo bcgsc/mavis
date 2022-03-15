@@ -277,6 +277,7 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
         COLUMNS.net_size,
         COLUMNS.assumed_untemplated,
         'dgv',
+        'known_sv_count',
     }
 
     rows = []
