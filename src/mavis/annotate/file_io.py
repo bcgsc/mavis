@@ -19,7 +19,7 @@ from .genomic import Exon, Gene, PreTranscript, Template, Transcript
 from .protein import Domain, Translation
 
 if TYPE_CHECKING:
-    from ..breakpoint import BreakpointPair
+    from ..breakpoint import Breakpoint, BreakpointPair
 
 
 def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
@@ -61,13 +61,13 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
     return regions
 
 
-def load_mavis_input(*filepaths: str) -> List[BreakpointPair]:
+def load_mavis_input(*filepaths: str) -> List["BreakpointPair"]:
     """
     loads a standard MAVIS file input in
     Args:
         filepath: path to standard MAVIS format file
     Returns:
-        a dictionary keyed by chromosome name with values of lists of regions on the chromosome
+        a list of breakpoint pairs
     """
     regions: Dict[str, List[BioInterval]] = {}
     for filepath in filepaths:
