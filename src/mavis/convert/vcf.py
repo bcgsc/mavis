@@ -123,9 +123,7 @@ def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def convert_imprecise_break(
-    std_row: Dict, info: Dict, record: List[VcfRecordType], bp_end: int
-) -> Dict:
+def convert_imprecise_break(std_row: Dict, record: List[VcfRecordType], bp_end: int) -> Dict:
     """
     Handles IMPRECISE calls, that leveraged uncertainty from the CIPOS/CIEND/CILEN fields.
 
@@ -151,28 +149,32 @@ def convert_imprecise_break(
     """
 
     try:
-        if info.get(
+        if record.info.get(
             'CILEN'
         ):  # as per https://github.com/samtools/hts-specs/issues/615, CILEN takes priority over CIPOS in dictating breakpoint2
             std_row.update(
                 {
                     COLUMNS.break1_position_start: max(
-                        1, record.pos + info.get('CIPOS', (0, 0))[0]
+                        1, record.pos + record.info.get('CIPOS', (0, 0))[0]
                     ),
-                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
-                    COLUMNS.break2_position_start: max(1, bp_end + info.get('CILEN', (0, 0))[0]),
-                    COLUMNS.break2_position_end: bp_end + info.get('CILEN', (0, 0))[1],
+                    COLUMNS.break1_position_end: record.pos + record.info.get('CIPOS', (0, 0))[1],
+                    COLUMNS.break2_position_start: max(
+                        1, bp_end + record.info.get('CILEN', (0, 0))[0]
+                    ),
+                    COLUMNS.break2_position_end: bp_end + record.info.get('CILEN', (0, 0))[1],
                 }
             )
         else:
             std_row.update(
                 {
                     COLUMNS.break1_position_start: max(
-                        1, record.pos + info.get('CIPOS', (0, 0))[0]
+                        1, record.pos + record.info.get('CIPOS', (0, 0))[0]
                     ),
-                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
-                    COLUMNS.break2_position_start: max(1, bp_end + info.get('CIEND', (0, 0))[0]),
-                    COLUMNS.break2_position_end: bp_end + info.get('CIEND', (0, 0))[1],
+                    COLUMNS.break1_position_end: record.pos + record.info.get('CIPOS', (0, 0))[1],
+                    COLUMNS.break2_position_start: max(
+                        1, bp_end + record.info.get('CIEND', (0, 0))[0]
+                    ),
+                    COLUMNS.break2_position_end: bp_end + record.info.get('CIEND', (0, 0))[1],
                 }
             )
 
@@ -275,7 +277,7 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                 }
             )
         else:
-            convert_imprecise_break(std_row, info, record, end)
+            convert_imprecise_break(std_row, record, end)
 
         if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
             # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
