@@ -3,7 +3,7 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-
+from ..interval import Interval
 import pandas as pd
 
 try:
@@ -123,7 +123,7 @@ def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def convert_imprecise_break(std_row: Dict, record: List[VcfRecordType], bp_end: int) -> Dict:
+def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_end: int) -> Dict:
     """
     Handles IMPRECISE calls, that leveraged uncertainty from the CIPOS/CIEND/CILEN fields.
 
@@ -148,58 +148,50 @@ def convert_imprecise_break(std_row: Dict, record: List[VcfRecordType], bp_end: 
     break2 -----------------------========------------------------------
     """
 
-    try:
-        if record.info.get(
-            'CILEN'
-        ):  # as per https://github.com/samtools/hts-specs/issues/615, CILEN takes priority over CIPOS in dictating breakpoint2
-            std_row.update(
-                {
-                    COLUMNS.break1_position_start: max(
-                        1, record.pos + record.info.get('CIPOS', (0, 0))[0]
-                    ),
-                    COLUMNS.break1_position_end: record.pos + record.info.get('CIPOS', (0, 0))[1],
-                    COLUMNS.break2_position_start: max(
-                        1, bp_end + record.info.get('CILEN', (0, 0))[0]
-                    ),
-                    COLUMNS.break2_position_end: bp_end + record.info.get('CILEN', (0, 0))[1],
-                }
+    if record.info.get(
+        'CILEN'
+    ):  # as per https://github.com/samtools/hts-specs/issues/615, CILEN takes priority over CIPOS in dictating breakpoint2
+        std_row.update(
+            {
+                COLUMNS.break1_position_start: max(
+                    1, record.pos + record.info.get('CIPOS', (0, 0))[0]
+                ),
+                COLUMNS.break1_position_end: record.pos + record.info.get('CIPOS', (0, 0))[1],
+                COLUMNS.break2_position_start: max(1, bp_end + record.info.get('CILEN', (0, 0))[0]),
+                COLUMNS.break2_position_end: bp_end + record.info.get('CILEN', (0, 0))[1],
+            }
+        )
+    else:
+        std_row.update(
+            {
+                COLUMNS.break1_position_start: max(
+                    1, record.pos + record.info.get('CIPOS', (0, 0))[0]
+                ),
+                COLUMNS.break1_position_end: record.pos + record.info.get('CIPOS', (0, 0))[1],
+                COLUMNS.break2_position_start: max(1, bp_end + record.info.get('CIEND', (0, 0))[0]),
+                COLUMNS.break2_position_end: bp_end + record.info.get('CIEND', (0, 0))[1],
+            }
+        )
+
+    if std_row["break1_chromosome"] == std_row["break2_chromosome"] and (
+        Interval.overlaps(
+            (std_row['break1_position_start'], std_row['break1_position_end']),
+            (std_row['break2_position_start'], std_row['break2_position_end']),
+        )
+        or std_row['break1_position_start'] > std_row['break2_position_start']
+    ):
+        if 'event_type' in std_row and std_row['event_type'] != 'BND':
+            std_row['break2_position_start'] = max(
+                std_row['break1_position_start'], std_row['break2_position_start']
             )
-        else:
-            std_row.update(
-                {
-                    COLUMNS.break1_position_start: max(
-                        1, record.pos + record.info.get('CIPOS', (0, 0))[0]
-                    ),
-                    COLUMNS.break1_position_end: record.pos + record.info.get('CIPOS', (0, 0))[1],
-                    COLUMNS.break2_position_start: max(
-                        1, bp_end + record.info.get('CIEND', (0, 0))[0]
-                    ),
-                    COLUMNS.break2_position_end: bp_end + record.info.get('CIEND', (0, 0))[1],
-                }
+            std_row['break1_position_end'] = min(
+                std_row['break1_position_end'], std_row['break2_position_end']
+            )
+            std_row['break1_position_start'] = min(
+                std_row['break1_position_start'], std_row['break2_position_end']
             )
 
-        if (
-            std_row['break1_position_end'] > std_row['break2_position_end']
-            and std_row["break1_chromosome"] == std_row["break2_chromosome"]
-            and std_row["event_type"] == 'INS'
-        ):  # bp1_e > bp2_e
-            std_row.update({'break1_position_end': std_row['break2_position_end']})
-        if (
-            std_row['break1_position_start'] > std_row['break2_position_end']
-            and std_row["break1_chromosome"] == std_row["break2_chromosome"]
-            and std_row["event_type"] == 'INS'
-        ):  # bp1_s > bp2_e
-            std_row.update({'break1_position_start': std_row['break2_position_end']})
-        if (
-            std_row['break1_position_start'] > std_row['break2_position_start']
-            and std_row["break1_chromosome"] == std_row["break2_chromosome"]
-            and std_row["event_type"] == 'INS'
-        ):  # bp1_s > bp2_s
-            std_row.update({'break2_position_start': std_row['break1_position_start']})
-        return std_row
-
-    except KeyError as err:
-        logger.warn(f'Missing required column inputs: {err}')
+    return std_row
 
 
 def convert_record(record: VcfRecordType) -> List[Dict]:
@@ -277,7 +269,7 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                 }
             )
         else:
-            convert_imprecise_break(std_row, record, end)
+            convert_imprecise_breakend(std_row, record, end)
 
         if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
             # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
@@ -324,7 +316,7 @@ def convert_pandas_rows_to_variants(df: pd.DataFrame) -> List[VcfRecordType]:
         return info
 
     df['info'] = df['INFO'].apply(parse_info)
-    df['alts'] = df['ALT'].apply(lambda a: a.split(','))
+    df['alts'] = df['ALT'].apply(lambda a: str(a).split(','))
 
     rows = []
     for _, row in df.iterrows():
