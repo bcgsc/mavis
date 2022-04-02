@@ -130,7 +130,9 @@ def group_events(events):
                 bpp.break2.strand != new_bpp.break2.strand,
             ]
         ):
-            raise AssertionError('cannot group events differing on key elements', bpp, new_bpp)
+            raise AssertionError(
+                'cannot group events differing on key elements', str(bpp), str(new_bpp)
+            )
 
     # Note: There are some attributes that shouldn't be lost if different, currently appending the information
     # The evidence could be better off as a max instead of a join

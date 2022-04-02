@@ -310,11 +310,12 @@ class BreakpointPair:
         return self.data.get(COLUMNS[colname])
 
     def __str__(self):
-        return 'BPP({}, {}{}{})'.format(
+        return 'BPP({}, {}{}{}{})'.format(
             str(self.break1),
             str(self.break2),
             ', opposing={}'.format(self.opposing_strands) if not self.stranded else '',
             ', seq=' + repr(self.untemplated_seq) if self.untemplated_seq is not None else '',
+            ', tracking_id=' + self.tracking_id if self.tracking_id else '',
         )
 
     def flatten(self):
