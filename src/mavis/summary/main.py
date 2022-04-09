@@ -285,7 +285,7 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
         logger.info(f'annotating dgv for {lib}')
         if not dgv_annotation.is_empty():
             annotate_dgv(
-                bpps_by_library[lib], dgv_annotation.content, distance=10
+                bpps_by_library[lib], dgv_annotation.content
             )  # TODO make distance a parameter
         logger.info(f'adding pairing states for {lib}')
         for row in bpps_by_library[lib]:

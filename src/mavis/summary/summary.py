@@ -197,18 +197,24 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name):
 
     Args:
         bpps (list) : the list of BreakpointPair objects
-        dgv_regions_by_reference_name (list) : the list of BreakpointPair objects specified by the DGV file
-        distance (int) : the minimum distance required to match a dgv event with a breakpoint
+        dgv_regions_by_reference_name (dict) : tuple of (break1_chr,break2_chr) and its associated list of BreakpointPair objects specified by the MAVIS input file
     """
+    for chrom in dgv_regions_by_reference_name:
+        dgv_regions_by_reference_name[chrom] = sorted(
+            dgv_regions_by_reference_name[chrom], key=lambda x: x.break1.start
+        )
 
-    for bpp in bpps:
+    for bpp in [
+        b for b in bpps if (b.break1.chr and b.break2.chr) in dgv_regions_by_reference_name
+    ]:
         bpp.data['known_sv_count'] = 0
-        for dgv_region in dgv_regions_by_reference_name:
-            if equivalent(bpp, dgv_region):
-                bpp.data['dgv'] = '{}({}-{})'.format(
-                    dgv_region.tracking_id, dgv_region.break1, dgv_region.break2
-                )
-                bpp.data['known_sv_count'] += 1
+        for chr_region, dgv_region in dgv_regions_by_reference_name.items():
+            for dgv_call in dgv_region:
+                if equivalent(bpp, dgv_call):
+                    bpp.data['dgv'] = '{}({}-{})'.format(
+                        dgv_region.tracking_id, dgv_region.break1, dgv_region.break2
+                    )
+                    bpp.data['known_sv_count'] += 1
 
 
 def get_pairing_state(

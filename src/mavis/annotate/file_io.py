@@ -61,17 +61,20 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
     return regions
 
 
-def load_mavis_input(*filepaths: str) -> List["BreakpointPair"]:
+def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
     """
     loads a standard MAVIS file input in
     Args:
         filepath: path to standard MAVIS format file
     Returns:
-        a list of breakpoint pairs
+        a dictionary with {(bp1_chr,bp2_chr):{BreakpointPair}}
     """
-    regions: Dict[str, List[BioInterval]] = {}
+    regions: Dict[(str, str), List[BreakpointPair]] = {}
     for filepath in filepaths:
-        regions = read_bpp_from_input_file(filepath, expand_orient=True, expand_svtype=True)
+        bpps = read_bpp_from_input_file(filepath, expand_orient=True, expand_svtype=True)
+    for bpp in bpps:
+        chr_list = [bpp.break1.chr, bpp.break2.chr]
+        regions.setdefault(tuple(chr_list), []).append(bpp)
     return regions
 
 
@@ -363,7 +366,7 @@ class ReferenceFile:
         'reference_genome': load_reference_genome,
         'masking': load_masking_regions,
         'template_metadata': load_templates,
-        'dgv_annotation': load_mavis_input,
+        'dgv_annotation': load_known_sv,
         'aligner_reference': None,
     }
     """dict: Mapping of file types (based on ENV name) to load functions"""
