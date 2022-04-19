@@ -123,7 +123,7 @@ def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
-def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_end: int) -> Dict:
+def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_end: int):
     """
     Handles IMPRECISE calls, that leveraged uncertainty from the CIPOS/CIEND/CILEN fields.
 
@@ -179,6 +179,7 @@ def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_en
             (std_row['break2_position_start'], std_row['break2_position_end']),
         )
         or std_row['break1_position_start'] > std_row['break2_position_start']
+        or std_row['break2_position_start'] > std_row['break2_position_end']
     ):
         if 'event_type' in std_row and std_row['event_type'] != 'BND':
             std_row['break2_position_start'] = max(
@@ -190,8 +191,9 @@ def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_en
             std_row['break1_position_start'] = min(
                 std_row['break1_position_start'], std_row['break2_position_end']
             )
-
-    return std_row
+            std_row['break2_position_start'] = min(
+                std_row['break2_position_start'], std_row['break2_position_end']
+            )
 
 
 def convert_record(record: VcfRecordType) -> List[Dict]:
