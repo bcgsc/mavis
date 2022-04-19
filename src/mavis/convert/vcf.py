@@ -179,7 +179,6 @@ def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_en
             (std_row['break2_position_start'], std_row['break2_position_end']),
         )
         or std_row['break1_position_start'] > std_row['break2_position_start']
-        or std_row['break2_position_start'] > std_row['break2_position_end']
     ):
         if 'event_type' in std_row and std_row['event_type'] != 'BND':
             std_row['break2_position_start'] = max(
@@ -193,6 +192,18 @@ def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_en
             )
             std_row['break2_position_start'] = min(
                 std_row['break2_position_start'], std_row['break2_position_end']
+            )
+
+    elif (
+        std_row["break1_chromosome"] == std_row["break2_chromosome"]
+        and std_row['break2_position_start'] > std_row['break2_position_end']
+    ):
+        if 'event_type' in std_row and std_row['event_type'] != 'BND':
+            std_row['break2_position_start'] = min(
+                std_row['break2_position_start'], std_row['break2_position_end']
+            )
+            logger.warning(
+                f'Improper entry. Breakpoint2 start: {std_row["break2_position_start"]} is greater than Breakpoint2 end: {std_row["break2_position_end"]}\n Breakpoint2 start position coerced to breakpoint2 end position.'
             )
 
 
