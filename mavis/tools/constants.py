@@ -9,6 +9,7 @@ SUPPORTED_TOOL = MavisNamespace(
     MAVIS='mavis',
     DEFUSE='defuse',
     BREAKDANCER='breakdancer',
+    ARRIBA='arriba',
     VCF='vcf',
     BREAKSEQ='breakseq',
     CNVNATOR='cnvnator',

@@ -13,6 +13,7 @@ from .transabyss import convert_row as _parse_transabyss
 from .cnvnator import convert_row as _parse_cnvnator
 from .vcf import convert_file as read_vcf
 from .breakdancer import convert_file as _convert_breakdancer_file
+from .arriba import convert_row as _parse_arriba
 from .starfusion import convert_row as _parse_starfusion
 from .chimerascan import convert_row as _parse_chimerascan
 
@@ -141,6 +142,10 @@ def _convert_tool_row(row, file_type, stranded, assume_no_untemplated=True):
         std_row.update(
             {k: v for k, v in row.items() if k not in {'Type', 'Chr1', 'Chr2', 'Pos1', 'Pos2'}}
         )
+
+    elif file_type == SUPPORTED_TOOL.ARRIBA:
+
+        std_row.update(_parse_arriba(row))
 
     else:
         raise NotImplementedError('unsupported file type', file_type)
