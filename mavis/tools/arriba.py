@@ -2,12 +2,14 @@ from ..constants import COLUMNS, ORIENT, STRAND
 
 from .constants import TRACKING_COLUMN, SUPPORTED_TOOL
 
+
 def get_orient(string):
     if string == "downstream":
         return ORIENT.LEFT
     elif string == "upstream":
         return ORIENT.RIGHT
     return ORIENT.NS
+
 
 def convert_row(row):
     """
@@ -30,8 +32,8 @@ def convert_row(row):
         std_row[COLUMNS.break2_position_start] = std_row[COLUMNS.break2_position_end] = b2_start
     except (ValueError, TypeError):
         raise AssertionError(
-            'Could not parse the breakpoint from the Arriba row: {}, {}'.format(
-                row['breakpoint1'], row['breakpoint2']
+            "Could not parse the breakpoint from the Arriba row: {}, {}".format(
+                row["breakpoint1"], row["breakpoint2"]
             )
         )
     return std_row
