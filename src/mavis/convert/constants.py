@@ -27,6 +27,7 @@ class SUPPORTED_TOOL(MavisNamespace):
     CNVNATOR = 'cnvnator'
     STRELKA = 'strelka'
     STARFUSION = 'starfusion'
+    STRAGLR = 'straglr'
 
 
 TOOL_SVTYPE_MAPPING = {v: [v] for v in SVTYPE.values()}  # type: ignore
