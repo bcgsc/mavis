@@ -288,7 +288,6 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
             )
         else:
             convert_imprecise_breakend(std_row, record, end)
-            print(std_row)
             if len(std_row) == 0:
                 continue
         try:
