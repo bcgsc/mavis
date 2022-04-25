@@ -26,6 +26,7 @@ nav:
   - glossary.md
 
 plugins:
+  - search
   - awesome-pages
   - mkdocs-simple-hooks:
       hooks:
