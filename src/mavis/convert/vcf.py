@@ -178,7 +178,6 @@ def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_en
             (std_row['break1_position_start'], std_row['break1_position_end']),
             (std_row['break2_position_start'], std_row['break2_position_end']),
         )
-        or std_row['break1_position_start'] > std_row['break2_position_start']
     ):
         if 'event_type' in std_row and std_row['event_type'] != 'BND':
             std_row['break2_position_start'] = max(
@@ -190,21 +189,27 @@ def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_en
             std_row['break1_position_start'] = min(
                 std_row['break1_position_start'], std_row['break2_position_end']
             )
-            std_row['break2_position_start'] = min(
-                std_row['break2_position_start'], std_row['break2_position_end']
-            )
+    if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
+        # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
+        std_row.update({'break1_position_end': 1})
+    if std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
+        std_row.update({'break2_position_end': 1})
 
-    elif (
-        std_row["break1_chromosome"] == std_row["break2_chromosome"]
-        and std_row['break2_position_start'] > std_row['break2_position_end']
+    if std_row["break1_chromosome"] == std_row["break2_chromosome"] and (
+        std_row['break2_position_start'] > std_row['break2_position_end']
+        or std_row['break1_position_start'] > std_row['break1_position_end']
     ):
         if 'event_type' in std_row and std_row['event_type'] != 'BND':
-            std_row['break2_position_start'] = min(
-                std_row['break2_position_start'], std_row['break2_position_end']
+            logger.error(
+                f'Improper entry. One of the following breakpoints start is greater than breakpoint end:\n Breakpoint1_start: {std_row["break1_position_start"]}, Breakpoint1_end: {std_row["break1_position_end"]}\n Breakpoint2_start: {std_row["break2_position_start"]}, Breakpoint2_end: {std_row["break2_position_end"]}\n This call has been dropped.'
             )
-            logger.warning(
-                f'Improper entry. Breakpoint2 start: {std_row["break2_position_start"]} is greater than Breakpoint2 end: {std_row["break2_position_end"]}\n Breakpoint2 start position coerced to breakpoint2 end position.'
-            )
+            std_row.clear()
+
+    if not None in (record.pos, record.info.get('END')) and record.pos > record.info.get('END'):
+        logger.error(
+            f'Improper entry. Starting position ({record.pos}) cannot be greater than ending position ({record.info.get("END")}).\n This call has been dropped.'
+        )
+        std_row.clear()
 
 
 def convert_record(record: VcfRecordType) -> List[Dict]:
@@ -283,13 +288,9 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
             )
         else:
             convert_imprecise_breakend(std_row, record, end)
-
-        if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
-            # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
-            std_row.update({'break1_position_end': 1})
-        if std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
-            std_row.update({'break2_position_end': 1})
-
+            print(std_row)
+            if len(std_row) == 0:
+                continue
         try:
             orient1, orient2 = info['CT'].split('to')
             connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
@@ -329,7 +330,7 @@ def convert_pandas_rows_to_variants(df: pd.DataFrame) -> List[VcfRecordType]:
         return info
 
     df['info'] = df['INFO'].apply(parse_info)
-    df['alts'] = df['ALT'].apply(lambda a: str(a).split(','))
+    df['alts'] = df['ALT'].apply(lambda a: a.split(','))
 
     rows = []
     for _, row in df.iterrows():

@@ -110,7 +110,7 @@ def test_convert_intrachromosomal_imprecise_breakend():
     assert variant_ins_imprecise_2.get('break2_position_end') == 1853472
     assert variant_ins_imprecise_2.get('break2_position_start') == 1853377
 
-    # breakpoint_2_start > breakpoint_2_end
+    # breakpoint_2_start > breakpoint_2_end (invalid entry)
     variant_imprecise3 = VcfRecordType(
         id='mock-INS-imprecise',
         pos=1853407,
@@ -129,12 +129,32 @@ def test_convert_intrachromosomal_imprecise_breakend():
         ),
     )
     variant_ins_imprecise_3 = convert_record(variant_imprecise3)
-    assert len(variant_ins_imprecise_3) == 1
-    variant_ins_imprecise_3 = variant_ins_imprecise_3[0]
-    assert variant_ins_imprecise_3.get('break2_position_end') == 1853472
-    assert variant_ins_imprecise_3.get('break2_position_start') == 1853472
+    print(variant_ins_imprecise_3)
+    assert len(variant_ins_imprecise_3) == 0
 
-    # breakpoint_1_start > breakpoint_1_end
+    # breakpoint_1_start > breakpoint_1_end (invalid entry)
+    variant_imprecise4 = VcfRecordType(
+        id='mock-INS-imprecise',
+        pos=1853407,
+        chrom='chr5',
+        alts=['AGG'],
+        ref='A',
+        info=VcfInfoType(
+            CHR2="chr5",
+            IMPRECISE=True,
+            SVMETHOD="Snifflesv1.0.11",
+            SVTYPE="INS",
+            SUPTYPE="None",
+            STRANDS="None",
+            CIPOS=(999, 100),
+            CILEN=(65, 65),
+        ),
+    )
+    variant_ins_imprecise_4 = convert_record(variant_imprecise4)
+    print(variant_ins_imprecise_4)
+    assert len(variant_ins_imprecise_4) == 0
+
+    # pos > end (invalid entry)
     variant_cilen4 = VcfRecordType(
         id='Sniffle.INS',
         pos=11184,
@@ -149,7 +169,4 @@ def test_convert_intrachromosomal_imprecise_breakend():
         ),
     )
     variant_ins_imprecise_4 = convert_record(variant_cilen4)
-    assert len(variant_ins_imprecise_4) == 1
-    variant_ins_imprecise_4 = variant_ins_imprecise_4[0]
-    assert variant_ins_imprecise_4.get('break2_position_end') == 11183
-    assert variant_ins_imprecise_4.get('break1_position_end') == 11183
+    assert len(variant_ins_imprecise_4) == 0
