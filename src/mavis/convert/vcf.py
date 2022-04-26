@@ -147,6 +147,7 @@ def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_en
     break1 ------------------------==-----------------------------------
     break2 -----------------------========------------------------------
     """
+    is_intrachromosomal = std_row["break1_chromosome"] == std_row["break2_chromosome"]
 
     if record.info.get(
         'CILEN'
@@ -173,13 +174,13 @@ def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_en
             }
         )
 
-    if std_row["break1_chromosome"] == std_row["break2_chromosome"] and (
+    if is_intrachromosomal and (
         Interval.overlaps(
             (std_row['break1_position_start'], std_row['break1_position_end']),
             (std_row['break2_position_start'], std_row['break2_position_end']),
         )
     ):
-        if 'event_type' in std_row and std_row['event_type'] != 'BND':
+        if std_row.get('event_type') != 'BND':
             std_row['break2_position_start'] = max(
                 std_row['break1_position_start'], std_row['break2_position_start']
             )
@@ -195,25 +196,23 @@ def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_en
     if std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
         std_row.update({'break2_position_end': 1})
 
-    if std_row["break1_chromosome"] == std_row["break2_chromosome"] and (
+    if is_intrachromosomal and (
         std_row['break2_position_start'] > std_row['break2_position_end']
         or std_row['break1_position_start'] > std_row['break1_position_end']
     ):
         if 'event_type' in std_row and std_row['event_type'] != 'BND':
-            logger.error(
-                f'Improper entry. One of the following breakpoints start is greater than breakpoint end:\n Breakpoint1_start: {std_row["break1_position_start"]}, Breakpoint1_end: {std_row["break1_position_end"]}\n Breakpoint2_start: {std_row["break2_position_start"]}, Breakpoint2_end: {std_row["break2_position_end"]}\n This call has been dropped.'
+            raise ValueError(
+                f'Improper entry. One of the following breakpoints start is greater than breakpoint end: Breakpoint1_start: {std_row["break1_position_start"]}, Breakpoint1_end: {std_row["break1_position_end"]} Breakpoint2_start: {std_row["break2_position_start"]}, Breakpoint2_end: {std_row["break2_position_end"]} This call has been dropped.'
             )
-            std_row.clear()
 
     if (
-        not None in (record.pos, record.info.get('END'))
+        None not in (record.pos, record.info.get('END'))
         and record.pos > record.info.get('END')
-        and std_row["break1_chromosome"] == std_row["break2_chromosome"]
+        and is_intrachromosomal
     ):
-        logger.error(
-            f'Improper entry. Starting position ({record.pos}) cannot be greater than ending position ({record.info.get("END")}).\n This call has been dropped.'
+        raise ValueError(
+            f'Improper entry. Starting position ({record.pos}) cannot be greater than ending position ({record.info.get("END")}). This call has been dropped.'
         )
-        std_row.clear()
 
 
 def convert_record(record: VcfRecordType) -> List[Dict]:
@@ -292,8 +291,7 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
             )
         else:
             convert_imprecise_breakend(std_row, record, end)
-            if len(std_row) == 0:
-                continue
+
         try:
             orient1, orient2 = info['CT'].split('to')
             connection_type = {'3': ORIENT.LEFT, '5': ORIENT.RIGHT, 'N': ORIENT.NS}
@@ -413,6 +411,6 @@ def convert_file(input_file: str) -> List[Dict]:
     for variant_record in convert_pandas_rows_to_variants(data):
         try:
             rows.extend(convert_record(variant_record))
-        except NotImplementedError as err:
+        except (NotImplementedError, ValueError) as err:
             logging.warning(str(err))
     return rows
