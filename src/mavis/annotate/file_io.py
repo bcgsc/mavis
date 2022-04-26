@@ -4,7 +4,7 @@ module which holds all functions relating to loading reference files
 import json
 import os
 import re
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, TYPE_CHECKING
 
 import pandas as pd
 from Bio import SeqIO
@@ -13,10 +13,13 @@ from snakemake.utils import validate as snakemake_validate
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
 from ..types import ReferenceAnnotations, ReferenceGenome
-from ..util import logger
+from ..util import logger, read_bpp_from_input_file
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, PreTranscript, Template, Transcript
 from .protein import Domain, Translation
+
+if TYPE_CHECKING:
+    from ..breakpoint import Breakpoint, BreakpointPair
 
 
 def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
@@ -55,6 +58,23 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
                 reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name']
             )
             regions.setdefault(mask_region.reference_object, []).append(mask_region)
+    return regions
+
+
+def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
+    """
+    loads a standard MAVIS file input in
+    Args:
+        filepath: path to standard MAVIS format file
+    Returns:
+        a dictionary with {(bp1_chr,bp2_chr):{BreakpointPair}}
+    """
+    regions: Dict[(str, str), List[BreakpointPair]] = {}
+    for filepath in filepaths:
+        bpps = read_bpp_from_input_file(filepath, expand_orient=True, expand_svtype=True)
+    for bpp in bpps:
+        chr_list = [bpp.break1.chr, bpp.break2.chr]
+        regions.setdefault(tuple(chr_list), []).append(bpp)
     return regions
 
 
@@ -346,7 +366,7 @@ class ReferenceFile:
         'reference_genome': load_reference_genome,
         'masking': load_masking_regions,
         'template_metadata': load_templates,
-        'dgv_annotation': load_masking_regions,
+        'dgv_annotation': load_known_sv,
         'aligner_reference': None,
     }
     """dict: Mapping of file types (based on ENV name) to load functions"""
