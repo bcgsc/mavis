@@ -1,3 +1,4 @@
+import pytest
 from mavis.convert import SUPPORTED_TOOL, _convert_tool_row
 from mavis.convert.vcf import VcfInfoType, VcfRecordType, convert_record, pandas_vcf
 
@@ -10,7 +11,7 @@ def test_read_vcf():
     assert df.shape[0] == 106
 
 
-def test_convert_record():
+def test_convert_telomeric_region():
     variant_imprecise = VcfRecordType(
         id='mock-BND-imprecise',
         pos=0,
@@ -59,3 +60,115 @@ def test_convert_record():
 
     assert precise_records.get('break1_chromosome') == 'chr14_KI270722v1_random'
     assert imprecise_records.get('break1_chromosome') == 'chr14_KI270722v1_random'
+
+
+TEST_POS = 1853407
+
+
+@pytest.mark.parametrize(
+    'pos,break1_ci,break2_ci,break1,break2,ids',
+    [
+        [
+            TEST_POS,
+            (-30, 30),
+            (-65, 65),
+            (TEST_POS - 30, TEST_POS + 30),
+            (TEST_POS - 30, TEST_POS + 65),
+            'vcf-cuteSV.INS.breakpoint_2_start < breakpoint_1_start',
+        ],
+        [
+            TEST_POS,
+            (-30, 99999),
+            (-10, 65),
+            (TEST_POS - 30, TEST_POS + 65),
+            (TEST_POS - 10, TEST_POS + 65),
+            'vcf-cuteSV.INS.breakpoint_1_end > breakpoint_2_end',
+        ],
+    ],
+    ids=[
+        'breakpoint_2_start < breakpoint_1_start',
+        'breakpoint_1_end > breakpoint_2_end',
+    ],
+)
+def test_convert_intrachromosomal_imprecise_breakend(
+    pos, break1_ci, break2_ci, break1, break2, ids
+):
+    variant_vcf = VcfRecordType(
+        id=ids,
+        pos=pos,
+        chrom='chr5',
+        alts=['AGG'],
+        ref='A',
+        info=VcfInfoType(
+            CHR2="chr5",
+            IMPRECISE=True,
+            SVMETHOD="cuteSV-1.0.12",
+            SVTYPE="INS",
+            CIPOS=break1_ci,
+            CILEN=break2_ci,
+        ),
+    )
+    result = convert_record(variant_vcf)
+    assert len(result) == 1
+    variant = result[0]
+    assert variant.get('break1_position_start') == break1[0]
+    assert variant.get('break1_position_end') == break1[1]
+    assert variant.get('break2_position_start') == break2[0]
+    assert variant.get('break2_position_end') == break2[1]
+
+
+@pytest.mark.parametrize(
+    'pos,break1_ci,break2_ci,break1,break2,ids',
+    [
+        [
+            TEST_POS,
+            (-30, 99999),
+            (70, 65),
+            (TEST_POS - 30, TEST_POS + 65),
+            (TEST_POS + 65, TEST_POS + 65),
+            'vcf-cuteSV.INS.breakpoint_2_start > breakpoint_2_end',
+        ],
+    ],
+    ids=[
+        'breakpoint_2_start > breakpoint_2_end',
+    ],
+)
+def test_error_on_convert_intrachromosomal_imprecise_breakend(
+    pos, break1_ci, break2_ci, break1, break2, ids
+):
+    variant_vcf = VcfRecordType(
+        id=ids,
+        pos=pos,
+        chrom='chr5',
+        alts=['AGG'],
+        ref='A',
+        info=VcfInfoType(
+            CHR2="chr5",
+            IMPRECISE=True,
+            SVMETHOD="cuteSV-1.0.12",
+            SVTYPE="INS",
+            CIPOS=break1_ci,
+            CILEN=break2_ci,
+        ),
+    )
+    with pytest.raises(ValueError):
+        convert_record(variant_vcf)
+
+
+def test_convert_intrachromosomal_imprecise_breakend_no_ci():
+    # breakpoint_1_start > breakpoint_1_end
+    variant_cilen4 = VcfRecordType(
+        id='Sniffle.INS',
+        pos=11184,
+        chrom='chr2',
+        alts=['AGG'],
+        ref='N',
+        info=VcfInfoType(
+            CHR2="chr2",
+            IMPRECISE=True,
+            SVTYPE="INS",
+            END=11183,
+        ),
+    )
+    with pytest.raises(ValueError):
+        convert_record(variant_cilen4)
