@@ -205,7 +205,11 @@ def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_en
             )
             std_row.clear()
 
-    if not None in (record.pos, record.info.get('END')) and record.pos > record.info.get('END') and std_row["break1_chromosome"] == std_row["break2_chromosome"]:
+    if (
+        not None in (record.pos, record.info.get('END'))
+        and record.pos > record.info.get('END')
+        and std_row["break1_chromosome"] == std_row["break2_chromosome"]
+    ):
         logger.error(
             f'Improper entry. Starting position ({record.pos}) cannot be greater than ending position ({record.info.get("END")}).\n This call has been dropped.'
         )
