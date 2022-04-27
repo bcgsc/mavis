@@ -27,6 +27,7 @@ from ..util import (
 from .call import call_events
 from .constants import PASS_FILENAME
 from .evidence import GenomeEvidence, TranscriptomeEvidence
+from .gather import load_evidence
 
 
 def main(
@@ -171,7 +172,7 @@ def main(
         logger.info(
             f'inner window regions: {evidence.break1.chr}:{evidence.inner_window1[0]}-{evidence.inner_window1[1]}  {evidence.break2.chr}:{evidence.inner_window2[0]}-{evidence.inner_window2[1]}'
         )
-        evidence.load_evidence()
+        load_evidence(evidence)
         logger.info(
             f'flanking pairs: {len(evidence.flanking_pairs)}'
             + '; split reads: {}, {}'.format(*[len(a) for a in evidence.split_reads])
