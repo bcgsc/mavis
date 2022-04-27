@@ -11,9 +11,7 @@ from ..bam import read as _read
 from ..bam.cache import BamCache
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import (
-    CIGAR,
     COLUMNS,
-    NA_MAPPING_QUALITY,
     ORIENT,
     PYSAM_READ_FLAGS,
     STRAND,

@@ -15,6 +15,7 @@ from ..bam import cigar as _cigar
 from ..bam import read as _read
 from ..interval import Interval
 from ..util import logger
+from ..error import NotSpecifiedError
 
 
 def collect_split_read(evidence_bpp: Evidence, read: pysam.AlignedSegment, first_breakpoint: bool):

@@ -1,5 +1,4 @@
 import pytest
-from mavis.convert import SUPPORTED_TOOL, _convert_tool_row
 from mavis.convert.vcf import VcfInfoType, VcfRecordType, convert_record, pandas_vcf
 
 from ...util import get_data
