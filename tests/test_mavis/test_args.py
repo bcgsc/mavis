@@ -4,7 +4,6 @@ import tempfile
 from unittest.mock import Mock, patch
 
 import pytest
-from mavis import util
 from mavis.cluster import main as cluster_main
 from mavis.main import main as mavis_main
 from mavis.validate import main as validate_main

@@ -7,6 +7,7 @@ from mavis.breakpoint import Breakpoint
 from mavis.constants import NA_MAPPING_QUALITY, ORIENT, PYSAM_READ_FLAGS
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence
+from mavis.validate.gather import collect_split_read, collect_flanking_pair, load_evidence
 from mavis_config import DEFAULTS
 
 from ...util import get_data, long_running_test
@@ -125,7 +126,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference19', 964, orient=ORIENT.LEFT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 14
         assert self.count_original_reads(ev1.split_reads[1]) == 20
@@ -137,7 +138,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference4', 2000, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 21
         # one of the reads that appears to look good in the bam is too low quality % match
@@ -152,7 +153,7 @@ class TestFullEvidenceGathering:
             opposing_strands=True,
         )
 
-        ev1.load_evidence()
+        load_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 54
         assert self.count_original_reads(ev1.split_reads[1]) == 20
@@ -164,7 +165,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference7', 19000, orient=ORIENT.RIGHT),
             opposing_strands=True,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[1]) == 15
         assert self.count_original_reads(ev1.split_reads[0]) == 27
@@ -176,7 +177,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference7', 11000, orient=ORIENT.LEFT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 35
@@ -190,7 +191,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference20', 6000, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert len(ev1.flanking_pairs) == 49
@@ -204,7 +205,7 @@ class TestFullEvidenceGathering:
             Breakpoint('referenceX', 6000, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 4
@@ -218,7 +219,7 @@ class TestFullEvidenceGathering:
             Breakpoint('referenceX', 14000, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 8
@@ -232,7 +233,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 3818, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 20
@@ -246,7 +247,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference11', 6003, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -264,7 +265,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference11', 10030, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -283,7 +284,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference12', 2120, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -302,7 +303,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 3818, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         assert self.count_original_reads(ev1.split_reads[0]) == 20
         assert self.count_original_reads(ev1.split_reads[1]) == 18
@@ -315,7 +316,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 8927, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -334,7 +335,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 13123, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -353,7 +354,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 17899, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -372,7 +373,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 24330, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -389,7 +390,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 31827, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -407,7 +408,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 42159, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -426,7 +427,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference12', 6016, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -449,7 +450,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference1', 2001, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -469,7 +470,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference9', 2001, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -487,7 +488,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference16', 2001, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -506,7 +507,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference12', 10021, orient=ORIENT.LEFT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -525,7 +526,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference17', 2020, orient=ORIENT.LEFT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -544,7 +545,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference19', 5219, 5219, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.spanning_reads))
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
@@ -587,7 +588,7 @@ class TestEvidenceGathering:
             next_reference_id=1,
             next_reference_start=2341,
         )
-        ev_gathering_setup.collect_split_read(ev1_sr, True)
+        collect_split_read(ev_gathering_setup, ev1_sr, True)
         assert list(ev_gathering_setup.split_reads[0])[0] == ev1_sr
 
     def test_collect_split_read_failure(self, ev_gathering_setup):
@@ -605,10 +606,11 @@ class TestEvidenceGathering:
             next_reference_id=1,
             next_reference_start=2550,
         )
-        assert not ev_gathering_setup.collect_split_read(ev1_sr, True)
+        assert not collect_split_read(ev_gathering_setup, ev1_sr, True)
 
     def test_collect_flanking_pair(self, ev_gathering_setup):
-        ev_gathering_setup.collect_flanking_pair(
+        collect_flanking_pair(
+            ev_gathering_setup,
             MockRead(
                 reference_id=1,
                 reference_start=2214,
@@ -638,12 +640,12 @@ class TestEvidenceGathering:
             MockRead(reference_id=1, reference_start=1903, reference_end=2053, is_reverse=True),
             MockRead(reference_id=1, reference_start=2052, reference_end=2053, is_reverse=True),
         )
-        assert not ev_gathering_setup.collect_flanking_pair(*pair)
+        assert not collect_flanking_pair(ev_gathering_setup, *pair)
         assert len(ev_gathering_setup.flanking_pairs) == 0
 
     def test_load_evidence(self, ev_gathering_setup):
         print(ev_gathering_setup)
-        ev_gathering_setup.load_evidence()
+        load_evidence(ev_gathering_setup)
         print(ev_gathering_setup.spanning_reads)
         assert (
             len(

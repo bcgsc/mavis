@@ -12,6 +12,7 @@ from mavis.interval import Interval
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 from mavis_config import DEFAULTS
+from mavis.validate.gather import collect_flanking_pair
 
 from ..mock import MockBamFileHandle, MockObject, MockRead, mock_read_pair
 
@@ -618,7 +619,7 @@ class TestGenomeEvidenceAddReads:
         )
         read.is_unmapped = True
         with pytest.raises(ValueError):
-            flanking_ge.collect_flanking_pair(read, mate)
+            collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_error_mate_unmapped(self, flanking_ge):
         read, mate = mock_read_pair(
@@ -627,7 +628,7 @@ class TestGenomeEvidenceAddReads:
         )
         mate.is_unmapped = True
         with pytest.raises(ValueError):
-            flanking_ge.collect_flanking_pair(read, mate)
+            collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_error_query_names_dont_match(self, flanking_ge):
         read, mate = mock_read_pair(
@@ -635,7 +636,7 @@ class TestGenomeEvidenceAddReads:
             MockRead('test', 0, 6000, 6099, is_reverse=True),
         )
         with pytest.raises(ValueError):
-            flanking_ge.collect_flanking_pair(read, mate)
+            collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_error_template_lengths_dont_match(self, flanking_ge):
         read, mate = mock_read_pair(
@@ -644,7 +645,7 @@ class TestGenomeEvidenceAddReads:
         )
         mate.template_length = 55
         with pytest.raises(ValueError):
-            flanking_ge.collect_flanking_pair(read, mate)
+            collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_read_low_mq(self, flanking_ge):
         read, mate = mock_read_pair(
@@ -652,7 +653,7 @@ class TestGenomeEvidenceAddReads:
             MockRead('test', 0, 6000, 6099, is_reverse=True),
         )
         read.mapping_quality = 0
-        assert not flanking_ge.collect_flanking_pair(read, mate)
+        assert not collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_mate_low_mq(self, flanking_ge):
         read, mate = mock_read_pair(
@@ -660,11 +661,11 @@ class TestGenomeEvidenceAddReads:
             MockRead('test', 0, 6000, 6099, is_reverse=True),
         )
         mate.mapping_quality = 0
-        assert not flanking_ge.collect_flanking_pair(read, mate)
+        assert not collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_interchromosomal(self, flanking_ge):
         read, mate = mock_read_pair(
             MockRead('test', 1, 900, 1000, is_reverse=False),
             MockRead('test', 0, 6000, 6099, is_reverse=True),
         )
-        assert not flanking_ge.collect_flanking_pair(read, mate)
+        assert not collect_flanking_pair(flanking_ge, read, mate)
