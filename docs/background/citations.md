@@ -62,6 +62,11 @@ Saunders,C.T. et al. (2012) Strelka: accurate somatic small-variant
     calling from sequenced tumor--normal sample pairs. Bioinformatics,
     28, 1811--1817.
 
+## Uhrig-2021
+
+Uhrig,S. et al. (2021) Accurate and efficient detection of gene
+    fusions from RNA sequencing data. Genome Res., 31, 448--460.
+
 ## Yates-2016
 
 Yates,A. et al. (2016) Ensembl 2016. Nucleic Acids Res., 44,

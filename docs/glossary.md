@@ -127,6 +127,11 @@ install instructions.
 Community based standard of reccommendations for variant notation.
 See [http://varnomen.hgvs.org/](http://varnomen.hgvs.org/)
 
+## Arriba
+
+Arriba is an SV caller. Source for Arriba can be found
+[here](https://github.com/suhrig/arriba) [Uhrig-2021](../background/citations#uhrig-2021)
+
 ## BreakDancer
 
 BreakDancer is an SV caller. Source for BreakDancer can be found
