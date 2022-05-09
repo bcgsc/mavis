@@ -1,11 +1,11 @@
 import os
 import types
 
-from mavis.align import query_coverage_interval
 from mavis.annotate.file_io import load_annotations, load_reference_genome
 from mavis.annotate.genomic import PreTranscript, Transcript
 from mavis.annotate.protein import Translation
 from mavis.constants import CIGAR, NA_MAPPING_QUALITY
+from mavis.validate.align import query_coverage_interval
 
 from ..util import get_data
 

@@ -4,11 +4,11 @@ from typing import List, Optional
 import distance
 import networkx as nx
 
-from .bam import cigar as _cigar
-from .bam.read import calculate_alignment_score, nsb_align, sequence_complexity
-from .constants import reverse_complement
-from .interval import Interval
-from .util import logger
+from ..bam import cigar as _cigar
+from ..bam.read import calculate_alignment_score, nsb_align, sequence_complexity
+from ..constants import reverse_complement
+from ..interval import Interval
+from ..util import logger
 
 
 class Contig:

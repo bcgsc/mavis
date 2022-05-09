@@ -3,8 +3,6 @@ import math
 import statistics
 from typing import List, Optional, Set
 
-from ..align import SplitAlignment, call_paired_read_event, call_read_events, convert_to_duplication
-from ..assemble import Contig
 from ..bam import read as _read
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import (
@@ -18,6 +16,13 @@ from ..constants import (
 )
 from ..interval import Interval
 from ..validate.base import Evidence
+from .align import (
+    DiscontinuousAlignment,
+    call_paired_read_event,
+    call_read_events,
+    convert_to_duplication,
+)
+from .assemble import Contig
 
 
 class EventCall(BreakpointPair):
@@ -34,7 +39,7 @@ class EventCall(BreakpointPair):
     compatible_flanking_pairs: Set
     compatible_type: Optional[str]
     contig: Optional[Contig]
-    contig_alignment: Optional[SplitAlignment]
+    contig_alignment: Optional[DiscontinuousAlignment]
 
     @property
     def has_compatible(self):
@@ -48,7 +53,7 @@ class EventCall(BreakpointPair):
         event_type: str,
         call_method: str,
         contig: Optional[Contig] = None,
-        contig_alignment: Optional[SplitAlignment] = None,
+        contig_alignment: Optional[DiscontinuousAlignment] = None,
         untemplated_seq: Optional[str] = None,
     ):
         """
@@ -515,13 +520,13 @@ class EventCall(BreakpointPair):
         if self.contig:
             cseq = self.contig_alignment.query_sequence
             try:
-                break1_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
+                break1_read_depth = DiscontinuousAlignment.breakpoint_contig_remapped_depth(
                     self.break1, self.contig, self.contig_alignment.read1
                 )
             except AssertionError:
                 break1_read_depth = None
             try:
-                break2_read_depth = SplitAlignment.breakpoint_contig_remapped_depth(
+                break2_read_depth = DiscontinuousAlignment.breakpoint_contig_remapped_depth(
                     self.break2,
                     self.contig,
                     self.contig_alignment.read1
@@ -1076,7 +1081,7 @@ def _call_by_split_reads(evidence, event_type, consumed_evidence=None):
                     event_type,
                     call_method=CALL_METHOD.SPLIT,
                     untemplated_seq=call.untemplated_seq,
-                    contig_alignment=None if not isinstance(call, SplitAlignment) else call,
+                    contig_alignment=None if not isinstance(call, DiscontinuousAlignment) else call,
                 )
             except ValueError:  # incompatible types
                 continue

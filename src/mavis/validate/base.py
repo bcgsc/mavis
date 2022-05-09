@@ -5,22 +5,15 @@ from typing import Dict, List, Optional, Set, Tuple
 import pysam
 from mavis_config import DEFAULTS
 
-from ..assemble import assemble
 from ..bam import cigar as _cigar
 from ..bam import read as _read
 from ..bam.cache import BamCache
 from ..breakpoint import Breakpoint, BreakpointPair
-from ..constants import (
-    COLUMNS,
-    ORIENT,
-    PYSAM_READ_FLAGS,
-    STRAND,
-    SVTYPE,
-    reverse_complement,
-)
+from ..constants import COLUMNS, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
 from ..error import NotSpecifiedError
 from ..interval import Interval
 from ..util import logger
+from .assemble import Contig, assemble
 
 
 class Evidence(BreakpointPair):
@@ -31,7 +24,7 @@ class Evidence(BreakpointPair):
     compatible_window1: Optional[Interval]
     compatible_window2: Optional[Interval]
     config: Dict
-    contigs: List
+    contigs: List[Contig]
     counts: List[int]
     flanking_pairs: Set
     half_mapped: Tuple[Set, Set]

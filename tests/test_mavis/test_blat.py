@@ -1,6 +1,6 @@
 import pytest
-from mavis.blat import Blat
 from mavis.constants import CIGAR, reverse_complement
+from mavis.validate.blat import Blat
 
 from .mock import Mock, MockFunction, MockLongString
 
