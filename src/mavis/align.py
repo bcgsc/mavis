@@ -330,7 +330,7 @@ def read_breakpoint(read):
         )
 
 
-def call_paired_read_event(read1, read2, is_stranded=False):
+def call_paired_read_event(read1, read2, is_stranded=False) -> SplitAlignment:
     """
     For a given pair of reads call all applicable events. Assume there is a major
     event from both reads and then call indels from the individual reads

@@ -16,7 +16,10 @@ junit
 *eggs/
 .mypy_cache
 .snakemake
-
+.venv*
+viral_gtfs
+tmp
+wr
 # aligners
 blat
 bwa

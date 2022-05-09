@@ -593,3 +593,13 @@ def sequence_complexity(seq: str) -> float:
         for base1, base2 in itertools.combinations(iupac.unambiguous_dna_letters, 2)
     ]
     return min(scores)
+
+
+
+def simplify_long_read(read: SamRead, min_event_size: int = 10):
+    """
+    Given some long read where we expect low read quality, simplify/remove small insertion/deletion
+    and mismatch events to simplify downstream calling. This will return a new read with the content
+    of small insertions and deletions replaced with the reference sequence when they are under a given size
+    """
+    pass
