@@ -24,8 +24,6 @@ from mavis.constants import CIGAR
 from ...util import get_data
 from ..mock import MockObject, MockRead
 
-# get_mapped_cigar_segments
-
 
 @pytest.fixture(scope='module')
 def mock_reference_genome():
