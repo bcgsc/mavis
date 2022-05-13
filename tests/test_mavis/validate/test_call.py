@@ -1,7 +1,6 @@
 from unittest import mock
 
 import pytest
-from mavis.align import call_paired_read_event, select_contig_alignments
 from mavis.annotate.file_io import load_reference_genome
 from mavis.annotate.genomic import PreTranscript, Transcript
 from mavis.bam import cigar as _cigar
@@ -12,6 +11,7 @@ from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE
 from mavis.interval import Interval
 from mavis.validate import call
+from mavis.validate.align import call_paired_read_event, select_contig_alignments
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 

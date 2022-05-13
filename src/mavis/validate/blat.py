@@ -15,12 +15,11 @@ from typing import Dict, List, Tuple
 
 import pandas as pd
 
-from .align import query_coverage_interval
-from .bam import cigar as _cigar
-from .bam.cache import BamCache
-from .bam.cigar import QUERY_ALIGNED_STATES
-from .bam.read import SamRead
-from .constants import (
+from ..bam import cigar as _cigar
+from ..bam.cache import BamCache
+from ..bam.cigar import QUERY_ALIGNED_STATES
+from ..bam.read import SamRead
+from ..constants import (
     CIGAR,
     DNA_ALPHABET,
     NA_MAPPING_QUALITY,
@@ -28,9 +27,10 @@ from .constants import (
     STRAND,
     reverse_complement,
 )
-from .interval import Interval
-from .types import ReferenceGenome
-from .util import logger
+from ..interval import Interval
+from ..types import ReferenceGenome
+from ..util import logger
+from .align import query_coverage_interval
 
 
 class Blat:

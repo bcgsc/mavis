@@ -1,14 +1,14 @@
 from unittest import mock
 
 import mavis.bam.cigar as _cigar
-from mavis import align
 from mavis.annotate.file_io import load_reference_genome
-from mavis.assemble import Contig
 from mavis.bam.cache import BamCache
 from mavis.bam.read import SamRead
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CIGAR, ORIENT, STRAND, reverse_complement
 from mavis.interval import Interval
+from mavis.validate import align
+from mavis.validate.assemble import Contig
 from mavis.validate.evidence import GenomeEvidence
 from mavis_config import DEFAULTS
 
@@ -242,7 +242,7 @@ class TestBreakpointContigRemappedDepth:
             reference_start=999,
             reference_name='10',
         )
-        align.SplitAlignment.breakpoint_contig_remapped_depth(b, contig, read)
+        align.DiscontinuousAlignment.breakpoint_contig_remapped_depth(b, contig, read)
 
 
 class TestSplitEvents:

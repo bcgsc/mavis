@@ -1,12 +1,12 @@
 import mavis.bam.cigar as _cigar
 import pytest
 from Bio import SeqIO
-from mavis.align import query_coverage_interval
 from mavis.annotate.file_io import load_reference_genome
 from mavis.bam.cache import BamCache
-from mavis.blat import Blat
 from mavis.constants import CIGAR, reverse_complement
 from mavis.interval import Interval
+from mavis.validate.align import query_coverage_interval
+from mavis.validate.blat import Blat
 
 from ..util import get_data
 from .mock import MockBamFileHandle, MockLongString, MockObject

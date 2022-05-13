@@ -8,7 +8,6 @@ from typing import Dict, List
 import pysam
 from shortuuid import uuid
 
-from ..align import SUPPORTED_ALIGNER, align_sequences, select_contig_alignments
 from ..annotate.base import BioInterval
 from ..annotate.file_io import ReferenceFile
 from ..bam import cigar as _cigar
@@ -24,6 +23,7 @@ from ..util import (
     read_inputs,
     write_bed_file,
 )
+from .align import SUPPORTED_ALIGNER, align_sequences, select_contig_alignments
 from .call import call_events
 from .constants import PASS_FILENAME
 from .evidence import GenomeEvidence, TranscriptomeEvidence

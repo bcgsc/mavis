@@ -2,8 +2,8 @@ import itertools
 import random
 
 import pytest
-from mavis.assemble import Contig, DeBruijnGraph, assemble, filter_contigs, kmers
 from mavis.constants import DNA_ALPHABET
+from mavis.validate.assemble import Contig, DeBruijnGraph, assemble, filter_contigs, kmers
 
 from ..util import get_data, long_running_test
 

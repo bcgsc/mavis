@@ -24,80 +24,52 @@ from mavis.constants import CIGAR
 from ...util import get_data
 from ..mock import MockObject, MockRead
 
-REFERENCE_GENOME = None
 
-
-def setUpModule():
+@pytest.fixture(scope='module')
+def mock_reference_genome():
     warnings.simplefilter('ignore')
-    global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if (
-        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
-        != REFERENCE_GENOME['fake'].seq[0:50].upper()
-    ):
+    ref = load_reference_genome(get_data('mock_reference_genome.fa'))
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != ref['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
+    return ref
 
 
-class TestRecomputeCigarMismatch:
-    def test_simple(self):
-        r = MockRead(
-            reference_start=1456,
-            query_sequence='CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
-            cigar=[(CIGAR.M, 45)],
-        )
-        assert recompute_cigar_mismatch(r, REFERENCE_GENOME['fake']) == [(CIGAR.EQ, 45)]
-
-    def test_hardclipping(self):
-        r = MockRead(
-            reference_start=1456,
-            query_sequence='CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
-            cigar=[(CIGAR.H, 20), (CIGAR.M, 45)],
-        )
-        assert [(CIGAR.H, 20), (CIGAR.EQ, 45)] == recompute_cigar_mismatch(
-            r, REFERENCE_GENOME['fake']
-        )
-
-    def test_with_events(self):
-        r = MockRead(
-            reference_start=1456,
-            query_sequence='TATA' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
-            cigar=[(CIGAR.S, 4), (CIGAR.M, 10), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)],
-        )
-        assert [
-            (CIGAR.S, 4),
-            (CIGAR.EQ, 10),
-            (CIGAR.D, 10),
-            (CIGAR.I, 10),
-            (CIGAR.EQ, 25),
-        ] == recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
-
-    def test_mismatch_to_mismatch(self):
-        r = MockRead(
-            reference_start=1452,
-            query_sequence='CAGC' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
-            cigar=[(CIGAR.X, 4), (CIGAR.M, 10), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)],
-        )
-        assert [
-            (CIGAR.X, 4),
-            (CIGAR.EQ, 10),
-            (CIGAR.D, 10),
-            (CIGAR.I, 10),
-            (CIGAR.EQ, 25),
-        ] == recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
-
-    def test_m_to_mismatch(self):
-        r = MockRead(
-            reference_start=1452,
-            query_sequence='CAGC' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
-            cigar=[(CIGAR.M, 14), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)],
-        )
-        assert [
-            (CIGAR.X, 4),
-            (CIGAR.EQ, 10),
-            (CIGAR.D, 10),
-            (CIGAR.I, 10),
-            (CIGAR.EQ, 25),
-        ] == recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
+@pytest.mark.parametrize(
+    'reference_start,query_sequence,cigar_in,cigar_out',
+    [
+        [1456, 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT', '45M', '45='],
+        [1456, 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT', '20H45M', '20H45='],
+        [
+            1456,
+            'TATA' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
+            '4S10M10D10I25M',
+            '4S10=10D10I25=',
+        ],
+        [
+            1452,
+            'CAGC' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
+            '4X10M10D10I25M',
+            '4X10=10D10I25=',
+        ],
+        [
+            1452,
+            'CAGC' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
+            '14M10D10I25M',
+            '4X10=10D10I25=',
+        ],
+    ],
+)
+def test_recompute_cigar_mismatch(
+    reference_start, query_sequence, cigar_in, cigar_out, mock_reference_genome
+):
+    r = MockRead(
+        reference_start=reference_start,
+        query_sequence=query_sequence,
+        cigar=convert_string_to_cigar(cigar_in),
+    )
+    assert recompute_cigar_mismatch(r, mock_reference_genome['fake']) == convert_string_to_cigar(
+        cigar_out
+    )
 
 
 class TestExtendSoftclipping:
@@ -108,22 +80,64 @@ class TestExtendSoftclipping:
         assert cnew == convert_string_to_cigar('70=80S')
 
 
+@pytest.mark.parametrize(
+    'input_cigars,output_cigar',
+    [
+        [['10M10X10X'], '10M20X'],
+        [['10X10M10X'], '10X10M10X'],
+        [['10M10X10X', '10X10M10X'], '10M30X10M10X'],
+        [['1S2S5=7X2=5X28=1X99='], '3S5=7X2=5X28=1X99='],
+        [['10H10M10X10X'], '10H10M20X'],
+    ],
+)
+def test_join(input_cigars, output_cigar):
+    assert join(*[convert_string_to_cigar(c) for c in input_cigars]) == convert_string_to_cigar(
+        output_cigar
+    )
+
+
+@pytest.mark.parametrize(
+    'seq1,seq2,opt,cigar_string,ref_start',
+    [
+        ['GTGAGTAAATTCAACATCGTTTTT', 'AACTTAGAATTCAAC---------', {}, '7S8=', 7],
+        ['GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------', {}, '5S8=', 7],
+        [
+            'GTGAGTAAATTCAACATCGTTTTT',
+            '--CTTAGAATTCAAC---------',
+            dict(force_softclipping=False),
+            '5S8=',
+            7,
+        ],
+        [
+            'GTGAGTAAATTC--CATCGTTTTT',
+            '--CTTAGAATTCAAC---------',
+            dict(force_softclipping=False),
+            '5S5=2I1=',
+            7,
+        ],
+        ['CCTG', 'CCGT', dict(min_exact_to_stop_softclipping=10), '2=2X', 0],
+        [
+            '--GAGTAAATTCAACATCGTTTTT',
+            '--CTTAGAATTCAAC---------',
+            dict(force_softclipping=False),
+            '5S8=',
+            5,
+        ],
+    ],
+)
+def test_compute(seq1, seq2, opt, cigar_string, ref_start):
+    assert compute(seq1, seq2, **opt) == (convert_string_to_cigar(cigar_string), ref_start)
+
+
+def test_compute_error():
+    with pytest.raises(AttributeError):
+        compute('CCTG', 'CCG')
+
+
 class TestCigarTools:
     def test_alignment_matches(self):
         c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]
         assert alignment_matches(c) == 30
-
-    def test_join(self):
-        c = [(CIGAR.M, 10), (CIGAR.X, 10), (CIGAR.X, 10)]
-        assert join(c) == [(CIGAR.M, 10), (CIGAR.X, 20)]
-        k = [(CIGAR.X, 10), (CIGAR.M, 10), (CIGAR.X, 10)]
-        assert join(c, k) == [(CIGAR.M, 10), (CIGAR.X, 30), (CIGAR.M, 10), (CIGAR.X, 10)]
-        k = [(4, 1), (4, 2), (7, 5), (8, 7), (7, 2), (8, 5), (7, 28), (8, 1), (7, 99)]
-        assert [(4, 3), (7, 5), (8, 7), (7, 2), (8, 5), (7, 28), (8, 1), (7, 99)] == join(k)
-
-    def test_join_hardclipping(self):
-        c = [(CIGAR.H, 10), (CIGAR.M, 10), (CIGAR.X, 10), (CIGAR.X, 10)]
-        assert join(c) == [(CIGAR.H, 10), (CIGAR.M, 10), (CIGAR.X, 20)]
 
     def test_longest_fuzzy_match(self):
         c = [
@@ -169,34 +183,6 @@ class TestCigarTools:
             match_percent([(CIGAR.M, 100)])
         with pytest.raises(AttributeError):
             match_percent([(CIGAR.S, 100)])
-
-    def test_compute(self):
-        # GTGAGTAAATTCAACATCGTTTTT
-        # aacttagAATTCAAC---------
-        assert ([(CIGAR.S, 7), (CIGAR.EQ, 8)], 7) == compute(
-            'GTGAGTAAATTCAACATCGTTTTT', 'AACTTAGAATTCAAC---------'
-        )
-        assert ([(CIGAR.S, 5), (CIGAR.EQ, 8)], 7) == compute(
-            'GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------'
-        )
-        assert ([(CIGAR.S, 5), (CIGAR.EQ, 8)], 7) == compute(
-            'GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------', False
-        )
-
-        assert ([(CIGAR.S, 5), (CIGAR.EQ, 5), (CIGAR.I, 2), (CIGAR.EQ, 1)], 7) == compute(
-            'GTGAGTAAATTC--CATCGTTTTT', '--CTTAGAATTCAAC---------', False
-        )
-
-        with pytest.raises(AttributeError):
-            compute('CCTG', 'CCG')
-
-        assert ([(CIGAR.EQ, 2), (CIGAR.X, 2)], 0) == compute(
-            'CCTG', 'CCGT', min_exact_to_stop_softclipping=10
-        )
-
-        assert ([(CIGAR.S, 5), (CIGAR.EQ, 8)], 5) == compute(
-            '--GAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------', False
-        )
 
     def test_convert_for_igv(self):
         c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]
@@ -524,7 +510,7 @@ class TestHgvsStandardizeCigars:
         read.cigar = new_cigar
         assert new_cigar == exp
 
-    def test_deletion_repeat(self):
+    def test_deletion_repeat(self, mock_reference_genome):
         qseq = (
             'GAGT'
             'GAGACTCTGT'
@@ -568,10 +554,10 @@ class TestHgvsStandardizeCigars:
             (CIGAR.D, 27),
             (CIGAR.EQ, 74 - 30),
         ]
-        std_cigar = hgvs_standardize_cigar(read, REFERENCE_GENOME[read.reference_name].seq)
-        print(SamRead.deletion_sequences(read, REFERENCE_GENOME))
+        std_cigar = hgvs_standardize_cigar(read, mock_reference_genome[read.reference_name].seq)
+        print(SamRead.deletion_sequences(read, mock_reference_genome))
         read.cigar = std_cigar
-        print(SamRead.deletion_sequences(read, REFERENCE_GENOME))
+        print(SamRead.deletion_sequences(read, mock_reference_genome))
         assert std_cigar == expected_cigar
 
     @timeout_decorator.timeout(1)
@@ -705,21 +691,34 @@ class TestMergeInternalEvents:
         assert new_cigar == exp
 
 
-class TestConvertStringToCigar:
-    def test(self):
-        string = '283M' '17506D' '5M' '21275D' '596M' '17506D' '5M' '21275D' '313M'
-        exp = [
-            (CIGAR.M, 283),
-            (CIGAR.D, 17506),
-            (CIGAR.M, 5),
-            (CIGAR.D, 21275),
-            (CIGAR.M, 596),
-            (CIGAR.D, 17506),
-            (CIGAR.M, 5),
-            (CIGAR.D, 21275),
-            (CIGAR.M, 313),
-        ]
-        assert convert_string_to_cigar(string) == exp
+@pytest.mark.parametrize(
+    'string,cigartuples',
+    [
+        [
+            '283M' '17506D' '5M' '21275D' '596M' '17506D' '5M' '21275D' '313M',
+            [
+                (CIGAR.M, 283),
+                (CIGAR.D, 17506),
+                (CIGAR.M, 5),
+                (CIGAR.D, 21275),
+                (CIGAR.M, 596),
+                (CIGAR.D, 17506),
+                (CIGAR.M, 5),
+                (CIGAR.D, 21275),
+                (CIGAR.M, 313),
+            ],
+        ],
+        [
+            '42H25M',
+            [
+                (CIGAR.H, 42),
+                (CIGAR.M, 25),
+            ],
+        ],
+    ],
+)
+def test_convert_string_to_cigar(string, cigartuples):
+    assert convert_string_to_cigar(string) == cigartuples
 
 
 class TestGetSequences:

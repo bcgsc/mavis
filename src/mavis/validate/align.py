@@ -9,16 +9,16 @@ from typing import TYPE_CHECKING, Dict, List
 
 import pysam
 
-from .bam import cigar as _cigar
-from .bam import read as _read
-from .breakpoint import Breakpoint, BreakpointPair
-from .constants import CIGAR, ORIENT, STRAND, SVTYPE, MavisNamespace, reverse_complement
-from .interval import Interval
-from .types import ReferenceGenome
-from .util import logger
+from ..bam import cigar as _cigar
+from ..bam import read as _read
+from ..breakpoint import Breakpoint, BreakpointPair
+from ..constants import CIGAR, ORIENT, STRAND, SVTYPE, MavisNamespace, reverse_complement
+from ..interval import Interval
+from ..types import ReferenceGenome
+from ..util import logger
 
 if TYPE_CHECKING:
-    from .bam.cache import BamCache
+    from ..bam.cache import BamCache
 
 
 class SUPPORTED_ALIGNER(MavisNamespace):
@@ -34,7 +34,7 @@ class SUPPORTED_ALIGNER(MavisNamespace):
     BLAT = 'blat'
 
 
-class SplitAlignment(BreakpointPair):
+class DiscontinuousAlignment(BreakpointPair):
     def __init__(self, *pos, **kwargs):
         self.read1 = kwargs.pop('read1')
         self.read2 = kwargs.pop('read2', None)
@@ -210,7 +210,7 @@ def convert_to_duplication(alignment, reference_genome: ReferenceGenome):
             if refseq != alignment.untemplated_seq[:dup_len]:
                 continue
 
-            result = SplitAlignment(
+            result = DiscontinuousAlignment(
                 Breakpoint(
                     alignment.break2.chr,
                     alignment.break2.start - dup_len,
@@ -280,7 +280,7 @@ def call_read_events(read, secondary_read=None, is_stranded=False):
     result = []
     strand = STRAND.NEG if read.is_reverse else STRAND.POS
     for ref_start, delsize, insseq in events:
-        bpp = SplitAlignment(
+        bpp = DiscontinuousAlignment(
             Breakpoint(
                 read.reference_name,
                 ref_start,
@@ -383,7 +383,9 @@ def call_paired_read_event(read1, read2, is_stranded=False):
     if not is_stranded:
         break1.strand = STRAND.NS
         break2.strand = STRAND.NS
-    return SplitAlignment(break1, break2, untemplated_seq=untemplated_seq, read1=read1, read2=read2)
+    return DiscontinuousAlignment(
+        break1, break2, untemplated_seq=untemplated_seq, read1=read1, read2=read2
+    )
 
 
 def align_sequences(
