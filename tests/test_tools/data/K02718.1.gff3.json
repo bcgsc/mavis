@@ -1,0 +1,243 @@
+{
+    "genes": [
+        {
+            "biotype": "region",
+            "chr": "K02718.1",
+            "end": 7904,
+            "name": "K02718.1:1..7904",
+            "start": 1,
+            "strand": "+"
+        },
+        {
+            "biotype": "region",
+            "chr": "K02718.1",
+            "end": 23,
+            "name": "id-K02718.1:17..23",
+            "start": 17,
+            "strand": "+"
+        },
+        {
+            "biotype": "region",
+            "chr": "K02718.1",
+            "end": 71,
+            "name": "id-K02718.1:65..71",
+            "start": 65,
+            "strand": "+"
+        },
+        {
+            "biotype": "region",
+            "chr": "K02718.1",
+            "end": 7265,
+            "name": "id-K02718.1:7260..7265",
+            "start": 7260,
+            "strand": "+"
+        },
+        {
+            "biotype": "region",
+            "chr": "K02718.1",
+            "end": 4295,
+            "name": "id-L2",
+            "start": 4289,
+            "strand": "+"
+        },
+        {
+            "biotype": "region",
+            "chr": "K02718.1",
+            "end": 4218,
+            "name": "id-K02718.1:4213..4218",
+            "start": 4213,
+            "strand": "+",
+            "note": "putative"
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 2813,
+            "name": "E1",
+            "start": 865,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 2813,
+                    "name": "E1_T",
+                    "start": 865,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 2813,
+                            "name": "AAA46936.1",
+                            "note": "E1 interrupted ORF from 859 to 2813%3B putative",
+                            "start": 865
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 3852,
+            "name": "E2",
+            "start": 2755,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3852,
+                    "name": "E2_T",
+                    "start": 2755,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3852,
+                            "name": "AAA46941.1",
+                            "note": "E2 ORF from 2725 to 3852%3B putative",
+                            "start": 2755
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 3619,
+            "name": "E4",
+            "start": 3332,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 3619,
+                    "name": "E4_T",
+                    "start": 3332,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 3619,
+                            "name": "AAA46937.1",
+                            "start": 3332
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 4099,
+            "name": "E5",
+            "start": 3863,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 4099,
+                    "name": "E5_T",
+                    "start": 3863,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 4099,
+                            "name": "AAA46938.1",
+                            "start": 3863
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 5656,
+            "name": "L2",
+            "start": 4235,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 5656,
+                    "name": "L2_T",
+                    "start": 4235,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 5656,
+                            "name": "AAA46942.1",
+                            "note": "L2 ORF from 4133 to 5656%3B putative",
+                            "start": 4235
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 7154,
+            "name": "L1",
+            "start": 5559,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 7154,
+                    "name": "L1_T",
+                    "start": 5559,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 7154,
+                            "name": "AAA46943.1",
+                            "note": "L1 ORF from 5526 to 7154%3B putative",
+                            "start": 5559
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 559,
+            "name": "E6",
+            "start": 83,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 559,
+                    "name": "E6_T",
+                    "start": 83,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 559,
+                            "name": "AAA46939.1",
+                            "note": "E6 ORF from 65 to 559%3B putative",
+                            "start": 83
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "biotype": "gene",
+            "chr": "K02718.1",
+            "end": 858,
+            "name": "E7",
+            "start": 562,
+            "strand": "+",
+            "transcripts": [
+                {
+                    "end": 858,
+                    "name": "E7_T",
+                    "start": 562,
+                    "translations": [
+                        {
+                            "biotype": "CDS",
+                            "end": 858,
+                            "name": "AAA46940.1",
+                            "note": "E7 ORF from 544 to 858%3B putative",
+                            "start": 562
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
