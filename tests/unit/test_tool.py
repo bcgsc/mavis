@@ -105,6 +105,113 @@ class TestCnvNator(unittest.TestCase):
         self.assertEqual('1', bpp.break2.chr)
 
 
+
+class TestArriba(unittest.TestCase):
+    def test_convert_standard_event(self):
+        row = {
+            'breakpoint1': '13:114529969',
+            'breakpoint2': '13:114751269',
+            'type': 'inversion',
+            'strand1(gene/fusion)': '+/+',
+            'strand2(gene/fusion)': '-/-',
+            'direction1': 'downstream',
+            'direction2': 'downstream',
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.ARRIBA, True)
+
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('13', bpp.break1.chr)
+        self.assertEqual('13', bpp.break2.chr)
+        self.assertEqual(114529969, bpp.break1.start)
+        self.assertEqual(114751269, bpp.break2.start)
+        self.assertEqual(SVTYPE.INV, bpp.event_type)
+        self.assertEqual('L', bpp.break1.orient)
+        self.assertEqual('L', bpp.break2.orient)
+        self.assertEqual(True, bpp.opposing_strands)
+
+    def test_convert_translocation(self):
+        row = {
+            'breakpoint1': '17:69313092',
+            'breakpoint2': '20:58272875',
+            'type': 'translocation',
+            'strand1(gene/fusion)': '-/-',
+            'strand2(gene/fusion)': '-/-',
+            'direction1': 'upstream',
+            'direction2': 'downstream',
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.ARRIBA, True)
+
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('chr17', bpp.break1.chr)
+        self.assertEqual('chr20', bpp.break2.chr)
+        self.assertEqual(69313092, bpp.break1.start)
+        self.assertEqual(58272875, bpp.break2.start)
+        self.assertEqual(SVTYPE.TRANS, bpp.event_type)
+        self.assertEqual('R', bpp.break1.orient)
+        self.assertEqual('L', bpp.break2.orient)
+        self.assertEqual(False, bpp.opposing_strands)
+
+    def test_convert_translocation(self):
+        row = {
+            'breakpoint1': '20:57265705',
+            'breakpoint2': '20:47786405',
+            'type': 'inversion/5\'-5\'',
+            'strand1(gene/fusion)': '-/-',
+            'strand2(gene/fusion)': '-/+',
+            'direction1': 'upstream',
+            'direction2': 'upstream',
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.ARRIBA, True)
+
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('chr20', bpp.break1.chr)
+        self.assertEqual('chr20', bpp.break2.chr)
+        self.assertEqual(57265705, bpp.break1.start)
+        self.assertEqual(47786405, bpp.break2.start)
+        self.assertEqual(SVTYPE.INV, bpp.event_type)
+        self.assertEqual('R', bpp.break1.orient)
+        self.assertEqual('R', bpp.break2.orient)
+        self.assertEqual(True, bpp.opposing_strands)
+
+    def test_convert_translocation(self):
+        row = {
+            'breakpoint1': '14:102877322',
+            'breakpoint2': '14:102994672',
+            'type': 'deletion/read-through/5\'-5\'',
+            'strand1(gene/fusion)': '+/+',
+            'strand2(gene/fusion)': '-/+',
+            'direction1': 'downstream',
+            'direction2': 'upstream',
+        }
+        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.ARRIBA, True)
+
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('chr14', bpp.break1.chr)
+        self.assertEqual('chr14', bpp.break2.chr)
+        self.assertEqual(102877322, bpp.break1.start)
+        self.assertEqual(102994672, bpp.break2.start)
+        self.assertEqual(SVTYPE.DEL, bpp.event_type)
+        self.assertEqual('L', bpp.break1.orient)
+        self.assertEqual('R', bpp.break2.orient)
+        self.assertEqual(False, bpp.opposing_strands)
+
+    def test_malformed(self):
+        row = {
+            'breakpoint1': '',
+            'breakpoint2': None,
+            'type': 'translocation',
+            'strand1(gene/fusion)': '-/-',
+            'strand2(gene/fusion)': '-/-',
+            'direction1': 'upstream',
+            'direction2': 'downstream',
+        }
+        with self.assertRaises(AssertionError):
+            _convert_tool_row(row, SUPPORTED_TOOL.ARRIBA, False)
+
 class TestStarFusion(unittest.TestCase):
     def test_convert_standard_event(self):
         row = {
