@@ -8,6 +8,7 @@ from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from ..error import InvalidRearrangement
 from ..util import logger, read_bpp_from_input_file
+from .arriba import convert_row as _parse_arriba
 from .breakdancer import convert_file as _convert_breakdancer_file
 from .chimerascan import convert_row as _parse_chimerascan
 from .cnvnator import convert_row as _parse_cnvnator
@@ -142,6 +143,10 @@ def _convert_tool_row(
         std_row.update(
             {k: v for k, v in row.items() if k not in {'Type', 'Chr1', 'Chr2', 'Pos1', 'Pos2'}}
         )
+
+    elif file_type == SUPPORTED_TOOL.ARRIBA:
+
+        std_row.update(_parse_arriba(row))
 
     elif file_type == SUPPORTED_TOOL.STRAGLR:
 
