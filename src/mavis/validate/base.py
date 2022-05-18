@@ -8,7 +8,7 @@ from mavis_config import DEFAULTS
 from ..bam import cigar as _cigar
 from ..bam import read as _read
 from ..bam.cache import BamCache
-from ..breakpoint import Breakpoint, BreakpointPair
+from ..breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
 from ..constants import COLUMNS, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
 from ..error import NotSpecifiedError
 from ..interval import Interval
@@ -151,12 +151,12 @@ class Evidence(BreakpointPair):
         self.stdev_fragment_size = stdev_fragment_size
         self.strand_determining_read = strand_determining_read
 
-        if self.classification is not None and self.classification not in BreakpointPair.classify(
+        if self.classification is not None and self.classification not in classify_breakpoint_pair(
             self
         ):
             raise AttributeError(
                 'breakpoint pair improper classification',
-                BreakpointPair.classify(self),
+                classify_breakpoint_pair(self),
                 self.classification,
             )
 
@@ -243,7 +243,7 @@ class Evidence(BreakpointPair):
         """
         if self.classification:
             return {self.classification}
-        return BreakpointPair.classify(self)
+        return classify_breakpoint_pair(self)
 
     @property
     def compatible_type(self):

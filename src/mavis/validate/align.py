@@ -11,7 +11,7 @@ import pysam
 
 from ..bam import cigar as _cigar
 from ..bam import read as _read
-from ..breakpoint import Breakpoint, BreakpointPair
+from ..breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
 from ..constants import CIGAR, ORIENT, STRAND, SVTYPE, MavisNamespace, reverse_complement
 from ..interval import Interval
 from ..types import ReferenceGenome
@@ -523,7 +523,7 @@ def select_contig_alignments(evidence, reads_by_query):
     standardize/simplify reads and filter bad/irrelevant alignments
     adds the contig alignments to the contigs
     """
-    putative_types = BreakpointPair.classify(evidence)
+    putative_types = classify_breakpoint_pair(evidence)
     if {SVTYPE.DUP, SVTYPE.INS} & putative_types:
         putative_types.update({SVTYPE.DUP, SVTYPE.INS})
 
@@ -543,7 +543,7 @@ def select_contig_alignments(evidence, reads_by_query):
     def supports_primary_event(alignment):
         return all(
             [
-                BreakpointPair.classify(alignment) & putative_types,
+                classify_breakpoint_pair(alignment) & putative_types,
                 alignment.break1.chr == evidence.break1.chr,
                 alignment.break2.chr == evidence.break2.chr,
                 alignment.break1 & evidence.outer_window1,

@@ -4,7 +4,7 @@ import statistics
 from typing import List, Optional, Set
 
 from ..bam import read as _read
-from ..breakpoint import Breakpoint, BreakpointPair
+from ..breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
 from ..constants import (
     CALL_METHOD,
     COLUMNS,
@@ -89,10 +89,10 @@ class EventCall(BreakpointPair):
         else:
             self.compatible_type = None
         # use the distance function from the source evidence to narrow the possible types
-        putative_types = BreakpointPair.classify(self, source_evidence.distance)
+        putative_types = classify_breakpoint_pair(self, source_evidence.distance)
         if event_type not in putative_types and self.compatible_type in putative_types:
             event_type, self.compatible_type = self.compatible_type, event_type
-            putative_types = BreakpointPair.classify(self, source_evidence.distance)
+            putative_types = classify_breakpoint_pair(self, source_evidence.distance)
 
         self.data[COLUMNS.event_type] = SVTYPE.enforce(event_type)
         if event_type not in putative_types | {self.compatible_type}:
@@ -177,7 +177,7 @@ class EventCall(BreakpointPair):
         return not all(
             [
                 {self.event_type, self.compatible_type}
-                & BreakpointPair.classify(self.source_evidence),
+                & classify_breakpoint_pair(self.source_evidence),
                 self.break1 & self.source_evidence.outer_window1,
                 self.break2 & self.source_evidence.outer_window2,
                 self.break1.chr == self.source_evidence.break1.chr,
@@ -305,7 +305,7 @@ class EventCall(BreakpointPair):
             read (pysam.AlignedSegment): putative spanning read
         """
         for event in call_read_events(read, is_stranded=self.source_evidence.bam_cache.stranded):
-            if event == self and self.event_type in BreakpointPair.classify(
+            if event == self and self.event_type in classify_breakpoint_pair(
                 event, distance=self.source_evidence.distance
             ):
                 self.spanning_reads.add(read)
@@ -567,7 +567,7 @@ def _call_by_contigs(source_evidence):
         for aln in ctg.alignments:
             if aln.is_putative_indel and aln.net_size(source_evidence.distance) == Interval(0):
                 continue
-            for event_type in BreakpointPair.classify(aln, distance=source_evidence.distance):
+            for event_type in classify_breakpoint_pair(aln, distance=source_evidence.distance):
                 try:
                     new_event = EventCall(
                         aln.break1,
@@ -660,8 +660,10 @@ def _call_by_spanning_reads(source_evidence: Evidence, consumed_evidence):
             None  # unless we are collecting a consensus we shouldn't assign sequences to the breaks
         )
         event.break2.seq = None
-        types = BreakpointPair.classify(source_evidence) | {source_evidence.compatible_type}
-        for event_type in types & BreakpointPair.classify(event, distance=source_evidence.distance):
+        types = classify_breakpoint_pair(source_evidence) | {source_evidence.compatible_type}
+        for event_type in types & classify_breakpoint_pair(
+            event, distance=source_evidence.distance
+        ):
             try:
                 new_event = EventCall(
                     event.break1,

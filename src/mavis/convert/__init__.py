@@ -4,7 +4,7 @@ from typing import Dict, List
 import pandas as pd
 from shortuuid import uuid
 
-from ..breakpoint import Breakpoint, BreakpointPair
+from ..breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
 from ..constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from ..error import InvalidRearrangement
 from ..util import logger, read_bpp_from_input_file
@@ -232,7 +232,7 @@ def _convert_tool_row(
             for col, value in std_row.items():
                 if col not in COLUMNS and col not in bpp.data:
                     bpp.data[col] = value
-            if not event_type or event_type in BreakpointPair.classify(bpp):
+            if not event_type or event_type in classify_breakpoint_pair(bpp):
                 result.append(bpp)
 
         except (InvalidRearrangement, AssertionError):

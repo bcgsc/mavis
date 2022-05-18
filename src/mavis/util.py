@@ -10,7 +10,7 @@ import pandas as pd
 from mavis_config import bash_expands
 from shortuuid import uuid
 
-from .breakpoint import Breakpoint, BreakpointPair
+from .breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
 from .constants import (
     COLUMNS,
     FLOAT_COLUMNS,
@@ -511,17 +511,17 @@ def read_bpp_from_input_file(
                 bpp.data.update(data)
                 if putative_event_type:
                     bpp.data[COLUMNS.event_type] = putative_event_type
-                    if putative_event_type not in BreakpointPair.classify(bpp):
+                    if putative_event_type not in classify_breakpoint_pair(bpp):
                         raise InvalidRearrangement(
                             'error: expected one of',
-                            BreakpointPair.classify(bpp),
+                            classify_breakpoint_pair(bpp),
                             'but found',
                             putative_event_type,
                             str(bpp),
                             row,
                         )
                 if expand_svtype and not putative_event_type:
-                    for svtype in BreakpointPair.classify(
+                    for svtype in classify_breakpoint_pair(
                         bpp, distance=lambda x, y: Interval(y - x)
                     ):
                         new_bpp = bpp.copy()
