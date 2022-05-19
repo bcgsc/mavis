@@ -1,7 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
-from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
 from mavis.constants import ORIENT, STRAND, SVTYPE
 from mavis.error import InvalidRearrangement, NotSpecifiedError
 from mavis.interval import Interval
@@ -206,7 +206,7 @@ class TestClassifyBreakpointPair:
             Breakpoint(2, 1, 2, ORIENT.LEFT),
             opposing_strands=True,
         )
-        BreakpointPair.classify(b)
+        classify_breakpoint_pair(b)
 
     def test_translocation(self):
         b = BreakpointPair(
@@ -214,123 +214,123 @@ class TestClassifyBreakpointPair:
             Breakpoint(2, 1, 2, ORIENT.LEFT),
             opposing_strands=False,
         )
-        BreakpointPair.classify(b)
+        classify_breakpoint_pair(b)
 
     def test_inversion(self):
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.INV}
+        assert classify_breakpoint_pair(b) == {SVTYPE.INV}
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.INV}
+        assert classify_breakpoint_pair(b) == {SVTYPE.INV}
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.NS),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.INV}
+        assert classify_breakpoint_pair(b) == {SVTYPE.INV}
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.NS),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.INV}
+        assert classify_breakpoint_pair(b) == {SVTYPE.INV}
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.LEFT),
             Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.LEFT),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.INV}
+        assert classify_breakpoint_pair(b) == {SVTYPE.INV}
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.LEFT),
             Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.LEFT),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.INV}
+        assert classify_breakpoint_pair(b) == {SVTYPE.INV}
 
     def test_duplication(self):
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.LEFT),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.DUP}
+        assert classify_breakpoint_pair(b) == {SVTYPE.DUP}
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.LEFT),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.DUP}
+        assert classify_breakpoint_pair(b) == {SVTYPE.DUP}
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.LEFT),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.DUP}
+        assert classify_breakpoint_pair(b) == {SVTYPE.DUP}
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.NS),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.DUP}
+        assert classify_breakpoint_pair(b) == {SVTYPE.DUP}
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.RIGHT),
             Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.NS),
         )
-        assert BreakpointPair.classify(b) == {SVTYPE.DUP}
+        assert classify_breakpoint_pair(b) == {SVTYPE.DUP}
 
     def test_deletion_or_insertion(self):
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.LEFT),
             Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT),
         )
-        assert sorted(BreakpointPair.classify(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
+        assert sorted(classify_breakpoint_pair(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.POS, orient=ORIENT.LEFT),
             Breakpoint(1, 10, 11, strand=STRAND.NS, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        assert sorted(BreakpointPair.classify(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
+        assert sorted(classify_breakpoint_pair(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.LEFT),
             Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT),
         )
-        assert sorted(BreakpointPair.classify(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
+        assert sorted(classify_breakpoint_pair(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.NEG, orient=ORIENT.LEFT),
             Breakpoint(1, 10, 11, strand=STRAND.NS, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        assert sorted(BreakpointPair.classify(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
+        assert sorted(classify_breakpoint_pair(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.NS, orient=ORIENT.LEFT),
             Breakpoint(1, 10, 11, strand=STRAND.POS, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        assert sorted(BreakpointPair.classify(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
+        assert sorted(classify_breakpoint_pair(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.NS, orient=ORIENT.LEFT),
             Breakpoint(1, 10, 11, strand=STRAND.NEG, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        assert sorted(BreakpointPair.classify(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
+        assert sorted(classify_breakpoint_pair(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
 
         b = BreakpointPair(
             Breakpoint(1, 1, 2, strand=STRAND.NS, orient=ORIENT.LEFT),
             Breakpoint(1, 10, 11, strand=STRAND.NS, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        assert sorted(BreakpointPair.classify(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
+        assert sorted(classify_breakpoint_pair(b)) == sorted([SVTYPE.DEL, SVTYPE.INS])
 
     def test_insertion(self):
         b = BreakpointPair(
@@ -338,7 +338,7 @@ class TestClassifyBreakpointPair:
             Breakpoint(1, 2, 2, strand=STRAND.NS, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        assert sorted(BreakpointPair.classify(b)) == sorted([SVTYPE.INS])
+        assert sorted(classify_breakpoint_pair(b)) == sorted([SVTYPE.INS])
 
     def test_no_type(self):
         b = BreakpointPair(
@@ -347,7 +347,7 @@ class TestClassifyBreakpointPair:
             opposing_strands=False,
             untemplated_seq='',
         )
-        assert BreakpointPair.classify(b) == set()
+        assert classify_breakpoint_pair(b) == set()
 
     def test_deletion(self):
         b = BreakpointPair(
@@ -356,7 +356,7 @@ class TestClassifyBreakpointPair:
             opposing_strands=False,
             untemplated_seq='',
         )
-        assert sorted(BreakpointPair.classify(b)) == sorted([SVTYPE.DEL])
+        assert sorted(classify_breakpoint_pair(b)) == sorted([SVTYPE.DEL])
 
     def test_deletion_with_useq(self):
         bpp = BreakpointPair(
@@ -365,20 +365,20 @@ class TestClassifyBreakpointPair:
             opposing=False,
             untemplated_seq='CCCT',
         )
-        assert sorted(BreakpointPair.classify(bpp)) == sorted([SVTYPE.DEL, SVTYPE.INS])
+        assert sorted(classify_breakpoint_pair(bpp)) == sorted([SVTYPE.DEL, SVTYPE.INS])
 
         def distance(x, y):
             return Interval(abs(x - y))
 
         net_size = BreakpointPair.net_size(bpp, distance)
         assert net_size == Interval(-71)
-        assert sorted(BreakpointPair.classify(bpp, distance)) == sorted([SVTYPE.DEL])
+        assert sorted(classify_breakpoint_pair(bpp, distance)) == sorted([SVTYPE.DEL])
 
     def test_deletion_no_distance_error(self):
         bpp = BreakpointPair(
             Breakpoint('1', 7039, orient='L'), Breakpoint('1', 7040, orient='R'), opposing=False
         )
-        assert sorted(BreakpointPair.classify(bpp)) == sorted([SVTYPE.INS])
+        assert sorted(classify_breakpoint_pair(bpp)) == sorted([SVTYPE.INS])
 
 
 class TestNetSize:

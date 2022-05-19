@@ -12,7 +12,7 @@ from ..annotate.base import BioInterval
 from ..annotate.file_io import ReferenceFile
 from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
-from ..breakpoint import BreakpointPair
+from ..breakpoint import classify_breakpoint_pair
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL
 from ..util import (
     filter_on_overlap,
@@ -165,7 +165,7 @@ def main(
             ),
         )
         logger.info(str(evidence))
-        logger.info(f'possible event type(s): {BreakpointPair.classify(evidence)}')
+        logger.info(f'possible event type(s): {classify_breakpoint_pair(evidence)}')
         logger.info(
             f'outer window regions: {evidence.break1.chr}:{evidence.outer_window1[0]}-{evidence.outer_window1[1]}  {evidence.break2.chr}:{evidence.outer_window2[0]}-{evidence.outer_window2[1]}'
         )

@@ -304,7 +304,7 @@ class BreakpointPair:
             )
 
         # try classifying to make sure it's a valid combination
-        BreakpointPair.classify(self)
+        classify_breakpoint_pair(self)
 
     def column(self, colname: str):
         return self.data.get(COLUMNS[colname])
@@ -346,70 +346,6 @@ class BreakpointPair:
             temp[col] = str(temp[col])
         row.update(temp)
         return row
-
-    @classmethod
-    def classify(cls, pair, distance: Optional[Callable] = None) -> Set[str]:
-        """
-        uses the chr, orientations and strands to determine the
-        possible structural_variant types that this pair could support
-
-        Args:
-            pair (BreakpointPair): the pair to classify
-            distance: if defined, will be passed to net size to use in narrowing the list of putative types (del vs ins)
-        Returns:
-            a list of possible SVTYPE
-
-        Example:
-            >>> bpp = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
-            >>> BreakpointPair.classify(bpp)
-            ['inversion']
-            >>> bpp = BreakpointPair(Breakpoint('1', 1, orient='L'), Breakpoint('1', 9999, orient='R'), opposing_strands=False)
-            >>> BreakpointPair.classify(bpp)
-            {'deletion', 'insertion'}
-
-        Note:
-            see [related theory documentation](/background/theory/#classifying-events)
-        """
-        if not pair.interchromosomal:  # intrachromosomal
-            if pair.opposing_strands:
-                if pair.LR or pair.RL:
-                    raise InvalidRearrangement(pair)
-                return {SVTYPE.INV}
-            else:
-                if pair.LL or pair.RR:
-                    raise InvalidRearrangement(pair)
-                elif pair.break1.orient == ORIENT.LEFT or pair.break2.orient == ORIENT.RIGHT:
-                    if (
-                        len(pair.break1) == 1
-                        and len(pair.break2) == 1
-                        and abs(pair.break1.start - pair.break2.start) < 2
-                    ):
-                        if pair.untemplated_seq == '':
-                            return set()
-                        return {SVTYPE.INS}
-                    elif pair.untemplated_seq == '':
-                        return {SVTYPE.DEL}
-                    elif distance:
-                        try:
-                            if pair.net_size(distance).start > 0:
-                                return {SVTYPE.INS}
-                            elif pair.net_size(distance).end < 0:
-                                return {SVTYPE.DEL}
-                        except ValueError:
-                            pass
-                    return {SVTYPE.DEL, SVTYPE.INS}
-                elif pair.break1.orient == ORIENT.RIGHT or pair.break2.orient == ORIENT.LEFT:
-                    return {SVTYPE.DUP}
-                return {SVTYPE.DEL, SVTYPE.INS, SVTYPE.DUP}
-        else:  # interchromosomal
-            if pair.opposing_strands:
-                if pair.LR or pair.RL:
-                    raise InvalidRearrangement(pair)
-                return {SVTYPE.ITRANS}
-            else:
-                if pair.LL or pair.RR:
-                    raise InvalidRearrangement(pair)
-                return {SVTYPE.TRANS}
 
     def net_size(self, distance=lambda x, y: Interval(abs(x - y))) -> Interval:
         """
@@ -624,3 +560,67 @@ class BreakpointPair:
                 )
             )
         return bed
+
+
+def classify_breakpoint_pair(pair: BreakpointPair, distance: Optional[Callable] = None) -> Set[str]:
+    """
+    uses the chr, orientations and strands to determine the
+    possible structural_variant types that this pair could support
+
+    Args:
+        pair (BreakpointPair): the pair to classify
+        distance: if defined, will be passed to net size to use in narrowing the list of putative types (del vs ins)
+    Returns:
+        a list of possible SVTYPE
+
+    Example:
+        >>> bpp = BreakpointPair(Breakpoint('1', 1), Breakpoint('1', 9999), opposing_strands=True)
+        >>> classify_breakpoint_pair(bpp)
+        ['inversion']
+        >>> bpp = BreakpointPair(Breakpoint('1', 1, orient='L'), Breakpoint('1', 9999, orient='R'), opposing_strands=False)
+        >>> classify_breakpoint_pair(bpp)
+        {'deletion', 'insertion'}
+
+    Note:
+        see [related theory documentation](/background/theory/#classifying-events)
+    """
+    if not pair.interchromosomal:  # intrachromosomal
+        if pair.opposing_strands:
+            if pair.LR or pair.RL:
+                raise InvalidRearrangement(pair)
+            return {SVTYPE.INV}
+        else:
+            if pair.LL or pair.RR:
+                raise InvalidRearrangement(pair)
+            elif pair.break1.orient == ORIENT.LEFT or pair.break2.orient == ORIENT.RIGHT:
+                if (
+                    len(pair.break1) == 1
+                    and len(pair.break2) == 1
+                    and abs(pair.break1.start - pair.break2.start) < 2
+                ):
+                    if pair.untemplated_seq == '':
+                        return set()
+                    return {SVTYPE.INS}
+                elif pair.untemplated_seq == '':
+                    return {SVTYPE.DEL}
+                elif distance:
+                    try:
+                        if pair.net_size(distance).start > 0:
+                            return {SVTYPE.INS}
+                        elif pair.net_size(distance).end < 0:
+                            return {SVTYPE.DEL}
+                    except ValueError:
+                        pass
+                return {SVTYPE.DEL, SVTYPE.INS}
+            elif pair.break1.orient == ORIENT.RIGHT or pair.break2.orient == ORIENT.LEFT:
+                return {SVTYPE.DUP}
+            return {SVTYPE.DEL, SVTYPE.INS, SVTYPE.DUP}
+    else:  # interchromosomal
+        if pair.opposing_strands:
+            if pair.LR or pair.RL:
+                raise InvalidRearrangement(pair)
+            return {SVTYPE.ITRANS}
+        else:
+            if pair.LL or pair.RR:
+                raise InvalidRearrangement(pair)
+            return {SVTYPE.TRANS}
