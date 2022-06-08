@@ -124,7 +124,7 @@ def collect_split_read(evidence_bpp: Evidence, read: pysam.AlignedSegment, first
         w[0] - 1 : w[1]
     ]
 
-    # figure out how much of the read must match when remaped
+    # figure out how much of the read must match when remapped
     min_match_tgt = read.cigar[-1][1] if breakpoint.orient == ORIENT.LEFT else read.cigar[0][1]
     min_match_tgt = min(
         min_match_tgt * evidence_bpp.config['validate.min_anchor_match'], min_match_tgt - 1
