@@ -7,13 +7,21 @@ from mavis.breakpoint import Breakpoint
 from mavis.constants import NA_MAPPING_QUALITY, ORIENT, PYSAM_READ_FLAGS
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence
-from mavis.validate.gather import collect_split_read, collect_flanking_pair, load_evidence
+from mavis.validate.gather import collect_flanking_pair, collect_split_read, load_evidence
 from mavis_config import DEFAULTS
 
 from ...util import get_data, long_running_test
-from ..mock import MockLongString, MockObject, MockRead, mock_read_pair
+from ..mock import MockLongString, MockObject, MockRead, flags_from_number, mock_read_pair
 
 REFERENCE_GENOME = None
+
+
+class MockBamCache(BamCache):
+    def get_read_reference_name(self, read):
+        if isinstance(read, MockRead):
+            return read.reference_name
+        else:
+            return BamCache.get_read_reference_name(self, read)
 
 
 def setUpModule():
@@ -25,9 +33,9 @@ def setUpModule():
     ):
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
-    BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
+    BAM_CACHE = MockBamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
     global FULL_BAM_CACHE
-    FULL_BAM_CACHE = BamCache(get_data('mock_reads_for_events.sorted.bam'))
+    FULL_BAM_CACHE = MockBamCache(get_data('mock_reads_for_events.sorted.bam'))
     global READS
     READS = {}
     for read in BAM_CACHE.fetch('reference3', 1, 8000):
