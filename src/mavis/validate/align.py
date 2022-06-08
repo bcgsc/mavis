@@ -177,9 +177,8 @@ def query_coverage_interval(read: pysam.AlignedSegment) -> Interval:
     Returns:
         The portion of the original query sequence that is aligned by this read
     """
-    seq = read.query_sequence
     st = 0
-    end = len(seq) - 1
+    end = read.query_length - 1
     if read.cigar[0][0] == CIGAR.S:
         st += read.cigar[0][1]
     if read.cigar[-1][0] == CIGAR.S:
