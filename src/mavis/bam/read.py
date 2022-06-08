@@ -424,7 +424,7 @@ def sequenced_strand(read: pysam.AlignedSegment, strand_determining_read: int = 
         else:
             strand = STRAND.NEG if not read.is_reverse else STRAND.POS
     elif strand_determining_read == 2:
-        if read.is_read2:
+        if not read.is_read1:
             strand = STRAND.NEG if read.is_reverse else STRAND.POS
         else:
             strand = STRAND.NEG if not read.is_reverse else STRAND.POS
