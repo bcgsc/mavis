@@ -1701,6 +1701,7 @@ class TestCallByFlankingReadsTranscriptome:
         pre_transcript = PreTranscript(
             [(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+'
         )
+        pre_transcript.chr = '1'
         for patt in pre_transcript.generate_splicing_patterns():
             pre_transcript.transcripts.append(Transcript(pre_transcript, patt))
         evidence = self.build_transcriptome_evidence(
