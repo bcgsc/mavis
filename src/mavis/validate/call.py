@@ -241,8 +241,8 @@ class EventCall(BreakpointPair):
                 else:  # L R
                     if not all(
                         [
-                            read.reference_start + 1 <= self.break1.end,
-                            mate.reference_end >= self.break2.start,
+                            read.reference_end <= self.break1.end,
+                            mate.reference_start >= self.break2.start,
                         ]
                     ):
                         continue
