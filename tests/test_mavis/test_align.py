@@ -717,7 +717,7 @@ class TestSelectContigAlignments:
         raw_alignments = {s: [read1, read2]}
         align.select_contig_alignments(evidence, raw_alignments)
         alignments = list(evidence.contigs[0].alignments)
-        assert len(alignments) == 2
+        assert len(alignments) == 1
 
 
 class TestGetAlignerVersion:
