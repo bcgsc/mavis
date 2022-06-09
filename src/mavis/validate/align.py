@@ -177,9 +177,8 @@ def query_coverage_interval(read: pysam.AlignedSegment) -> Interval:
     Returns:
         The portion of the original query sequence that is aligned by this read
     """
-    seq = read.query_sequence
     st = 0
-    end = len(seq) - 1
+    end = read.query_length - 1
     if read.cigar[0][0] == CIGAR.S:
         st += read.cigar[0][1]
     if read.cigar[-1][0] == CIGAR.S:
@@ -333,7 +332,8 @@ def read_breakpoint(read):
 def call_paired_read_event(read1, read2, is_stranded=False):
     """
     For a given pair of reads call all applicable events. Assume there is a major
-    event from both reads and then call indels from the individual reads
+    event from both reads and then call indels from the individual reads. Should be alternate alignments of
+    the same read
     """
     # sort the reads so that we are calling consistently
     break1 = read_breakpoint(read1)

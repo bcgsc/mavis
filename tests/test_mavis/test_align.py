@@ -238,7 +238,7 @@ class TestBreakpointContigRemappedDepth:
 
         b = Breakpoint('10', 1030, 1030, orient=ORIENT.LEFT)
         read = MockRead(
-            cigar=_cigar.convert_string_to_cigar('35M10D5I20M'),
+            cigarstring='35M10D5I20M',
             reference_start=999,
             reference_name='10',
         )
@@ -249,11 +249,8 @@ class TestSplitEvents:
     def test_read_with_exons(self):
         contig = MockRead(
             query_sequence='CTTGAAGGAAACTGAATTCAAAAAGATCAAAGTGCTGGGCTCCGGTGCGTTCGGCACGGTGTATAAGGGACTCTGGATCCCAGAAGGTGAGAAAGTTAAAATTCCCGTCGCTATCAAGACATCTCCGAAAGCCAACAAGGAAATCCTCGATGAAGCCTACGTGATGGCCAGCGTGGACAACCCCCACGTGTGCCGCCTGCTGGGCATCTGCCTCACCTCCACCGTGCAGCTCATCATGCAGCTCATGCCCTTCGGCTGCCTCCTGGACTATGTCCGGGAACACAAAGACAATATTGGCTCCCAGTACCTGCTCAACTGGTGTGTGCAGATCGCAAAGGGCATGAACTACTTGGAGGACCGTCGCTTGGTGCACCGCGACCTGGCAGCCAGGAACGTACTGGTGAAAACACCGCAGCATGTCAAGATCACAGATTTTGGGCTGGCCAAACTGCTGGGTGCGGAAGAGAAAGAATACCATGCAGAAGGAGGCAAAGTGCCTATCAAGTGGATGGCATTGGAATCAATTTTACACAGAATCTATACCCACCAGAGTGATGTCTGGAGCTACGGGGTGACCGTTTGGGAGTTGATGACCTTTGGATCCAA',
-            cigar=_cigar.convert_string_to_cigar(
-                '68M678D50M15D34M6472D185M10240D158M891D74M8I5883D29M'
-            ),
+            cigarstring='68M678D50M15D34M6472D185M10240D158M891D74M8I5883D29M',
             reference_name='7',
-            reference_id=6,
             reference_start=55241669,
         )
         assert len(align.call_read_events(contig)) == 6
@@ -262,10 +259,9 @@ class TestSplitEvents:
 class TestCallBreakpointPair:
     def test_single_one_event(self):
         r = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=0,
-            cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.D, 7), (CIGAR.M, 10)],
+            cigarstring='10M3I7D10M',
             query_sequence='ACTGAATCGTGGGTAGCTGCTAG',
         )
         bpps = align.call_read_events(r)
@@ -280,10 +276,9 @@ class TestCallBreakpointPair:
 
     def test_ins_and_del(self):
         r = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=0,
-            cigar=[(CIGAR.M, 10), (CIGAR.I, 3), (CIGAR.M, 5), (CIGAR.D, 7), (CIGAR.M, 5)],
+            cigarstring='10M3I5M7D5M',
             query_sequence='ACTGAATCGTGGGTAGCTGCTAG',
         )
         # only report the major del event for now
@@ -305,10 +300,9 @@ class TestCallBreakpointPair:
 
     def test_single_insertion(self):
         r = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=0,
-            cigar=[(CIGAR.M, 10), (CIGAR.I, 8), (CIGAR.M, 5)],
+            cigarstring='10M8I5M',
             query_sequence='ACTGAATCGTGGGTAGCTGCTAG',
         )
         bpp = align.call_read_events(r)[0]
@@ -321,10 +315,10 @@ class TestCallBreakpointPair:
 
     def test_single_duplication(self):
         r = MockRead(
-            name='seq1',
+            query_name='seq1',
             reference_name='gene3',
             reference_start=27155,
-            cigar=[(CIGAR.M, 65), (CIGAR.I, 6), (CIGAR.D, 95), (CIGAR.M, 21), (CIGAR.S, 17)],
+            cigarstring='65M6I95D21M17S',
             query_sequence='TAGTTGGATCTCTGTGCTGACTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACTGACAGACAGACTTTAGTGTCTGTGTGCTGACT'
             'GACAGACTCTAGTAGTGTC',
         )
@@ -341,10 +335,9 @@ class TestCallBreakpointPair:
                 'CTGTGGGCTCGGGCCCGACGCGCACGGAGGACTGGAGGACTGGGGCGTGTGTCTGCGGTGCAGGCGAGGCGGGGCGGGC'
             ),
             query_name='duplication_with_untemp',
-            reference_id=16,
             reference_name='reference17',
             reference_start=1882,
-            cigar=[(CIGAR.EQ, 126), (CIGAR.I, 54), (CIGAR.EQ, 93)],
+            cigarstring='126=54I93=',
             is_reverse=False,
         )
         bpp = align.call_read_events(r)[0]
@@ -359,10 +352,9 @@ class TestCallBreakpointPair:
                 'CCGGTTTAGCATTGCCATTGGTAA'
             ),
             query_name='duplication_with_untemp',
-            reference_id=2,
             reference_name='reference3',
             reference_start=1497,
-            cigar=[(CIGAR.EQ, 51), (CIGAR.I, 22), (CIGAR.EQ, 52)],
+            cigarstring='51=22I52=',
             is_reverse=False,
         )
         # repeat: GATTTTGCTGTTGTTTTTGTTC
@@ -383,10 +375,9 @@ class TestCallBreakpointPair:
                 'CAAAGTGTTTTATACTGATAAAGCAACCCCGGTTTAGCATTGCCATTGGTAA'
             ),
             query_name='duplication_with_untemp',
-            reference_id=2,
             reference_name='reference3',
             reference_start=1497,
-            cigar=[(CIGAR.EQ, 51), (CIGAR.I, 27), (CIGAR.EQ, 52)],
+            cigarstring='51=27I52=',
             is_reverse=False,
         )
         # repeat: GATTTTGCTGTTGTTTTTGTTC
@@ -410,19 +401,17 @@ class TestCallBreakpointPair:
         # i   ---------GGGAATTCCGGA--------- 10-21    n/a
         seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
         r1 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=0,
-            cigar=[(CIGAR.M, 9), (CIGAR.S, 21)],
+            cigarstring='9M21S',
             query_sequence=seq,
             is_reverse=False,
         )
 
         r2 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=99,
-            cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
+            cigarstring='21S9M',
             query_sequence=seq,
             is_reverse=False,
         )
@@ -443,19 +432,17 @@ class TestCallBreakpointPair:
         # r2  aaatttcccgggaattccggaTCGATCGAT
         seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
         r1 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=0,
-            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
+            cigarstring='21M9S',
             query_sequence=seq,
             is_reverse=False,
         )
 
         r2 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=99,
-            cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
+            cigarstring='21S9M',
             query_sequence=seq,
             is_reverse=False,
         )
@@ -474,19 +461,17 @@ class TestCallBreakpointPair:
         # r2  aaatttcccgggaattccggaTCGATCGAT
         seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
         r1 = MockRead(
-            reference_id=0,
             reference_name='2',
             reference_start=0,
-            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
+            cigarstring='21M9S',
             query_sequence=seq,
             is_reverse=False,
         )
 
         r2 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=99,
-            cigar=[(CIGAR.S, 21), (CIGAR.M, 9)],
+            cigarstring='21S9M',
             query_sequence=seq,
             is_reverse=False,
         )
@@ -506,19 +491,17 @@ class TestCallBreakpointPair:
 
         seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
         r1 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=0,
-            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
+            cigarstring='21M9S',
             query_sequence=seq,
             is_reverse=False,
         )
 
         r2 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=99,
-            cigar=[(CIGAR.S, 18), (CIGAR.M, 12)],
+            cigarstring='18S12M',
             query_sequence=seq,
             is_reverse=False,
         )
@@ -542,19 +525,17 @@ class TestCallBreakpointPair:
         # r2  ATCTATCGATCCggaattcccgggaaattt 100+12 = 111 - 3 = 108
         seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
         r1 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=0,
-            cigar=[(CIGAR.M, 21), (CIGAR.S, 9)],
+            cigarstring='21M9S',
             query_sequence=seq,
             is_reverse=False,
         )
 
         r2 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=99,
-            cigar=[(CIGAR.M, 12), (CIGAR.S, 18)],
+            cigarstring='12M18S',
             query_sequence=reverse_complement(seq),
             is_reverse=True,
         )
@@ -573,16 +554,16 @@ class TestCallBreakpointPair:
         s = 'CTGAGCATGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTTAAT'
 
         read1 = MockRead(
-            reference_id=3,
+            reference_name='3',
             reference_start=1114,
-            cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)],
+            cigarstring='125S120=',
             query_sequence=s,
             is_reverse=False,
         )
         read2 = MockRead(
-            reference_id=3,
+            reference_name='3',
             reference_start=2187,
-            cigar=[(CIGAR.S, 117), (CIGAR.EQ, 8), (CIGAR.D, 1), (CIGAR.M, 120)],
+            cigarstring='117S8=1D120M',
             query_sequence=reverse_complement(s),
             is_reverse=True,
         )
@@ -613,19 +594,17 @@ class TestCallBreakpointPair:
         # r2  ATCTATCGATCCggaattcccgggaaattt 100+12 = 111 - 3 = 108
         seq = 'AAATTTCCCGGGAATTCCGGATCGATCGAT'  # 30
         r1 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=0,
-            cigar=[(CIGAR.M, 16), (CIGAR.S, 14)],
+            cigarstring='16M14S',
             query_sequence=seq,
             is_reverse=False,
         )
 
         r2 = MockRead(
-            reference_id=0,
             reference_name='1',
             reference_start=99,
-            cigar=[(CIGAR.M, 12), (CIGAR.S, 18)],
+            cigarstring='12M18S',
             query_sequence=reverse_complement(seq),
             is_reverse=True,
         )
@@ -719,19 +698,17 @@ class TestSelectContigAlignments:
             reference_genome=None,
             bam_cache=mock.Mock(stranded=False),
         )
-        read1 = SamRead(
-            reference_id=3,
+        read1 = MockRead(
             reference_start=1114,
-            cigar=[(CIGAR.S, 125), (CIGAR.EQ, 120)],
+            cigarstring='125S120=',
             query_sequence=s,
             is_reverse=False,
             reference_name='3',
             alignment_rank=0,
         )
-        read2 = SamRead(
-            reference_id=3,
+        read2 = MockRead(
             reference_start=2187,
-            cigar=[(CIGAR.S, 117), (CIGAR.EQ, 8), (CIGAR.D, 1), (CIGAR.EQ, 120)],
+            cigarstring='117S7=1X120=',
             query_sequence=reverse_complement(s),
             is_reverse=True,
             reference_name='3',
@@ -740,7 +717,7 @@ class TestSelectContigAlignments:
         raw_alignments = {s: [read1, read2]}
         align.select_contig_alignments(evidence, raw_alignments)
         alignments = list(evidence.contigs[0].alignments)
-        assert len(alignments) == 2
+        assert len(alignments) == 1
 
 
 class TestGetAlignerVersion:

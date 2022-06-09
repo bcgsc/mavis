@@ -1,21 +1,22 @@
 """
 Module which contains functions related to picking reads from a BAM file which support a putative event
 """
-from .base import Evidence
 import pysam
-from ..constants import (
-    CIGAR,
-    ORIENT,
-    PYSAM_READ_FLAGS,
-    reverse_complement,
-    NA_MAPPING_QUALITY,
-    SVTYPE,
-)
+
 from ..bam import cigar as _cigar
 from ..bam import read as _read
+from ..constants import (
+    CIGAR,
+    NA_MAPPING_QUALITY,
+    ORIENT,
+    PYSAM_READ_FLAGS,
+    SVTYPE,
+    reverse_complement,
+)
+from ..error import NotSpecifiedError
 from ..interval import Interval
 from ..util import logger
-from ..error import NotSpecifiedError
+from .base import Evidence
 
 
 def collect_split_read(evidence_bpp: Evidence, read: pysam.AlignedSegment, first_breakpoint: bool):
@@ -123,7 +124,7 @@ def collect_split_read(evidence_bpp: Evidence, read: pysam.AlignedSegment, first
         w[0] - 1 : w[1]
     ]
 
-    # figure out how much of the read must match when remaped
+    # figure out how much of the read must match when remapped
     min_match_tgt = read.cigar[-1][1] if breakpoint.orient == ORIENT.LEFT else read.cigar[0][1]
     min_match_tgt = min(
         min_match_tgt * evidence_bpp.config['validate.min_anchor_match'], min_match_tgt - 1

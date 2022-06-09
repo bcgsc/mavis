@@ -5,7 +5,6 @@ from unittest import mock
 import pytest
 import timeout_decorator
 from mavis.annotate.file_io import load_annotations, load_reference_genome
-from mavis.bam import cigar as _cigar
 from mavis.bam import read as _read
 from mavis.bam.cache import BamCache
 from mavis.bam.read import (
@@ -15,7 +14,7 @@ from mavis.bam.read import (
     sequenced_strand,
 )
 from mavis.bam.stats import Histogram, compute_genome_bam_stats, compute_transcriptome_bam_stats
-from mavis.constants import CIGAR, DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE
+from mavis.constants import DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE
 from mavis.interval import Interval
 
 from ...util import get_data
@@ -148,7 +147,7 @@ class TestModule:
 
     def test_breakpoint_pos(self):
         # ==========+++++++++>
-        r = MockRead(reference_start=10, cigar=[(CIGAR.M, 10), (CIGAR.S, 10)])
+        r = MockRead(reference_start=10, cigarstring='10M10S')
         assert _read.breakpoint_pos(r) == 19
 
         with pytest.raises(AttributeError):
@@ -157,7 +156,7 @@ class TestModule:
         assert _read.breakpoint_pos(r, ORIENT.LEFT) == 19
 
         # ++++++++++=========>
-        r = MockRead(reference_start=10, cigar=[(CIGAR.S, 10), (CIGAR.M, 10)])
+        r = MockRead(reference_start=10, cigarstring='10S10M')
         assert _read.breakpoint_pos(r) == 10
 
         with pytest.raises(AttributeError):
@@ -166,7 +165,7 @@ class TestModule:
         assert _read.breakpoint_pos(r, ORIENT.RIGHT) == 10
 
         with pytest.raises(AttributeError):
-            r = MockRead(reference_start=10, cigar=[(CIGAR.X, 10), (CIGAR.M, 10)])
+            r = MockRead(reference_start=10, cigarstring='10X10M')
             _read.breakpoint_pos(r, ORIENT.LEFT)
 
     def test_nsb_align(self):
@@ -240,20 +239,66 @@ class TestNsbAlign:
 @pytest.fixture
 def stranded_reads():
     n = argparse.Namespace()
-    n.read1_pos_neg = MockRead(is_reverse=False, is_read1=True, mate_is_reverse=True)
-    assert not n.read1_pos_neg.is_read2
-    n.read1_neg_pos = MockRead(is_reverse=True, is_read1=True, mate_is_reverse=False)
-    n.read1_pos_pos = MockRead(is_reverse=False, is_read1=True, mate_is_reverse=False)
-    n.read1_neg_neg = MockRead(is_reverse=True, is_read1=True, mate_is_reverse=True)
+    n.read1_pos_neg = MockRead(
+        is_reverse=False,
+        is_read1=True,
+        mate_is_reverse=True,
+        cigarstring='10=',
+        reference_start=100,
+    )
+    n.read1_neg_pos = MockRead(
+        is_reverse=True,
+        is_read1=True,
+        mate_is_reverse=False,
+        cigarstring='10=',
+        reference_start=100,
+    )
+    n.read1_pos_pos = MockRead(
+        is_reverse=False,
+        is_read1=True,
+        mate_is_reverse=False,
+        cigarstring='10=',
+        reference_start=100,
+    )
+    n.read1_neg_neg = MockRead(
+        is_reverse=True, is_read1=True, mate_is_reverse=True, cigarstring='10=', reference_start=100
+    )
 
-    n.read2_pos_neg = MockRead(is_reverse=True, is_read1=False, mate_is_reverse=True)
-    assert n.read2_pos_neg.is_read2
-    n.read2_neg_pos = MockRead(is_reverse=False, is_read1=False, mate_is_reverse=False)
-    n.read2_pos_pos = MockRead(is_reverse=False, is_read1=False, mate_is_reverse=False)
-    n.read2_neg_neg = MockRead(is_reverse=True, is_read1=False, mate_is_reverse=True)
+    n.read2_pos_neg = MockRead(
+        is_reverse=True,
+        is_read1=False,
+        mate_is_reverse=True,
+        cigarstring='10=',
+        reference_start=100,
+    )
+    n.read2_neg_pos = MockRead(
+        is_reverse=False,
+        is_read1=False,
+        mate_is_reverse=False,
+        cigarstring='10=',
+        reference_start=100,
+    )
+    n.read2_pos_pos = MockRead(
+        is_reverse=False,
+        is_read1=False,
+        mate_is_reverse=False,
+        cigarstring='10=',
+        reference_start=100,
+    )
+    n.read2_neg_neg = MockRead(
+        is_reverse=True,
+        is_read1=False,
+        mate_is_reverse=True,
+        cigarstring='10=',
+        reference_start=100,
+    )
 
-    n.unpaired_pos = MockRead(is_reverse=False, is_paired=False)
-    n.unpaired_neg = MockRead(is_reverse=True, is_paired=False)
+    n.unpaired_pos = MockRead(
+        is_reverse=False, is_paired=False, cigarstring='10=', reference_start=100
+    )
+    n.unpaired_neg = MockRead(
+        is_reverse=True, is_paired=False, cigarstring='10=', reference_start=100
+    )
     return n
 
 
@@ -329,32 +374,36 @@ class TestReadPairStrand:
 def read_pairs():
     n = argparse.Namespace()
     n.LR = MockRead(
-        reference_id=0,
-        next_reference_id=0,
+        reference_name='1',
+        next_reference_name='1',
+        cigarstring='50=',
         reference_start=1,
         next_reference_start=2,
         is_reverse=False,
         mate_is_reverse=True,
     )
     n.LL = MockRead(
-        reference_id=0,
-        next_reference_id=0,
+        reference_name='1',
+        next_reference_name='1',
+        cigarstring='50=',
         reference_start=1,
         next_reference_start=2,
         is_reverse=False,
         mate_is_reverse=False,
     )
     n.RR = MockRead(
-        reference_id=0,
-        next_reference_id=0,
+        reference_name='1',
+        next_reference_name='1',
+        cigarstring='50=',
         reference_start=1,
         next_reference_start=2,
         is_reverse=True,
         mate_is_reverse=True,
     )
     n.RL = MockRead(
-        reference_id=0,
-        next_reference_id=0,
+        reference_name='1',
+        next_reference_name='1',
+        cigarstring='50=',
         reference_start=1,
         next_reference_start=2,
         is_reverse=True,
@@ -483,7 +532,7 @@ class TestBamStats:
 @pytest.fixture
 def contig_read():
     return MockRead(
-        cigar=_cigar.convert_string_to_cigar('275M18I12041D278M'),
+        cigarstring='275M18I12041D278M',
         reference_start=89700025,
         reference_name='10',
     )
