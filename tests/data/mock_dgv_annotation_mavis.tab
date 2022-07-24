@@ -7,6 +7,9 @@ dgv1n82	None	1	10001	10001	L	?	None	1	22118	22118	L	?	None	True	False	bed
 dgv1n82	None	1	10001	10001	L	?	None	1	22118	22118	R	?	None	False	False	bed	
 dgv1n82	None	1	10001	10001	R	?	None	1	22118	22118	L	?	None	False	False	bed	
 dgv1n82	None	1	10001	10001	R	?	None	1	22118	22118	R	?	None	True	False	bed	
+dgv1n98	None	1	10001	10001	R	?	None	1	22120	22120	R	?	None	True	False	bed	
+dgv2n98	None	1	10001	10001	R	?	None	1	15000	15000	R	?	None	True	False	bed	
+dgv2n99	None	1	10001	10501	R	?	None	1	15000	15000	R	?	None	True	False	bed	
 nsv7879	None	1	10001	10001	L	?	None	1	127330	127330	L	?	None	True	False	bed	
 nsv7879	None	1	10001	10001	L	?	None	1	127330	127330	R	?	None	False	False	bed	
 nsv7879	None	1	10001	10001	R	?	None	1	127330	127330	L	?	None	False	False	bed	

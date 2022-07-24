@@ -1,9 +1,10 @@
 import pytest
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, COLUMNS, PROTOCOL, STRAND, SVTYPE
-from mavis.summary.summary import filter_by_annotations
+from mavis.summary.summary import filter_by_annotations, annotate_dgv
+from mavis.annotate.file_io import load_known_sv
 
-from ...util import todo
+from ...util import todo, get_data
 
 
 @pytest.fixture
@@ -39,6 +40,40 @@ def genomic_event2():
         }
     )
 
+@pytest.fixture
+def genomic_event3():
+    return BreakpointPair(
+        Breakpoint('1', 10001),
+        Breakpoint('1', 22118),
+        opposing_strands=True,
+        **{
+            COLUMNS.event_type: SVTYPE.DEL,
+            COLUMNS.call_method: CALL_METHOD.CONTIG,
+            COLUMNS.fusion_sequence_fasta_id: None,
+            COLUMNS.protocol: PROTOCOL.GENOME,
+            COLUMNS.fusion_cdna_coding_start: None,
+            COLUMNS.fusion_cdna_coding_end: None,
+        }
+    )
+
+@pytest.fixture
+def genomic_event4():
+    return BreakpointPair(
+        Breakpoint('1', 30000),
+        Breakpoint('1', 30000),
+        opposing_strands=True,
+        **{
+            COLUMNS.event_type: SVTYPE.DEL,
+            COLUMNS.call_method: CALL_METHOD.CONTIG,
+            COLUMNS.fusion_sequence_fasta_id: None,
+            COLUMNS.protocol: PROTOCOL.GENOME,
+            COLUMNS.fusion_cdna_coding_start: None,
+            COLUMNS.fusion_cdna_coding_end: None,
+        }
+    )
+@pytest.fixture
+def dgv_event():
+    return load_known_sv(get_data("mock_dgv_annotation_mavis.tab"))
 
 @pytest.fixture
 def best_transcripts():
@@ -174,3 +209,20 @@ class TestFilterByAnnotations:
     @todo
     def test_get_pairing_state(self):
         pass
+
+class TestFilterByCallMethod:
+    
+    def test_annotate_dgv_multiple_match(
+        self, genomic_event3, genomic_event4, dgv_event
+    ):
+        bpps = [genomic_event3]
+        annotate_dgv(bpps, dgv_event)
+        assert bpps[0].data["known_sv_count"] == 2
+        assert bpps[0].data["dgv"] == 'dgv1n82,dgv1n98' or bpps[0].data["dgv"] == 'dgv1n98,dgv1n82'
+    
+    def test_annotate_dgv_no_match(
+        self, genomic_event3, genomic_event4, dgv_event
+    ):
+        bpps = [genomic_event4]
+        annotate_dgv(bpps, dgv_event)
+        assert bpps[0].data["known_sv_count"] == 0

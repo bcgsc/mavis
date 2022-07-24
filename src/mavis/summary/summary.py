@@ -205,16 +205,17 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name):
         )
 
     for bpp in [
-        b for b in bpps if (b.break1.chr and b.break2.chr) in dgv_regions_by_reference_name
-    ]:
+        b for b in bpps if (str(b.break1.chr), str(b.break2.chr)) in dgv_regions_by_reference_name
+    ]:  # all bpp that have corresponding tuples
         bpp.data['known_sv_count'] = 0
-        for chr_region, dgv_region in dgv_regions_by_reference_name.items():
-            for dgv_call in dgv_region:
-                if equivalent(bpp, dgv_call):
-                    bpp.data['dgv'] = '{}({}-{})'.format(
-                        dgv_region.tracking_id, dgv_region.break1, dgv_region.break2
-                    )
-                    bpp.data['known_sv_count'] += 1
+        bpp.data['dgv'] = []
+
+        for dgv_call in dgv_regions_by_reference_name[(str(bpp.break1.chr), str(bpp.break2.chr))]:
+            # Both breakpoint pairs must be within the pairing range
+            if equivalent(bpp, dgv_call, matching_event_type=False):
+                bpp.data['dgv'].append('{}'.format(dgv_call.data["tracking_id"]))
+        bpp.data['known_sv_count'] = len(set(bpp.data['dgv']))
+        bpp.data['dgv'] = ','.join(set(bpp.data['dgv']))
 
 
 def get_pairing_state(
