@@ -40,6 +40,7 @@ def genomic_event2():
         }
     )
 
+
 @pytest.fixture
 def genomic_event3():
     return BreakpointPair(
@@ -53,8 +54,10 @@ def genomic_event3():
             COLUMNS.protocol: PROTOCOL.GENOME,
             COLUMNS.fusion_cdna_coding_start: None,
             COLUMNS.fusion_cdna_coding_end: None,
+            COLUMNS.tracking_id: "genomic_event3",
         }
     )
+
 
 @pytest.fixture
 def genomic_event4():
@@ -69,11 +72,15 @@ def genomic_event4():
             COLUMNS.protocol: PROTOCOL.GENOME,
             COLUMNS.fusion_cdna_coding_start: None,
             COLUMNS.fusion_cdna_coding_end: None,
+            COLUMNS.tracking_id: "genomic_event4",
         }
     )
+
+
 @pytest.fixture
 def dgv_event():
     return load_known_sv(get_data("mock_dgv_annotation_mavis.tab"))
+
 
 @pytest.fixture
 def best_transcripts():
@@ -210,19 +217,31 @@ class TestFilterByAnnotations:
     def test_get_pairing_state(self):
         pass
 
+
 class TestFilterByCallMethod:
-    
-    def test_annotate_dgv_multiple_match(
-        self, genomic_event3, genomic_event4, dgv_event
-    ):
+    def test_annotate_dgv_multiple_match(self, genomic_event3, dgv_event):
         bpps = [genomic_event3]
-        annotate_dgv(bpps, dgv_event)
+        annotate_dgv(bpps, dgv_event, 100)
         assert bpps[0].data["known_sv_count"] == 2
-        assert bpps[0].data["dgv"] == 'dgv1n82,dgv1n98' or bpps[0].data["dgv"] == 'dgv1n98,dgv1n82'
-    
-    def test_annotate_dgv_no_match(
-        self, genomic_event3, genomic_event4, dgv_event
-    ):
+        output_dgv_tracking_id = list(bpps[0].data["dgv"].split(','))
+        expected = ['dgv1n82', 'rgv2n98']
+        for output_tracking_id in output_dgv_tracking_id:
+            assert output_tracking_id in expected
+        assert len(bpps) == 1
+
+    def test_annotate_dgv_no_match(self, genomic_event4, dgv_event):
         bpps = [genomic_event4]
-        annotate_dgv(bpps, dgv_event)
+        annotate_dgv(bpps, dgv_event, 100)
         assert bpps[0].data["known_sv_count"] == 0
+        assert bpps[0].data["dgv"] == ''
+        assert len(bpps) == 1
+
+    def test_annotate_dgv_distance(self, genomic_event3, genomic_event4, dgv_event):
+        bpps = [genomic_event3]
+        annotate_dgv(bpps, dgv_event, 102)
+        assert bpps[0].data["known_sv_count"] == 3
+        output_dgv_tracking_id = list(bpps[0].data["dgv"].split(','))
+        expected = ['dgv1n82', 'rgv2n98', 'rgv2n99']
+        for output_tracking_id in output_dgv_tracking_id:
+            assert output_tracking_id in expected
+        assert len(bpps) == 1
