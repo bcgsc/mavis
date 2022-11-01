@@ -207,6 +207,6 @@ class TestFilterByCallMethod:
         print(bpps[0].data)
         assert len(bpps[0].data['dgv']) == 3
         assert (
-            bpps[0].data
-            == "['dgv1n82(1:10001-22118)', 'rgv2n98(1:10001-22120)', 'rgv2n99(1:10001-22221)']"
+            bpps[0].data['dgv']
+            == ['dgv1n82(1:10001-22118)', 'rgv2n98(1:10001-22120)', 'rgv2n99(1:10001-22221)']
         )
