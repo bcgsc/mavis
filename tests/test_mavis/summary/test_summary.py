@@ -1,9 +1,10 @@
 import pytest
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, COLUMNS, PROTOCOL, STRAND, SVTYPE
-from mavis.summary.summary import filter_by_annotations
+from mavis.summary.summary import filter_by_annotations, annotate_dgv
+from mavis.annotate.file_io import load_masking_regions
 
-from ...util import todo
+from ...util import todo, get_data
 
 
 @pytest.fixture
@@ -41,8 +42,31 @@ def genomic_event2():
 
 
 @pytest.fixture
+def genomic_event3():
+    return BreakpointPair(
+        Breakpoint('1', 10001),
+        Breakpoint('1', 22118),
+        opposing_strands=True,
+        **{
+            COLUMNS.event_type: SVTYPE.DEL,
+            COLUMNS.call_method: CALL_METHOD.CONTIG,
+            COLUMNS.fusion_sequence_fasta_id: None,
+            COLUMNS.protocol: PROTOCOL.GENOME,
+            COLUMNS.fusion_cdna_coding_start: None,
+            COLUMNS.fusion_cdna_coding_end: None,
+            COLUMNS.tracking_id: "genomic_event3",
+        }
+    )
+
+
+@pytest.fixture
 def best_transcripts():
     return {'ABCA': True, 'ABCD': True}
+
+
+@pytest.fixture
+def dgv_event2():
+    return load_masking_regions(get_data("mock_dgv_annotation.txt"))
 
 
 class TestFilterByAnnotations:
@@ -174,3 +198,15 @@ class TestFilterByAnnotations:
     @todo
     def test_get_pairing_state(self):
         pass
+
+
+class TestFilterByCallMethod:
+    def test_annotate_dgv_distance_bed(self, genomic_event3, dgv_event2):
+        bpps = [genomic_event3]
+        annotate_dgv(bpps, dgv_event2, 103)
+        print(bpps[0].data)
+        assert len(bpps[0].data['dgv']) == 3
+        assert (
+            bpps[0].data
+            == "['dgv1n82(1:10001-22118)', 'rgv2n98(1:10001-22120)', 'rgv2n99(1:10001-22221)']"
+        )
