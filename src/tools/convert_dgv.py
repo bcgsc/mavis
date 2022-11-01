@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+
+"""
+Converts existing dgv tab file to a MAVIS format. 
+DGV files can be obtained from: http://dgv.tcag.ca/dgv/app/downloads?ref=GRCh37/hg19
+"""
+
 import argparse
 import logging
 import itertools
@@ -136,7 +142,7 @@ def _convert_tool_row(
     return result
 
 
-def convert_to_dictionary(filepaths: str) -> Dict:
+def convert_dgv_to_list(filepaths: str) -> List:
     """
     reads a file of regions. The expect input format for the file is tab-delimited and
     the header should contain the following columns
@@ -150,7 +156,7 @@ def convert_to_dictionary(filepaths: str) -> Dict:
     Args:
         filepath: path to the input tab-delimited file
     Returns:
-        Dictionary by chromosome name with values of lists of regions on the chromosome
+        list sorted by by chromosome name with values of lists of regions on the chromosome
     """
     col_list = ['chr', 'start', 'end', 'variantaccession']
     result = []
@@ -196,7 +202,6 @@ def convert_row(row: Dict) -> Dict:
 
 
 def main():
-
     parser = argparse.ArgumentParser(
         description="Convert the dgv file format into a MAVIS file.",
         add_help=False,
@@ -205,7 +210,7 @@ def main():
     req_parser.add_argument("-n", "--input", required=True, help="input DGV file")
     req_parser.add_argument("-o", "--output", required=True, help="output file name")
     args = parser.parse_args()
-    output_tabbed_file(convert_to_dictionary(args.input), args.output)
+    output_tabbed_file(convert_dgv_to_list(args.input), args.output)
 
 
 if __name__ == "__main__":

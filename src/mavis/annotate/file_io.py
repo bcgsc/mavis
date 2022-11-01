@@ -21,9 +21,11 @@ from .protein import Domain, Translation
 if TYPE_CHECKING:
     from ..breakpoint import Breakpoint, BreakpointPair
 
-
-def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
+def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
     """
+    loads a standard MAVIS or BED file input to a ist of known breakpoints. 
+    
+    Standard BED file requirements: 
     reads a file of regions. The expect input format for the file is tab-delimited and
     the header should contain the following columns
 
@@ -38,43 +40,40 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
 
         #chr    start       end         name
         chr20   25600000    27500000    centromere
-
-    Args:
-        filepath: path to the input tab-delimited file
-    Returns:
-        a dictionary keyed by chromosome name with values of lists of regions on the chromosome
-    """
-    regions: Dict[str, List[BioInterval]] = {}
-    for filepath in filepaths:
-        df = pd.read_csv(
-            filepath, sep='\t', dtype={'chr': str, 'start': int, 'end': int, 'name': str}
-        )
-        for col in ['chr', 'start', 'end', 'name']:
-            if col not in df:
-                raise KeyError(f'missing required column ({col})')
-        df['chr'] = df['chr'].apply(lambda c: ReferenceName(c))
-        for row in df.to_dict('records'):
-            mask_region = BioInterval(
-                reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name']
-            )
-            regions.setdefault(mask_region.reference_object, []).append(mask_region)
-    return regions
-
-
-def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
-    """
-    loads a standard MAVIS file input in
     Args:
         filepath: path to standard MAVIS format file
     Returns:
         a dictionary with {(bp1_chr,bp2_chr):{BreakpointPair}}
     """
-    regions: Dict[(str, str), List[BreakpointPair]] = {}
+    regions = {}
     for filepath in filepaths:
-        bpps = read_bpp_from_input_file(filepath, expand_orient=True, expand_svtype=True)
-    for bpp in bpps:
-        chr_list = [bpp.break1.chr, bpp.break2.chr]
-        regions.setdefault(tuple(chr_list), []).append(bpp)
+        header = set(pd.read_csv(filepath, nrows=1, sep='\t').columns)
+        mavis_header = {'break1_chromosome', 'break2_chromosome'}
+        bed_header = {'chr', 'start', 'end', 'name'}
+        if mavis_header.issubset(header):
+            bpps = read_bpp_from_input_file(filepath, expand_orient=True, expand_svtype=True)
+            for bpp in bpps:
+                chr_list = [bpp.break1.chr, bpp.break2.chr]
+                regions.setdefault(tuple(chr_list), []).append(bpp)
+
+        elif bed_header.issubset(header):
+            df = pd.read_csv(
+                filepath, sep='\t', dtype={'chr': str, 'start': int, 'end': int, 'name': str}
+            )
+            for col in bed_header:
+                if col not in df:
+                    raise KeyError(f'missing required column ({col})')
+            df['chr'] = df['chr'].apply(lambda c: ReferenceName(c))
+            for row in df.to_dict('records'):
+                known_sv_region = BioInterval(
+                    reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name']
+                )
+                regions.setdefault(known_sv_region.reference_object, []).append(known_sv_region)
+        else:
+            logger.warning(
+            'No known SV inputs were loaded.'
+            )
+            return {}
     return regions
 
 
@@ -364,7 +363,7 @@ class ReferenceFile:
     LOAD_FUNCTIONS: Dict[str, Optional[Callable]] = {
         'annotations': load_annotations,
         'reference_genome': load_reference_genome,
-        'masking': load_masking_regions,
+        'masking': load_known_sv,
         'template_metadata': load_templates,
         'dgv_annotation': load_known_sv,
         'aligner_reference': None,

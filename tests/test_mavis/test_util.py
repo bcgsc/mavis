@@ -1,7 +1,8 @@
 import pytest
+from mavis.annotate.base import BioInterval
 from mavis.constants import COLUMNS, ORIENT, STRAND
 from mavis.error import NotSpecifiedError
-from mavis.util import cast, get_connected_components, read_bpp_from_input_file
+from mavis.util import cast, get_connected_components, read_bpp_from_input_file, convert_biointervals_to_bpps
 
 from ..util import todo
 
@@ -359,3 +360,11 @@ class TestReadBreakpointPairsFromFile:
         assert len(bpps) == 1
         assert bpps[0].break1.strand == STRAND.POS
         assert bpps[0].break2.strand == STRAND.NEG
+
+class TestBreakpointPairsFromBiointervals:
+    def test_convert_to_bpps(self):
+        biointervals = [BioInterval('chr1', 10000, 20000)]
+        bpp_lists = convert_biointervals_to_bpps(biointervals)
+        print(bpp_lists)
+        assert len(bpp_lists) == 1
+

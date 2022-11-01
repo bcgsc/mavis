@@ -12,10 +12,10 @@ rgv2n98	None	1	10001	10001	L	?	None	1	22120	22120	R	?	None	False	False	bed
 rgv2n98	None	1	10001	10001	R	?	None	1	22120	22120	L	?	None	False	False	bed	
 rgv2n98	None	1	10001	10001	R	?	None	1	22120	22120	R	?	None	True	False	bed	
 dgv2n99	None	1	10001	10501	R	?	None	1	15000	15000	R	?	None	True	False	bed	
-rgv2n99	None	1	10001	10001	L	?	None	1	22221	22221	L	?	None	True	False	bed	
-rgv2n99	None	1	10001	10001	L	?	None	1	22221	22221	R	?	None	False	False	bed	
-rgv2n99	None	1	10001	10001	R	?	None	1	22221	22221	L	?	None	False	False	bed	
-rgv2n99	None	1	10001	10001	R	?	None	1	22221	22221	R	?	None	True	False	bed	
+rgv2n99	None	1	10001	10001	L	?	None	1	22222	22222	L	?	None	True	False	bed	
+rgv2n99	None	1	10001	10001	L	?	None	1	22222	22222	R	?	None	False	False	bed	
+rgv2n99	None	1	10001	10001	R	?	None	1	22222	22222	L	?	None	False	False	bed	
+rgv2n99	None	1	10001	10001	R	?	None	1	22222	22222	R	?	None	True	False	bed	
 nsv7879	None	1	10001	10001	L	?	None	1	127330	127330	L	?	None	True	False	bed	
 nsv7879	None	1	10001	10001	L	?	None	1	127330	127330	R	?	None	False	False	bed	
 nsv7879	None	1	10001	10001	R	?	None	1	127330	127330	L	?	None	False	False	bed	
