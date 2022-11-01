@@ -230,6 +230,7 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
             )
         bpp.data['dgv'] = ','.join(bpp.data['dgv'])
 
+
 def get_pairing_state(
     current_protocol,
     current_disease_state,
