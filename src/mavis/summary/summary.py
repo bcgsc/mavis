@@ -228,7 +228,7 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
             bpp.data['dgv'].append(
                 '{}({}:{}-{})'.format(dgv_region.name, refname, dgv_region.start, dgv_region.end)
             )
-        bpp.data['dgv'] = ','.join(bpp.data['dgv'])
+        bpp.data['dgv'] = ';'.join(bpp.data['dgv'])
 
 
 def get_pairing_state(

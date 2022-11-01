@@ -204,4 +204,4 @@ class TestFilterByCallMethod:
     def test_annotate_dgv_distance_bed(self, genomic_event3, dgv_event2):
         bpps = [genomic_event3]
         annotate_dgv(bpps, dgv_event2, 103)
-        assert len(bpps[0].data['dgv'].split(',')) == 3
+        assert len(bpps[0].data['dgv'].split(';')) == 3
