@@ -19,11 +19,6 @@ from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.convert import TRACKING_COLUMN
 from mavis.util import output_tabbed_file
 
-"""
-Converts existing dgv tab file to a MAVIS format. 
-DGV files can be obtained from: http://dgv.tcag.ca/dgv/app/downloads?ref=GRCh37/hg19
-"""
-
 
 def _convert_tool_row(
     row: Dict, file_type: str, stranded: bool, assume_no_untemplated: bool = True
