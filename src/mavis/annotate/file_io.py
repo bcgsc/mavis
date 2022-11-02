@@ -21,11 +21,12 @@ from .protein import Domain, Translation
 if TYPE_CHECKING:
     from ..breakpoint import Breakpoint, BreakpointPair
 
+
 def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
     """
-    loads a standard MAVIS or BED file input to a ist of known breakpoints. 
-    
-    Standard BED file requirements: 
+    loads a standard MAVIS or BED file input to a ist of known breakpoints.
+
+    Standard BED file requirements:
     reads a file of regions. The expect input format for the file is tab-delimited and
     the header should contain the following columns
 
@@ -57,6 +58,7 @@ def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
                 regions.setdefault(tuple(chr_list), []).append(bpp)
 
         elif bed_header.issubset(header):
+            logger.warning('BED file support will be deprecated in future versions')
             df = pd.read_csv(
                 filepath, sep='\t', dtype={'chr': str, 'start': int, 'end': int, 'name': str}
             )
@@ -66,13 +68,14 @@ def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
             df['chr'] = df['chr'].apply(lambda c: ReferenceName(c))
             for row in df.to_dict('records'):
                 known_sv_region = BioInterval(
-                    reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name']
+                    reference_object=row['chr'],
+                    start=row['start'],
+                    end=row['end'],
+                    name=row['name'],
                 )
                 regions.setdefault(known_sv_region.reference_object, []).append(known_sv_region)
         else:
-            logger.warning(
-            'No known SV inputs were loaded.'
-            )
+            logger.warning('No known SV inputs were loaded.')
             return {}
     return regions
 

@@ -80,7 +80,7 @@
         "reference_inputs/ensembl69_hg19_annotations.v3.json"
     ],
     "reference.dgv_annotation": [
-        "reference_inputs/dgv_hg19_variants.tab"
+        "tests/data/mock_dgv_annotation.txt"
     ],
     "reference.masking": [
         "reference_inputs/hg19_masking.tab"

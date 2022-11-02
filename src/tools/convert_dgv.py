@@ -156,7 +156,7 @@ def convert_dgv_to_list(filepaths: str) -> List:
     Args:
         filepath: path to the input tab-delimited file
     Returns:
-        list sorted by by chromosome name with values of lists of regions on the chromosome
+        lists of regions on the chromosome
     """
     col_list = ['chr', 'start', 'end', 'variantaccession']
     result = []

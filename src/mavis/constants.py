@@ -386,7 +386,7 @@ class COLUMNS(MavisNamespace):
     library: str = 'library'
     cluster_id: str = 'cluster_id'
     cluster_size: str = 'cluster_size'
-    dgv: str = 'dgv' 
+    dgv: str = 'dgv'
     validation_id: str = 'validation_id'
     annotation_id: str = 'annotation_id'
     product_id: str = 'product_id'

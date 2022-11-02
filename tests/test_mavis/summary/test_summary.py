@@ -81,9 +81,11 @@ def genomic_event4():
 def dgv_event():
     return load_known_sv(get_data("mock_dgv_annotation_mavis.tab"))
 
+
 @pytest.fixture
 def dgv_event2():
     return load_known_sv(get_data("mock_dgv_annotation.txt"))
+
 
 @pytest.fixture
 def best_transcripts():
@@ -226,11 +228,10 @@ class TestFilterByCallMethod:
         bpps = [genomic_event3]
         annotate_dgv(bpps, dgv_event, 100)
         assert bpps[0].data["known_sv_count"] == 2
-        output_dgv_tracking_id = list(bpps[0].data["dgv"].split(','))
+        output_dgv_tracking_id = list(bpps[0].data["dgv"].split(';'))
         expected = ['dgv1n82', 'rgv2n98']
         for output_tracking_id in output_dgv_tracking_id:
             assert output_tracking_id in expected
-        assert len(bpps) == 1
 
     def test_annotate_dgv_no_match(self, genomic_event4, dgv_event):
         bpps = [genomic_event4]
@@ -238,21 +239,18 @@ class TestFilterByCallMethod:
         assert bpps[0].data["known_sv_count"] == 0
         assert bpps[0].data["dgv"] == ''
 
-    def test_annotate_dgv_distance(self, genomic_event3, genomic_event4, dgv_event):
+    def test_annotate_dgv_distance(self, genomic_event3, dgv_event):
         bpps = [genomic_event3]
         annotate_dgv(bpps, dgv_event, 102)
         assert bpps[0].data["known_sv_count"] == 3
-        output_dgv_tracking_id = list(bpps[0].data["dgv"].split(','))
+        output_dgv_tracking_id = list(bpps[0].data["dgv"].split(';'))
         expected = ['dgv1n82', 'rgv2n98', 'rgv2n99']
         for output_tracking_id in output_dgv_tracking_id:
             assert output_tracking_id in expected
 
-
-    def test_annotate_dgv_distance_bed(self, genomic_event3, genomic_event4, dgv_event2):
+    def test_annotate_dgv_distance_bed(self, genomic_event3, dgv_event2):
         bpps = [genomic_event3]
         annotate_dgv(bpps, dgv_event2, 103)
         assert bpps[0].data["known_sv_count"] == 3
-        # output_dgv_tracking_id = list(bpps[0].data["dgv"].split(','))
-        # expected = ['dgv1n82', 'rgv2n98', 'rgv2n99']
-        # for output_tracking_id in output_dgv_tracking_id:
-        #     assert output_tracking_id in expected
+        output_dgv_tracking_id = list(bpps[0].data["dgv"].split(';'))
+        assert len(output_dgv_tracking_id) == 3

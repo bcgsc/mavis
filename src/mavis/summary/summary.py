@@ -1,6 +1,6 @@
 from typing import Mapping, Dict, List, Tuple
 
-from ..annotate.genomic import BioInterval,Transcript
+from ..annotate.genomic import BioInterval, Transcript
 from ..breakpoint import Breakpoint, BreakpointPair
 from ..constants import CALL_METHOD, COLUMNS, DISEASE_STATUS, PROTOCOL, SVTYPE
 from ..interval import Interval
@@ -202,7 +202,7 @@ def annotate_dgv(
 
     Args:
         bpps (list) : the list of BreakpointPair objects
-        dgv_regions_by_reference_name (dict) : tuple of (break1_chr,break2_chr) and its associated list of BreakpointPair objects specified by the MAVIS input file
+        dgv_regions_by_reference_name (dict) : tuple of (break1_chr,break2_chr) and its associated list of BreakpointPair/BioInterval objects specified by the MAVIS input file
         cluster_radius (int) : Distance used in matching input SVs to reference SVs through clusterind, defined by summary.cluster_radius in the configuration file
     """
 
@@ -223,22 +223,24 @@ def annotate_dgv(
 
         flag_col = '_is_variant'
         for variant in bpps:
-                variant.data[flag_col]  = True
-                variant.data[COLUMNS.dgv] = ''
-                variant.data[COLUMNS.known_sv_count] = 0
+            variant.data[flag_col] = True
+            variant.data[COLUMNS.dgv] = ''
+            variant.data[COLUMNS.known_sv_count] = 0
 
         for clustered_bpp_key, clustered_bpp_val in clusters.items():
-                dgv_tracking_ids = [bpp.tracking_id for bpp in clustered_bpp_val if bpp.data.get(flag_col) != True]
-                dgv_field = ','.join(sorted(dgv_tracking_ids))
-                variant_bpp = [bpp for bpp in clustered_bpp_val if bpp.data.get(flag_col) == True]
-                for variant in variant_bpp:
-                    variant.data[COLUMNS.dgv] = dgv_field
-                    variant.data[COLUMNS.known_sv_count] = len(dgv_tracking_ids)
+            dgv_tracking_ids = [
+                bpp.tracking_id for bpp in clustered_bpp_val if bpp.data.get(flag_col) != True
+            ]
+            dgv_field = ';'.join(sorted(dgv_tracking_ids))
+            variant_bpp = [bpp for bpp in clustered_bpp_val if bpp.data.get(flag_col) == True]
+            for variant in variant_bpp:
+                variant.data[COLUMNS.dgv] = dgv_field
+                variant.data[COLUMNS.known_sv_count] = len(dgv_tracking_ids)
 
         for bpp in bpps:
-                if flag_col in bpp.data:
-                    del bpp.data[flag_col]
-    
+            if flag_col in bpp.data:
+                del bpp.data[flag_col]
+
     elif isinstance(list(dgv_regions_by_reference_name.values())[0][0], BioInterval):
         for chrom in dgv_regions_by_reference_name:
             dgv_regions_by_reference_name[chrom] = sorted(
@@ -250,7 +252,9 @@ def annotate_dgv(
             bpp.data[COLUMNS.known_sv_count] = 0
         # only look at the bpps that dgv events could pair to, Intrachromosomal
         for bpp in [
-            b for b in bpps if not b.interchromosomal and b.break1.chr in dgv_regions_by_reference_name
+            b
+            for b in bpps
+            if not b.interchromosomal and b.break1.chr in dgv_regions_by_reference_name
         ]:
             for dgv_region in dgv_regions_by_reference_name[bpp.break1.chr]:
                 dist = abs(Interval.dist(Interval(dgv_region.start), bpp.break1))
@@ -258,7 +262,8 @@ def annotate_dgv(
                     continue
                 elif (
                     dist > input_cluster_radius
-                    or abs(Interval.dist(Interval(dgv_region.end), bpp.break2)) > input_cluster_radius
+                    or abs(Interval.dist(Interval(dgv_region.end), bpp.break2))
+                    > input_cluster_radius
                 ):
                     continue
                 refname = dgv_region.reference_object
@@ -266,10 +271,13 @@ def annotate_dgv(
                     refname = dgv_region.reference_object.name
                 except AttributeError:
                     pass
-                bpp.data[COLUMNS.dgv].append('{}({}:{}-{})'.format(
-                    dgv_region.name, refname, dgv_region.start, dgv_region.end
-                ))
+                bpp.data[COLUMNS.dgv].append(
+                    '{}({}:{}-{})'.format(
+                        dgv_region.name, refname, dgv_region.start, dgv_region.end
+                    )
+                )
                 bpp.data[COLUMNS.known_sv_count] = len(bpp.data[COLUMNS.dgv])
+            bpp.data[COLUMNS.dgv] = ';'.join(bpp.data[COLUMNS.dgv])
 
 
 def get_pairing_state(

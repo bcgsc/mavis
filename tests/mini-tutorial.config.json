@@ -46,7 +46,7 @@
         "tests/data/mock_annotations.json"
     ],
     "reference.dgv_annotation": [
-        "tests/data/mock_dgv_annotation_mavis.tab"
+        "tests/data/mock_dgv_annotation.txt"
     ],
     "reference.masking": [
         "tests/data/mock_masking.tab"
