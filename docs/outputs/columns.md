@@ -610,3 +610,15 @@ non-specific events.
 Flag to indicate if the
 current event was a supplementary call, meaning a call that was
 found as a result of validating another event.
+
+## dgv
+
+**type**: `str`
+
+ID(s) of SVs from dgv database matched to a SV call from the summary step
+
+## known\_sv\_count
+
+**type**: `int`
+
+Number of known SVs matched to a call in the summary step

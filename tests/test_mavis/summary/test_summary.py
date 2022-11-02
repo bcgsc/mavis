@@ -84,7 +84,7 @@ def dgv_event():
 
 @pytest.fixture
 def dgv_event2():
-    return load_known_sv(get_data("mock_dgv_annotation.txt"))
+    return load_known_sv(get_data("mock_dgv_annotation.tab"))
 
 
 @pytest.fixture
