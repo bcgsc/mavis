@@ -181,7 +181,7 @@ def equivalent(
         ]
     ):
         return False
-    if matching_event_type == True and event1.event_type != event2.event_type:
+    if matching_event_type and event1.event_type != event2.event_type:
         return False
     return True
 

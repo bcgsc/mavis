@@ -22,6 +22,45 @@ if TYPE_CHECKING:
     from ..breakpoint import Breakpoint, BreakpointPair
 
 
+def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
+    """
+    reads a file of regions. The expect input format for the file is tab-delimited and
+    the header should contain the following columns
+    - chr: the chromosome
+    - start: start of the region, 1-based inclusive
+    - end: end of the region, 1-based inclusive
+    - name: the name/label of the region
+    For example:
+    .. code-block:: text
+        #chr    start       end         name
+        chr20   25600000    27500000    centromere
+    Args:
+        filepath: path to the input tab-delimited file
+    Returns:
+        a dictionary keyed by chromosome name with values of lists of regions on the chromosome
+    """
+    warnings.warn(
+        "This load_masking_regions function will be deprecated in v4 releases and forward.",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
+    regions: Dict[str, List[BioInterval]] = {}
+    for filepath in filepaths:
+        df = pd.read_csv(
+            filepath, sep='\t', dtype={'chr': str, 'start': int, 'end': int, 'name': str}
+        )
+        for col in ['chr', 'start', 'end', 'name']:
+            if col not in df:
+                raise KeyError(f'missing required column ({col})')
+        df['chr'] = df['chr'].apply(lambda c: ReferenceName(c))
+        for row in df.to_dict('records'):
+            mask_region = BioInterval(
+                reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name']
+            )
+            regions.setdefault(mask_region.reference_object, []).append(mask_region)
+    return regions
+
+
 def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
     """
     loads a standard MAVIS or BED file input to a ist of known breakpoints.
@@ -44,7 +83,7 @@ def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
     Args:
         filepath: path to standard MAVIS format file
     Returns:
-        a dictionary with {(bp1_chr,bp2_chr):{BreakpointPair}}
+        a dictionary with {str:{BreakpointPair}}
     """
     regions = {}
     for filepath in filepaths:
@@ -366,7 +405,7 @@ class ReferenceFile:
     LOAD_FUNCTIONS: Dict[str, Optional[Callable]] = {
         'annotations': load_annotations,
         'reference_genome': load_reference_genome,
-        'masking': load_known_sv,
+        'masking': load_masking_regions,
         'template_metadata': load_templates,
         'dgv_annotation': load_known_sv,
         'aligner_reference': None,
