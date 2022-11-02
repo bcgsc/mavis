@@ -39,11 +39,7 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
     Returns:
         a dictionary keyed by chromosome name with values of lists of regions on the chromosome
     """
-    warnings.warn(
-        "This load_masking_regions function will be deprecated in v4 releases and forward.",
-        category=DeprecationWarning,
-        stacklevel=2,
-    )
+    logger.warning('BED file support will be deprecated in future versions')
     regions: Dict[str, List[BioInterval]] = {}
     for filepath in filepaths:
         df = pd.read_csv(
