@@ -8,16 +8,16 @@ DGV files can be obtained from: http://dgv.tcag.ca/dgv/app/downloads?ref=GRCh37/
 import argparse
 import logging
 import itertools
-from typing import Dict, Tuple, List
-from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
 import pandas as pd
-from mavis.error import InvalidRearrangement
 
 from mavis.annotate.file_io import parse_annotations_json
 from mavis.annotate.base import ReferenceName
 from mavis.breakpoint import Breakpoint, BreakpointPair
+from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from mavis.convert import TRACKING_COLUMN
+from mavis.error import InvalidRearrangement
 from mavis.util import output_tabbed_file
+from typing import Dict, Tuple, List
 
 
 def _convert_tool_row(

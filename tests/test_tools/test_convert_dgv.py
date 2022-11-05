@@ -29,9 +29,9 @@ def test_dgv_examples(tmp_path, filename, expected_file):
             convert_dgv_main()
 
     with open(os.path.join(data_dir, expected_file), 'r') as fh:
-        expected = fh.read().replace('\n', '')
+        expected = fh.read().strip()
 
     with open(output_path, 'r') as fh:
-        observed = fh.read().replace('\n', '')
+        observed = fh.read().strip()
 
     assert expected == observed

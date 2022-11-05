@@ -159,7 +159,13 @@ def equivalent(
 ) -> bool:
     """
     compares two events by breakpoint position to see if they are equivalent
-    matching_event_type specificies whether event type must match
+
+    Args:
+        - event1: first BreakpointPair to be compared
+        - event2: second BreakpointPair to be compared
+        - distances: distance between two BreakpointPairs to be considered equivalent
+        - matching_event_type: specificies whether event type must match
+
     """
 
     max_distance = comparison_distance(event1, event2, distances)

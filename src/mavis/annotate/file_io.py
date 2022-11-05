@@ -4,6 +4,7 @@ module which holds all functions relating to loading reference files
 import json
 import os
 import re
+import warnings
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING
 
 import pandas as pd
@@ -39,7 +40,11 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
     Returns:
         a dictionary keyed by chromosome name with values of lists of regions on the chromosome
     """
-    logger.warning('BED file support will be deprecated in future versions')
+    warnings.warn(
+        "BED file support will be deprecated in future versions.",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
     regions: Dict[str, List[BioInterval]] = {}
     for filepath in filepaths:
         df = pd.read_csv(
@@ -59,7 +64,7 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
 
 def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
     """
-    loads a standard MAVIS or BED file input to a ist of known breakpoints.
+    loads a standard MAVIS or BED file input to a list of known breakpoints.
 
     Standard BED file requirements:
     reads a file of regions. The expect input format for the file is tab-delimited and
@@ -92,8 +97,13 @@ def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
                 chr_list = [bpp.break1.chr, bpp.break2.chr]
                 regions.setdefault(tuple(chr_list), []).append(bpp)
 
-        elif bed_header.issubset(header):
-            logger.warning('BED file support will be deprecated in future versions')
+        else:
+            warnings.warn(
+                "BED file support will be deprecated in future versions.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
             df = pd.read_csv(
                 filepath, sep='\t', dtype={'chr': str, 'start': int, 'end': int, 'name': str}
             )
@@ -109,9 +119,7 @@ def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
                     name=row['name'],
                 )
                 regions.setdefault(known_sv_region.reference_object, []).append(known_sv_region)
-        else:
-            logger.warning('No known SV inputs were loaded.')
-            return {}
+
     return regions
 
 

@@ -254,3 +254,7 @@ class TestFilterByCallMethod:
         assert bpps[0].data["known_sv_count"] == 3
         output_dgv_tracking_id = list(bpps[0].data["dgv"].split(';'))
         assert len(output_dgv_tracking_id) == 3
+
+    def test_annotate_dgv_distance_bed_malformed_header(self):
+        with pytest.raises(KeyError):
+            load_known_sv(get_data("mock_dgv_annotation_malformed.tab"))

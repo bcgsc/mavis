@@ -299,7 +299,10 @@ def annotate_dgv(
         cluster_radius : Distance used in matching input SVs to reference SVs through clusterind, defined by summary.cluster_radius in the configuration file
     """
 
-    if isinstance(list(dgv_regions_by_reference_name.values())[0][0], BreakpointPair):
+    if not dgv_regions_by_reference_name:
+        pass
+
+    elif isinstance(list(dgv_regions_by_reference_name.values())[0][0], BreakpointPair):
         annotate_with_dgv_bpp(
             bpps, list(chain(*dgv_regions_by_reference_name.values())), input_cluster_radius
         )
