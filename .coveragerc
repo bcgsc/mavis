@@ -5,3 +5,8 @@ concurrency = multiprocessing
 [html]
 directory = coverage
 title = mavis coverage report
+
+[report]
+exclude_lines = 
+    pragma: no cover
+    if TYPE_CHECKING:
