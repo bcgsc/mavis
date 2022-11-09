@@ -2,7 +2,7 @@ import pytest
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, COLUMNS, PROTOCOL, STRAND, SVTYPE
 from mavis.summary.summary import filter_by_annotations, annotate_dgv
-from mavis.annotate.file_io import load_masking_regions
+from mavis.annotate.file_io import load_known_sv
 
 from ...util import todo, get_data
 
@@ -60,13 +60,36 @@ def genomic_event3():
 
 
 @pytest.fixture
-def best_transcripts():
-    return {'ABCA': True, 'ABCD': True}
+def genomic_event4():
+    return BreakpointPair(
+        Breakpoint('1', 30000),
+        Breakpoint('1', 30000),
+        opposing_strands=True,
+        **{
+            COLUMNS.event_type: SVTYPE.DEL,
+            COLUMNS.call_method: CALL_METHOD.CONTIG,
+            COLUMNS.fusion_sequence_fasta_id: None,
+            COLUMNS.protocol: PROTOCOL.GENOME,
+            COLUMNS.fusion_cdna_coding_start: None,
+            COLUMNS.fusion_cdna_coding_end: None,
+            COLUMNS.tracking_id: "genomic_event4",
+        }
+    )
+
+
+@pytest.fixture
+def dgv_event():
+    return load_known_sv(get_data("mock_dgv_annotation_mavis.tab"))
 
 
 @pytest.fixture
 def dgv_event2():
-    return load_masking_regions(get_data("mock_dgv_annotation.txt"))
+    return load_known_sv(get_data("mock_dgv_annotation.tab"))
+
+
+@pytest.fixture
+def best_transcripts():
+    return {'ABCA': True, 'ABCD': True}
 
 
 class TestFilterByAnnotations:
@@ -201,7 +224,37 @@ class TestFilterByAnnotations:
 
 
 class TestFilterByCallMethod:
+    def test_annotate_dgv_multiple_match(self, genomic_event3, dgv_event):
+        bpps = [genomic_event3]
+        annotate_dgv(bpps, dgv_event, 100)
+        assert bpps[0].data["known_sv_count"] == 2
+        output_dgv_tracking_id = list(bpps[0].data["dgv"].split(';'))
+        expected = ['dgv1n82', 'rgv2n98']
+        for output_tracking_id in output_dgv_tracking_id:
+            assert output_tracking_id in expected
+
+    def test_annotate_dgv_no_match(self, genomic_event4, dgv_event):
+        bpps = [genomic_event4]
+        annotate_dgv(bpps, dgv_event, 100)
+        assert bpps[0].data["known_sv_count"] == 0
+        assert bpps[0].data["dgv"] == ''
+
+    def test_annotate_dgv_distance(self, genomic_event3, dgv_event):
+        bpps = [genomic_event3]
+        annotate_dgv(bpps, dgv_event, 102)
+        assert bpps[0].data["known_sv_count"] == 3
+        output_dgv_tracking_id = list(bpps[0].data["dgv"].split(';'))
+        expected = ['dgv1n82', 'rgv2n98', 'rgv2n99']
+        for output_tracking_id in output_dgv_tracking_id:
+            assert output_tracking_id in expected
+
     def test_annotate_dgv_distance_bed(self, genomic_event3, dgv_event2):
         bpps = [genomic_event3]
         annotate_dgv(bpps, dgv_event2, 103)
-        assert len(bpps[0].data['dgv'].split(';')) == 3
+        assert bpps[0].data["known_sv_count"] == 3
+        output_dgv_tracking_id = list(bpps[0].data["dgv"].split(';'))
+        assert len(output_dgv_tracking_id) == 3
+
+    def test_annotate_dgv_distance_bed_malformed_header(self):
+        with pytest.raises(KeyError):
+            load_known_sv(get_data("mock_dgv_annotation_malformed.tab"))

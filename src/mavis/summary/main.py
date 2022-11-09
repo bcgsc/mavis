@@ -276,7 +276,8 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
         COLUMNS.cdna_synon,
         COLUMNS.net_size,
         COLUMNS.assumed_untemplated,
-        'dgv',
+        COLUMNS.dgv,
+        COLUMNS.known_sv_count,
     }
 
     rows = []
@@ -284,8 +285,8 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
         logger.info(f'annotating dgv for {lib}')
         if not dgv_annotation.is_empty():
             annotate_dgv(
-                bpps_by_library[lib], dgv_annotation.content, distance=10
-            )  # TODO make distance a parameter
+                bpps_by_library[lib], dgv_annotation.content, config['summary.cluster_radius']
+            )
         logger.info(f'adding pairing states for {lib}')
         for row in bpps_by_library[lib]:
             # in case no pairing was done, add default (applicable to single library summaries)

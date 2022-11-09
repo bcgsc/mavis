@@ -4,7 +4,8 @@ module which holds all functions relating to loading reference files
 import json
 import os
 import re
-from typing import Callable, Dict, List, Optional
+import warnings
+from typing import Callable, Dict, List, Optional, TYPE_CHECKING
 
 import pandas as pd
 from Bio import SeqIO
@@ -13,34 +14,37 @@ from snakemake.utils import validate as snakemake_validate
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate
 from ..interval import Interval
 from ..types import ReferenceAnnotations, ReferenceGenome
-from ..util import logger
+from ..util import logger, read_bpp_from_input_file
 from .base import BioInterval, ReferenceName
 from .genomic import Exon, Gene, PreTranscript, Template, Transcript
 from .protein import Domain, Translation
+
+if TYPE_CHECKING:
+    from ..breakpoint import Breakpoint, BreakpointPair
 
 
 def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
     """
     reads a file of regions. The expect input format for the file is tab-delimited and
     the header should contain the following columns
-
     - chr: the chromosome
     - start: start of the region, 1-based inclusive
     - end: end of the region, 1-based inclusive
     - name: the name/label of the region
-
     For example:
-
     .. code-block:: text
-
         #chr    start       end         name
         chr20   25600000    27500000    centromere
-
     Args:
         filepath: path to the input tab-delimited file
     Returns:
         a dictionary keyed by chromosome name with values of lists of regions on the chromosome
     """
+    warnings.warn(
+        "BED file support will be deprecated in future versions.",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
     regions: Dict[str, List[BioInterval]] = {}
     for filepath in filepaths:
         df = pd.read_csv(
@@ -55,6 +59,67 @@ def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:
                 reference_object=row['chr'], start=row['start'], end=row['end'], name=row['name']
             )
             regions.setdefault(mask_region.reference_object, []).append(mask_region)
+    return regions
+
+
+def load_known_sv(*filepaths: str) -> Dict[str, List["BreakpointPair"]]:
+    """
+    loads a standard MAVIS or BED file input to a list of known breakpoints.
+
+    Standard BED file requirements:
+    reads a file of regions. The expect input format for the file is tab-delimited and
+    the header should contain the following columns
+
+    - chr: the chromosome
+    - start: start of the region, 1-based inclusive
+    - end: end of the region, 1-based inclusive
+    - name: the name/label of the region
+
+    For example:
+
+    .. code-block:: text
+
+        #chr    start       end         name
+        chr20   25600000    27500000    centromere
+    Args:
+        filepath: path to standard MAVIS format file
+    Returns:
+        a dictionary with {str:{BreakpointPair}}
+    """
+    regions = {}
+    for filepath in filepaths:
+        header = set(pd.read_csv(filepath, nrows=1, sep='\t').columns)
+        mavis_header = {'break1_chromosome', 'break2_chromosome'}
+        bed_header = {'chr', 'start', 'end', 'name'}
+        if mavis_header.issubset(header):
+            bpps = read_bpp_from_input_file(filepath, expand_orient=True, expand_svtype=True)
+            for bpp in bpps:
+                chr_list = [bpp.break1.chr, bpp.break2.chr]
+                regions.setdefault(tuple(chr_list), []).append(bpp)
+
+        else:
+            warnings.warn(
+                "BED file support will be deprecated in future versions.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
+            df = pd.read_csv(
+                filepath, sep='\t', dtype={'chr': str, 'start': int, 'end': int, 'name': str}
+            )
+            for col in bed_header:
+                if col not in df:
+                    raise KeyError(f'missing required column ({col})')
+            df['chr'] = df['chr'].apply(lambda c: ReferenceName(c))
+            for row in df.to_dict('records'):
+                known_sv_region = BioInterval(
+                    reference_object=row['chr'],
+                    start=row['start'],
+                    end=row['end'],
+                    name=row['name'],
+                )
+                regions.setdefault(known_sv_region.reference_object, []).append(known_sv_region)
+
     return regions
 
 
@@ -346,7 +411,7 @@ class ReferenceFile:
         'reference_genome': load_reference_genome,
         'masking': load_masking_regions,
         'template_metadata': load_templates,
-        'dgv_annotation': load_masking_regions,
+        'dgv_annotation': load_known_sv,
         'aligner_reference': None,
     }
     """dict: Mapping of file types (based on ENV name) to load functions"""
