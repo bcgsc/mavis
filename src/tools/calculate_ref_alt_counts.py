@@ -7,6 +7,7 @@ import logging
 import statistics as stats
 
 import pysam
+
 from mavis.annotate.file_io import load_reference_genome
 from mavis.constants import SVTYPE
 from mavis.util import logger, output_tabbed_file, read_inputs

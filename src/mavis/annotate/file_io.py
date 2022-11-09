@@ -8,6 +8,7 @@ from typing import Callable, Dict, List, Optional
 
 import pandas as pd
 from Bio import SeqIO
+
 from snakemake.utils import validate as snakemake_validate
 
 from ..constants import CODON_SIZE, GIEMSA_STAIN, START_AA, STOP_AA, STRAND, translate

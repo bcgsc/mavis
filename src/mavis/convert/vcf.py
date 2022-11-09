@@ -3,8 +3,10 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-from ..interval import Interval
+
 import pandas as pd
+
+from ..interval import Interval
 
 try:
     # TypedDict added to typing package directly in later versions

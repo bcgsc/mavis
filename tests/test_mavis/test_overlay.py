@@ -6,8 +6,9 @@ import tempfile
 from unittest.mock import patch
 
 import pytest
-from mavis.main import main
 from mavis_config.constants import SUBCOMMAND
+
+from mavis.main import main
 
 from ..util import get_data, glob_exists
 

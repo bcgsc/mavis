@@ -1,6 +1,7 @@
 import unittest
 
 import pytest
+
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from mavis.convert import SUPPORTED_TOOL, _convert_tool_row, _parse_transabyss
 from mavis.convert.vcf import convert_record as _parse_vcf_record

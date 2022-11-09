@@ -4,15 +4,22 @@ This is the primary module responsible for generating svg visualizations
 """
 from typing import Iterable, List, Optional
 
+from svgwrite import Drawing
+
 from mavis.annotate.genomic import Gene, Template
 from mavis.annotate.variant import Annotation
 from mavis.types import ReferenceGenome
-from svgwrite import Drawing
 
 from ..annotate.genomic import IntergenicRegion
 from ..interval import Interval
 from .constants import DiagramSettings
-from .elements import draw_exon_track, draw_genes, draw_template, draw_ustranscript, draw_vmarker
+from .elements import (
+    draw_exon_track,
+    draw_genes,
+    draw_template,
+    draw_ustranscript,
+    draw_vmarker,
+)
 from .scatter import ScatterPlot, draw_scatter
 from .util import LabelMapping, generate_interval_mapping
 

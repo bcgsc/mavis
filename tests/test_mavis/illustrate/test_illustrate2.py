@@ -1,6 +1,8 @@
 import random
 
 import pytest
+from svgwrite import Drawing
+
 from mavis.annotate import fusion, genomic, protein, variant
 from mavis.annotate.base import BioInterval
 from mavis.annotate.file_io import load_templates
@@ -14,11 +16,15 @@ from mavis.illustrate.diagram import (
     draw_sv_summary_diagram,
     generate_interval_mapping,
 )
-from mavis.illustrate.elements import draw_genes, draw_legend, draw_template, draw_ustranscript
+from mavis.illustrate.elements import (
+    draw_genes,
+    draw_legend,
+    draw_template,
+    draw_ustranscript,
+)
 from mavis.illustrate.scatter import ScatterPlot
 from mavis.illustrate.util import dynamic_label_color, split_intervals_into_tracks
 from mavis.interval import Interval
-from svgwrite import Drawing
 
 from ...util import get_data
 from ..mock import OUTPUT_SVG, MockObject, MockString, build_transcript

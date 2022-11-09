@@ -1,5 +1,7 @@
 from unittest import mock
 
+from mavis_config import DEFAULTS
+
 import mavis.bam.cigar as _cigar
 from mavis.annotate.file_io import load_reference_genome
 from mavis.bam.cache import BamCache
@@ -10,7 +12,6 @@ from mavis.interval import Interval
 from mavis.validate import align
 from mavis.validate.assemble import Contig
 from mavis.validate.evidence import GenomeEvidence
-from mavis_config import DEFAULTS
 
 from ..util import blat_only, bwa_only, get_data
 from .mock import MockLongString, MockObject, MockRead

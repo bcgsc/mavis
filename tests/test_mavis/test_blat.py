@@ -1,4 +1,5 @@
 import pytest
+
 from mavis.constants import CIGAR, reverse_complement
 from mavis.validate.blat import Blat
 

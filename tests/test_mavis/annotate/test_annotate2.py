@@ -2,11 +2,18 @@ import argparse
 import unittest
 
 import pytest
+
 from mavis.annotate.base import BioInterval, ReferenceName
 from mavis.annotate.file_io import load_annotations, load_reference_genome
 from mavis.annotate.fusion import FusionTranscript, determine_prime
 from mavis.annotate.genomic import Exon, Gene, PreTranscript, Template, Transcript
-from mavis.annotate.protein import Domain, DomainRegion, Translation, calculate_orf, translate
+from mavis.annotate.protein import (
+    Domain,
+    DomainRegion,
+    Translation,
+    calculate_orf,
+    translate,
+)
 from mavis.annotate.variant import (
     Annotation,
     _gather_annotations,

@@ -1,6 +1,7 @@
-import mavis.bam.cigar as _cigar
 import pytest
 from Bio import SeqIO
+
+import mavis.bam.cigar as _cigar
 from mavis.annotate.file_io import load_reference_genome
 from mavis.bam.cache import BamCache
 from mavis.constants import CIGAR, reverse_complement

@@ -1,6 +1,7 @@
 from unittest import mock
 
 import pytest
+
 from mavis.annotate.file_io import load_reference_genome
 from mavis.annotate.genomic import PreTranscript, Transcript
 from mavis.bam import cigar as _cigar
@@ -16,7 +17,13 @@ from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
 from ...util import get_data, todo
-from ..mock import MockBamFileHandle, MockLongString, MockRead, get_example_genes, mock_read_pair
+from ..mock import (
+    MockBamFileHandle,
+    MockLongString,
+    MockRead,
+    get_example_genes,
+    mock_read_pair,
+)
 
 REFERENCE_GENOME = None
 
