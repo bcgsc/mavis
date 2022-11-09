@@ -296,7 +296,7 @@ def annotate_dgv(
     Args:
         bpps: the list of BreakpointPair objects
         dgv_regions_by_reference_name: tuple of strings of chr name and its associated list of BreakpointPair/BioInterval objects specified by the MAVIS input file
-        cluster_radius: Distance used in matching input SVs to reference SVs through clusterind, defined by summary.cluster_radius in the configuration file
+        input_cluster_radius: Distance used in matching input SVs to reference SVs through clusterind, defined by summary.cluster_radius in the configuration file
     """
 
     if not dgv_regions_by_reference_name:
