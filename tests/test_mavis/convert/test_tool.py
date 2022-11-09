@@ -102,6 +102,7 @@ class TestCnvNator:
         assert bpp.break1.chr == '1'
         assert bpp.break2.chr == '1'
 
+
 class TestArriba:
     def test_convert_standard_event(self):
         row = {
@@ -207,6 +208,7 @@ class TestArriba:
         }
         with pytest.raises(AssertionError):
             _convert_tool_row(row, SUPPORTED_TOOL.ARRIBA, False)
+
 
 class TestStarFusion:
     def test_convert_standard_event(self):
