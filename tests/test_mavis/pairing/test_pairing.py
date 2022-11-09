@@ -1,6 +1,7 @@
 import unittest
 
 import pytest
+
 from mavis.annotate.genomic import PreTranscript
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE

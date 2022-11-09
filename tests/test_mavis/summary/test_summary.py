@@ -1,10 +1,11 @@
 import pytest
+
+from mavis.annotate.file_io import load_masking_regions
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, COLUMNS, PROTOCOL, STRAND, SVTYPE
-from mavis.summary.summary import filter_by_annotations, annotate_dgv
-from mavis.annotate.file_io import load_masking_regions
+from mavis.summary.summary import annotate_dgv, filter_by_annotations
 
-from ...util import todo, get_data
+from ...util import get_data, todo
 
 
 @pytest.fixture

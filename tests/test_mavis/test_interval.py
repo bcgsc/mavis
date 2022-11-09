@@ -1,4 +1,5 @@
 import pytest
+
 from mavis.interval import Interval, IntervalMapping
 
 

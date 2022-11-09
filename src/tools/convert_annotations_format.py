@@ -5,6 +5,7 @@ import re
 from typing import Dict, Tuple
 
 import pandas as pd
+
 from mavis.annotate.file_io import parse_annotations_json
 
 PANDAS_DEFAULT_NA_VALUES = [

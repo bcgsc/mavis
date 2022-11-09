@@ -12,7 +12,14 @@ import pysam
 from ..bam import cigar as _cigar
 from ..bam import read as _read
 from ..breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
-from ..constants import CIGAR, ORIENT, STRAND, SVTYPE, MavisNamespace, reverse_complement
+from ..constants import (
+    CIGAR,
+    ORIENT,
+    STRAND,
+    SVTYPE,
+    MavisNamespace,
+    reverse_complement,
+)
 from ..interval import Interval
 from ..types import ReferenceGenome
 from ..util import logger

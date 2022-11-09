@@ -1,4 +1,5 @@
 import pytest
+
 from mavis.bam import cigar as _cigar
 from mavis.bam import read as _read
 from mavis.constants import CIGAR, ORIENT

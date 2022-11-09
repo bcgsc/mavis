@@ -1,6 +1,7 @@
 import unittest
 
 import pytest
+
 from mavis.cluster.cluster import merge_integer_intervals
 from mavis.interval import Interval
 

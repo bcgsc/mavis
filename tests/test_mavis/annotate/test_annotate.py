@@ -2,6 +2,7 @@ import itertools
 
 import pytest
 import timeout_decorator
+
 from mavis.annotate.base import ReferenceName
 from mavis.annotate.protein import Domain, DomainRegion, calculate_orf
 from mavis.annotate.variant import IndelCall

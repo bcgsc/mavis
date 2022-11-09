@@ -1,4 +1,5 @@
 import pytest
+
 from mavis.constants import COLUMNS, ORIENT, STRAND
 from mavis.error import NotSpecifiedError
 from mavis.util import cast, get_connected_components, read_bpp_from_input_file

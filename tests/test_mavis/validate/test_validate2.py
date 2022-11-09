@@ -1,4 +1,6 @@
 import pytest
+from mavis_config import DEFAULTS
+
 from mavis.annotate.file_io import load_reference_genome
 from mavis.bam import cigar as _cigar
 from mavis.bam.cache import BamCache
@@ -7,11 +9,20 @@ from mavis.breakpoint import Breakpoint
 from mavis.constants import NA_MAPPING_QUALITY, ORIENT, PYSAM_READ_FLAGS
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence
-from mavis.validate.gather import collect_flanking_pair, collect_split_read, load_evidence
-from mavis_config import DEFAULTS
+from mavis.validate.gather import (
+    collect_flanking_pair,
+    collect_split_read,
+    load_evidence,
+)
 
 from ...util import get_data, long_running_test
-from ..mock import MockLongString, MockObject, MockRead, flags_from_number, mock_read_pair
+from ..mock import (
+    MockLongString,
+    MockObject,
+    MockRead,
+    flags_from_number,
+    mock_read_pair,
+)
 
 REFERENCE_GENOME = None
 
