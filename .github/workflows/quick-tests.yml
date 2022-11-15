@@ -32,6 +32,10 @@ jobs:
         pip install black
         # stop the build if black needs to be run
         black src tests -S -l 100 --check
+    - name: Lint with isort
+      run: |
+        pip install isort
+        isort src tests --check
     - name: install bwa
       run: |
         git clone https://github.com/lh3/bwa.git
