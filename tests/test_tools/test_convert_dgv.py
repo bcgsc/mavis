@@ -1,8 +1,10 @@
 import os
-import pytest
-from unittest.mock import patch
-from tools.convert_dgv import main as convert_dgv_main
 import sys
+from unittest.mock import patch
+
+import pytest
+
+from tools.convert_dgv import main as convert_dgv_main
 
 
 @pytest.mark.parametrize(

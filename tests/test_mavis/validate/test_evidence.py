@@ -2,6 +2,8 @@ import argparse
 from functools import partial
 
 import pytest
+from mavis_config import DEFAULTS
+
 from mavis.annotate.genomic import Gene, PreTranscript, Transcript
 from mavis.bam import cigar as _cigar
 from mavis.bam.cache import BamCache
@@ -12,7 +14,6 @@ from mavis.interval import Interval
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 from mavis.validate.gather import collect_flanking_pair
-from mavis_config import DEFAULTS
 
 from ..mock import MockBamFileHandle, MockObject, MockRead, mock_read_pair
 

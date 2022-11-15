@@ -7,15 +7,16 @@ DGV files can be obtained from: http://dgv.tcag.ca/dgv/app/downloads?ref=GRCh37/
 
 import argparse
 import itertools
+from typing import Dict, List
+
 import pandas as pd
+from shortuuid import uuid
 
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
-from mavis.convert import TRACKING_COLUMN, TOOL_SVTYPE_MAPPING
+from mavis.convert import TOOL_SVTYPE_MAPPING, TRACKING_COLUMN
 from mavis.error import InvalidRearrangement
 from mavis.util import output_tabbed_file
-from typing import Dict, List
-from shortuuid import uuid
 
 
 def _convert_tool_row(

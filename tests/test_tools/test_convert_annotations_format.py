@@ -2,6 +2,7 @@ import json
 import os
 
 import pytest
+
 from tools.convert_annotations_format import (
     convert_gff2_to_mavis,
     convert_gff3_to_mavis,

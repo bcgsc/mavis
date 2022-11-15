@@ -2,10 +2,11 @@ import time
 
 import pytest
 import timeout_decorator
+from mavis_config import DEFAULTS
+
 from mavis.constants import reverse_complement
 from mavis.interval import Interval
 from mavis.validate.assemble import Contig, assemble, filter_contigs
-from mavis_config import DEFAULTS
 
 from ..util import get_data, long_running_test
 from .mock import MockObject

@@ -1,6 +1,7 @@
 import json
 
 import pytest
+
 from mavis.annotate.file_io import load_annotations
 
 

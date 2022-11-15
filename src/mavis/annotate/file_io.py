@@ -5,7 +5,7 @@ import json
 import os
 import re
 import warnings
-from typing import Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 
 import pandas as pd
 from Bio import SeqIO

@@ -1,14 +1,14 @@
-from typing import Dict, List, Tuple, Union
 from itertools import chain
+from typing import Dict, List, Tuple, Union
 
 from ..annotate.genomic import BioInterval, Transcript
 from ..breakpoint import Breakpoint, BreakpointPair
+from ..cluster.cluster import merge_breakpoint_pairs
 from ..constants import CALL_METHOD, COLUMNS, DISEASE_STATUS, PROTOCOL, SVTYPE
 from ..interval import Interval
 from ..pairing.pairing import pair_by_distance, product_key
 from ..util import get_connected_components
 from .constants import PAIRING_STATE
-from ..cluster.cluster import merge_breakpoint_pairs
 
 
 def filter_by_annotations(bpp_list: List[BreakpointPair], best_transcripts: Dict[str, Transcript]):
