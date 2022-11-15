@@ -31,7 +31,7 @@ jobs:
       run: |
         pip install black
         # stop the build if black needs to be run
-        black src/mavis -S -l 100 --check
+        black src tests -S -l 100 --check
     - name: install bwa
       run: |
         git clone https://github.com/lh3/bwa.git
