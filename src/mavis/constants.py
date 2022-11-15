@@ -223,7 +223,7 @@ class CIGAR(MavisNamespace):
     """
 
     M = 0
-    I = 1
+    I = 1  # noqa
     D = 2
     N = 3
     S = 4

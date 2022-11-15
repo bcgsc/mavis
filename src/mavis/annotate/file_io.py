@@ -20,7 +20,7 @@ from .genomic import Exon, Gene, PreTranscript, Template, Transcript
 from .protein import Domain, Translation
 
 if TYPE_CHECKING:
-    from ..breakpoint import Breakpoint, BreakpointPair
+    from ..breakpoint import BreakpointPair
 
 
 def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:

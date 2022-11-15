@@ -102,6 +102,7 @@ class TestCnvNator:
         assert bpp.break1.chr == '1'
         assert bpp.break2.chr == '1'
 
+
 class TestArriba:
     def test_convert_standard_event(self):
         row = {
@@ -124,9 +125,9 @@ class TestArriba:
         assert bpp.event_type == SVTYPE.INV
         assert bpp.break1.orient == 'L'
         assert bpp.break2.orient == 'L'
-        assert bpp.opposing_strands == True
+        assert bpp.opposing_strands is True
 
-    def test_convert_translocation(self):
+    def test_convert_translocation1(self):
         row = {
             'breakpoint1': '17:69313092',
             'breakpoint2': '20:58272875',
@@ -147,9 +148,9 @@ class TestArriba:
         assert bpp.event_type == SVTYPE.TRANS
         assert bpp.break1.orient == 'R'
         assert bpp.break2.orient == 'L'
-        assert bpp.opposing_strands == False
+        assert bpp.opposing_strands is False
 
-    def test_convert_translocation(self):
+    def test_convert_translocation2(self):
         row = {
             'breakpoint1': '20:57265705',
             'breakpoint2': '20:47786405',
@@ -170,9 +171,9 @@ class TestArriba:
         assert bpp.event_type == SVTYPE.INV
         assert bpp.break1.orient == 'R'
         assert bpp.break2.orient == 'R'
-        assert bpp.opposing_strands == True
+        assert bpp.opposing_strands is True
 
-    def test_convert_translocation(self):
+    def test_convert_translocation3(self):
         row = {
             'breakpoint1': '14:102877322',
             'breakpoint2': '14:102994672',
@@ -193,7 +194,7 @@ class TestArriba:
         assert bpp.event_type == SVTYPE.DEL
         assert bpp.break1.orient == 'L'
         assert bpp.break2.orient == 'R'
-        assert bpp.opposing_strands == False
+        assert bpp.opposing_strands is False
 
     def test_malformed(self):
         row = {
@@ -207,6 +208,7 @@ class TestArriba:
         }
         with pytest.raises(AssertionError):
             _convert_tool_row(row, SUPPORTED_TOOL.ARRIBA, False)
+
 
 class TestStarFusion:
     def test_convert_standard_event(self):

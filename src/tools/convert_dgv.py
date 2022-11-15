@@ -1,23 +1,21 @@
 #!/usr/bin/env python
 
 """
-Converts existing dgv tab file to a MAVIS format. 
+Converts existing dgv tab file to a MAVIS format.
 DGV files can be obtained from: http://dgv.tcag.ca/dgv/app/downloads?ref=GRCh37/hg19
 """
 
 import argparse
-import logging
 import itertools
 import pandas as pd
 
-from mavis.annotate.file_io import parse_annotations_json
-from mavis.annotate.base import ReferenceName
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
-from mavis.convert import TRACKING_COLUMN
+from mavis.convert import TRACKING_COLUMN, TOOL_SVTYPE_MAPPING
 from mavis.error import InvalidRearrangement
 from mavis.util import output_tabbed_file
-from typing import Dict, Tuple, List
+from typing import Dict, List
+from shortuuid import uuid
 
 
 def _convert_tool_row(

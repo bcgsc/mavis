@@ -1,6 +1,4 @@
-from ..constants import COLUMNS, ORIENT, STRAND
-
-from .constants import TRACKING_COLUMN, SUPPORTED_TOOL
+from ..constants import COLUMNS, ORIENT
 
 
 def get_orient(string):
