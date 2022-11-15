@@ -1,6 +1,7 @@
 import unittest
 
 import pytest
+
 from mavis.constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from mavis.convert import SUPPORTED_TOOL, _convert_tool_row, _parse_transabyss
 from mavis.convert.vcf import convert_record as _parse_vcf_record
@@ -102,6 +103,7 @@ class TestCnvNator:
         assert bpp.break1.chr == '1'
         assert bpp.break2.chr == '1'
 
+
 class TestArriba:
     def test_convert_standard_event(self):
         row = {
@@ -124,53 +126,7 @@ class TestArriba:
         assert bpp.event_type == SVTYPE.INV
         assert bpp.break1.orient == 'L'
         assert bpp.break2.orient == 'L'
-        assert bpp.opposing_strands == True
-
-    def test_convert_translocation(self):
-        row = {
-            'breakpoint1': '17:69313092',
-            'breakpoint2': '20:58272875',
-            'type': 'translocation',
-            'strand1(gene/fusion)': '-/-',
-            'strand2(gene/fusion)': '-/-',
-            'direction1': 'upstream',
-            'direction2': 'downstream',
-        }
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.ARRIBA, True)
-
-        assert len(bpp_list) == 1
-        bpp = bpp_list[0]
-        assert bpp.break1.chr == 'chr17'
-        assert bpp.break2.chr == 'chr20'
-        assert bpp.break1.start == 69313092
-        assert bpp.break2.start == 58272875
-        assert bpp.event_type == SVTYPE.TRANS
-        assert bpp.break1.orient == 'R'
-        assert bpp.break2.orient == 'L'
-        assert bpp.opposing_strands == False
-
-    def test_convert_translocation(self):
-        row = {
-            'breakpoint1': '20:57265705',
-            'breakpoint2': '20:47786405',
-            'type': 'inversion/5\'-5\'',
-            'strand1(gene/fusion)': '-/-',
-            'strand2(gene/fusion)': '-/+',
-            'direction1': 'upstream',
-            'direction2': 'upstream',
-        }
-        bpp_list = _convert_tool_row(row, SUPPORTED_TOOL.ARRIBA, True)
-
-        assert len(bpp_list) == 1
-        bpp = bpp_list[0]
-        assert bpp.break1.chr == 'chr20'
-        assert bpp.break2.chr == 'chr20'
-        assert bpp.break1.start == 57265705
-        assert bpp.break2.start == 47786405
-        assert bpp.event_type == SVTYPE.INV
-        assert bpp.break1.orient == 'R'
-        assert bpp.break2.orient == 'R'
-        assert bpp.opposing_strands == True
+        assert bpp.opposing_strands is True
 
     def test_convert_translocation(self):
         row = {
@@ -193,7 +149,7 @@ class TestArriba:
         assert bpp.event_type == SVTYPE.DEL
         assert bpp.break1.orient == 'L'
         assert bpp.break2.orient == 'R'
-        assert bpp.opposing_strands == False
+        assert bpp.opposing_strands is False
 
     def test_malformed(self):
         row = {
@@ -207,6 +163,7 @@ class TestArriba:
         }
         with pytest.raises(AssertionError):
             _convert_tool_row(row, SUPPORTED_TOOL.ARRIBA, False)
+
 
 class TestStarFusion:
     def test_convert_standard_event(self):

@@ -9,7 +9,14 @@ from ..bam import cigar as _cigar
 from ..bam import read as _read
 from ..bam.cache import BamCache
 from ..breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
-from ..constants import COLUMNS, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE, reverse_complement
+from ..constants import (
+    COLUMNS,
+    ORIENT,
+    PYSAM_READ_FLAGS,
+    STRAND,
+    SVTYPE,
+    reverse_complement,
+)
 from ..error import NotSpecifiedError
 from ..interval import Interval
 from ..util import logger

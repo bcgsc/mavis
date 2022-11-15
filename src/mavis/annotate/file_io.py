@@ -5,7 +5,7 @@ import json
 import os
 import re
 import warnings
-from typing import Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 
 import pandas as pd
 from Bio import SeqIO
@@ -20,7 +20,7 @@ from .genomic import Exon, Gene, PreTranscript, Template, Transcript
 from .protein import Domain, Translation
 
 if TYPE_CHECKING:
-    from ..breakpoint import Breakpoint, BreakpointPair
+    from ..breakpoint import BreakpointPair
 
 
 def load_masking_regions(*filepaths: str) -> Dict[str, List[BioInterval]]:

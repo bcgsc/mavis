@@ -1,9 +1,8 @@
-from colour import Color
 import svgwrite
+from colour import Color
 
 from ..error import DrawingFitError
 from ..interval import Interval, IntervalMapping
-
 
 MIN_PIXEL_ACCURACY = 1
 

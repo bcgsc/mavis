@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
+
 from mavis.breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
 from mavis.constants import ORIENT, STRAND, SVTYPE
 from mavis.error import InvalidRearrangement, NotSpecifiedError

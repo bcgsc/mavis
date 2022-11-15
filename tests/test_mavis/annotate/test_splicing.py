@@ -1,6 +1,7 @@
 import argparse
 
 import pytest
+
 from mavis.annotate.constants import SPLICE_SITE_RADIUS
 from mavis.annotate.genomic import Exon, PreTranscript
 from mavis.annotate.splicing import predict_splice_sites

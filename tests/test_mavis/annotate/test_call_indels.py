@@ -1,4 +1,5 @@
 import pytest
+
 from mavis.annotate.variant import IndelCall, call_protein_indel
 
 from ..mock import Mock, MockFunction

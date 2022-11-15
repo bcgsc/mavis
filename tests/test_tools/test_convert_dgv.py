@@ -1,8 +1,10 @@
 import os
-import pytest
-from unittest.mock import Mock, patch
-from tools.convert_dgv import main as convert_dgv_main
 import sys
+from unittest.mock import patch
+
+import pytest
+
+from tools.convert_dgv import main as convert_dgv_main
 
 
 @pytest.mark.parametrize(
@@ -25,7 +27,7 @@ def test_dgv_examples(tmp_path, filename, expected_file):
 
     with patch.object(convert_dgv_main, "main", create=True):
 
-        with patch.object(sys, "argv", args) as m:
+        with patch.object(sys, "argv", args):
             convert_dgv_main()
 
     with open(os.path.join(data_dir, expected_file), 'r') as fh:

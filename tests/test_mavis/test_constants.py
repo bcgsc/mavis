@@ -1,4 +1,11 @@
-from mavis.constants import COLUMNS, ORIENT, STRAND, reverse_complement, sort_columns, translate
+from mavis.constants import (
+    COLUMNS,
+    ORIENT,
+    STRAND,
+    reverse_complement,
+    sort_columns,
+    translate,
+)
 
 
 class TestConstants:

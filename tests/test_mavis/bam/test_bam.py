@@ -4,6 +4,7 @@ from unittest import mock
 
 import pytest
 import timeout_decorator
+
 from mavis.annotate.file_io import load_annotations, load_reference_genome
 from mavis.bam import read as _read
 from mavis.bam.cache import BamCache
@@ -13,7 +14,11 @@ from mavis.bam.read import (
     read_pair_type,
     sequenced_strand,
 )
-from mavis.bam.stats import Histogram, compute_genome_bam_stats, compute_transcriptome_bam_stats
+from mavis.bam.stats import (
+    Histogram,
+    compute_genome_bam_stats,
+    compute_transcriptome_bam_stats,
+)
 from mavis.constants import DNA_ALPHABET, ORIENT, READ_PAIR_TYPE, STRAND, SVTYPE
 from mavis.interval import Interval
 

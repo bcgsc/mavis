@@ -2,6 +2,7 @@ import warnings
 
 import pytest
 import timeout_decorator
+
 from mavis.annotate.file_io import load_reference_genome
 from mavis.bam import read as _read
 from mavis.bam.cigar import (

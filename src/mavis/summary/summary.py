@@ -1,14 +1,14 @@
-from typing import Mapping, Dict, List, Tuple, Union
 from itertools import chain
+from typing import Dict, List, Tuple, Union
 
 from ..annotate.genomic import BioInterval, Transcript
 from ..breakpoint import Breakpoint, BreakpointPair
+from ..cluster.cluster import merge_breakpoint_pairs
 from ..constants import CALL_METHOD, COLUMNS, DISEASE_STATUS, PROTOCOL, SVTYPE
 from ..interval import Interval
-from ..pairing.pairing import equivalent, pair_by_distance, product_key
+from ..pairing.pairing import pair_by_distance, product_key
 from ..util import get_connected_components
 from .constants import PAIRING_STATE
-from ..cluster.cluster import merge_breakpoint_pairs
 
 
 def filter_by_annotations(bpp_list: List[BreakpointPair], best_transcripts: Dict[str, Transcript]):
@@ -226,10 +226,10 @@ def annotate_with_dgv_bpp(
 
     for clustered_bpp_key, clustered_bpp_val in clusters.items():
         dgv_tracking_ids = [
-            bpp.tracking_id for bpp in clustered_bpp_val if bpp.data.get(flag_col) != True
+            bpp.tracking_id for bpp in clustered_bpp_val if bpp.data.get(flag_col) is not True
         ]
         dgv_field = ';'.join(sorted(dgv_tracking_ids))
-        variant_bpp = [bpp for bpp in clustered_bpp_val if bpp.data.get(flag_col) == True]
+        variant_bpp = [bpp for bpp in clustered_bpp_val if bpp.data.get(flag_col) is True]
         for variant in variant_bpp:
             variant.data[COLUMNS.dgv] = dgv_field
             variant.data[COLUMNS.known_sv_count] = len(dgv_tracking_ids)
