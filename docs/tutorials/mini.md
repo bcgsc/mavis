@@ -31,7 +31,7 @@ pip install mavis_config
 Now you are ready to run MAVIS. This can be done in a single command using snakemake.
 
 ```bash
-snakemake -j 1 --configfile=tests/mini-tutorial.config.json -s Snakefile
+snakemake -j 1 --configfile=tests/mini-tutorial.config.json -s Snakefile --use-singularity
 ```
 
 Which will run the mini tutorial version and output files into a folder called `output_dir` in the
