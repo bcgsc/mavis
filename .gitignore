@@ -16,6 +16,7 @@ junit
 *eggs/
 .mypy_cache
 .snakemake
+.venv*
 
 # aligners
 blat
