@@ -14,7 +14,6 @@ from mavis_config.constants import SUBCOMMAND
 from . import __version__
 from . import config as _config
 from . import util as _util
-from .align import get_aligner_version
 from .annotate import main as annotate_main
 from .cluster import main as cluster_main
 from .convert import SUPPORTED_TOOL, convert_tool_output
@@ -24,6 +23,7 @@ from .pairing import main as pairing_main
 from .summary import main as summary_main
 from .util import filepath
 from .validate import main as validate_main
+from .validate.align import get_aligner_version
 
 
 def convert_main(inputs, outputfile, file_type, strand_specific=False, assume_no_untemplated=True):

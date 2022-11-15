@@ -4,15 +4,17 @@ from typing import Dict, List
 import pandas as pd
 from shortuuid import uuid
 
-from ..breakpoint import Breakpoint, BreakpointPair
+from ..breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
 from ..constants import COLUMNS, ORIENT, STRAND, SVTYPE
 from ..error import InvalidRearrangement
 from ..util import logger, read_bpp_from_input_file
+from .arriba import convert_row as _parse_arriba
 from .breakdancer import convert_file as _convert_breakdancer_file
 from .chimerascan import convert_row as _parse_chimerascan
 from .cnvnator import convert_row as _parse_cnvnator
 from .constants import SUPPORTED_TOOL, TOOL_SVTYPE_MAPPING, TRACKING_COLUMN
 from .starfusion import convert_row as _parse_starfusion
+from .straglr import convert_row as _parse_straglr
 from .transabyss import convert_row as _parse_transabyss
 from .vcf import convert_file as read_vcf
 
@@ -142,6 +144,14 @@ def _convert_tool_row(
             {k: v for k, v in row.items() if k not in {'Type', 'Chr1', 'Chr2', 'Pos1', 'Pos2'}}
         )
 
+    elif file_type == SUPPORTED_TOOL.ARRIBA:
+
+        std_row.update(_parse_arriba(row))
+
+    elif file_type == SUPPORTED_TOOL.STRAGLR:
+
+        std_row.update(_parse_straglr(row))
+
     else:
         raise NotImplementedError('unsupported file type', file_type)
 
@@ -222,7 +232,7 @@ def _convert_tool_row(
             for col, value in std_row.items():
                 if col not in COLUMNS and col not in bpp.data:
                     bpp.data[col] = value
-            if not event_type or event_type in BreakpointPair.classify(bpp):
+            if not event_type or event_type in classify_breakpoint_pair(bpp):
                 result.append(bpp)
 
         except (InvalidRearrangement, AssertionError):

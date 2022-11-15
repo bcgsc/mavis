@@ -8,12 +8,11 @@ from typing import Dict, List
 import pysam
 from shortuuid import uuid
 
-from ..align import SUPPORTED_ALIGNER, align_sequences, select_contig_alignments
 from ..annotate.base import BioInterval
 from ..annotate.file_io import ReferenceFile
 from ..bam import cigar as _cigar
 from ..bam.cache import BamCache
-from ..breakpoint import BreakpointPair
+from ..breakpoint import classify_breakpoint_pair
 from ..constants import CALL_METHOD, COLUMNS, PROTOCOL
 from ..util import (
     filter_on_overlap,
@@ -24,9 +23,11 @@ from ..util import (
     read_inputs,
     write_bed_file,
 )
+from .align import SUPPORTED_ALIGNER, align_sequences, select_contig_alignments
 from .call import call_events
 from .constants import PASS_FILENAME
 from .evidence import GenomeEvidence, TranscriptomeEvidence
+from .gather import load_evidence
 
 
 def main(
@@ -164,14 +165,14 @@ def main(
             ),
         )
         logger.info(str(evidence))
-        logger.info(f'possible event type(s): {BreakpointPair.classify(evidence)}')
+        logger.info(f'possible event type(s): {classify_breakpoint_pair(evidence)}')
         logger.info(
             f'outer window regions: {evidence.break1.chr}:{evidence.outer_window1[0]}-{evidence.outer_window1[1]}  {evidence.break2.chr}:{evidence.outer_window2[0]}-{evidence.outer_window2[1]}'
         )
         logger.info(
             f'inner window regions: {evidence.break1.chr}:{evidence.inner_window1[0]}-{evidence.inner_window1[1]}  {evidence.break2.chr}:{evidence.inner_window2[0]}-{evidence.inner_window2[1]}'
         )
-        evidence.load_evidence()
+        load_evidence(evidence)
         logger.info(
             f'flanking pairs: {len(evidence.flanking_pairs)}'
             + '; split reads: {}, {}'.format(*[len(a) for a in evidence.split_reads])

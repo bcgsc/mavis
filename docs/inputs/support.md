@@ -41,6 +41,7 @@ It should be noted however that the tool tracked will only be listed as
 
 | Name                                       | Version(s)       | MAVIS input                                   | Publication                                                 |
 | ------------------------------------------ | ---------------- | --------------------------------------------- | ----------------------------------------------------------- |
+| [Arriba](../../glossary/#arriba)           | `2.2.1`          | `fusions.tsv`                                 | [Uhrig-2021](../../background/citations#uhrig-2021)          |
 | [BreakDancer](../../glossary/#breakdancer) | `1.4.5`          | `Tools main output file(s)`                   | [Chen-2009](../../background/citations#chen-2009)           |
 | [BreakSeq](../../glossary/#breakseq)       | `2.2`            | `work/breakseq.vcf.gz`                        | [Abyzov-2015](../../background/citations#abyzov-2015)       |
 | [Chimerascan](../../glossary/#chimerascan) | `0.4.5`          | `*.bedpe`                                     | [Iyer-2011](../../background/citations#Iyer-2011)           |

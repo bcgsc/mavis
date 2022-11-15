@@ -1,7 +1,6 @@
 from unittest import mock
 
 import pytest
-from mavis.align import call_paired_read_event, select_contig_alignments
 from mavis.annotate.file_io import load_reference_genome
 from mavis.annotate.genomic import PreTranscript, Transcript
 from mavis.bam import cigar as _cigar
@@ -12,6 +11,7 @@ from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, CIGAR, ORIENT, PYSAM_READ_FLAGS, STRAND, SVTYPE
 from mavis.interval import Interval
 from mavis.validate import call
+from mavis.validate.align import call_paired_read_event, select_contig_alignments
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
 
@@ -66,7 +66,6 @@ class TestCallByContig:
                 '68M678D50M15D34M6472D185M10240D158M891D74M' '5875D' '6M' '1X' '29M'
             ),
             reference_name='7',
-            reference_id=6,
             reference_start=55241669,
             alignment_rank=0,
         )
@@ -167,26 +166,38 @@ class TestEventCall:
             mock_read_pair(
                 MockRead(
                     query_name='test1',
-                    reference_id=3,
+                    reference_name='reference3',
                     template_length=500,
                     reference_start=1150,
-                    reference_end=1200,
                     is_reverse=True,
+                    cigarstring='50M',
                 ),
-                MockRead(reference_id=3, reference_start=2200, reference_end=2250, is_reverse=True),
+                MockRead(
+                    reference_name='reference3',
+                    reference_start=2200,
+                    is_reverse=True,
+                    cigarstring='50M',
+                ),
+                proper_pair=False,
             )
         )
         ev.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
                     query_name='test2',
-                    reference_id=3,
+                    reference_name='reference3',
                     template_length=560,
                     reference_start=1150,
-                    reference_end=1200,
+                    cigarstring='50M',
                     is_reverse=True,
                 ),
-                MockRead(reference_id=3, reference_start=2200, reference_end=2250, is_reverse=True),
+                MockRead(
+                    reference_name='reference3',
+                    reference_start=2200,
+                    is_reverse=True,
+                    cigarstring='50M',
+                ),
+                proper_pair=False,
             )
         )
         median, stdev = ev.flanking_metrics()
@@ -250,8 +261,18 @@ class TestPullFlankingSupport:
         )
         flanking_pairs = [
             mock_read_pair(
-                MockRead('r1', 0, 400, 450, is_reverse=False),
-                MockRead('r1', 0, 1200, 1260, is_reverse=True),
+                MockRead(
+                    query_name='r1',
+                    reference_name='1',
+                    reference_start=400,
+                    cigarstring='50M',
+                ),
+                MockRead(
+                    query_name='r1',
+                    reference_name='1',
+                    reference_start=1200,
+                    cigarstring='60M',
+                ),
             )
         ]
         event = call.EventCall(
@@ -303,8 +324,12 @@ class TestPullFlankingSupport:
         )
         flanking_pairs = [
             mock_read_pair(
-                MockRead('r1', 0, 700, 750, is_reverse=False),
-                MockRead('r1', 0, 950, 1049, is_reverse=True),
+                MockRead(
+                    query_name='r1', reference_name='1', reference_start=700, cigarstring='50M'
+                ),
+                MockRead(
+                    query_name='r1', reference_name='1', reference_start=950, cigarstring='50M'
+                ),
             )
         ]
         print(evidence.min_expected_fragment_size)
@@ -326,8 +351,21 @@ class TestPullFlankingSupport:
         )
         flanking_pairs = [
             mock_read_pair(
-                MockRead('r1', 0, 400, 450, is_reverse=False),
-                MockRead('r1', 0, 900, 950, is_reverse=False),
+                MockRead(
+                    query_name='r1',
+                    reference_name='1',
+                    reference_start=400,
+                    cigarstring='50M',
+                    is_reverse=False,
+                ),
+                MockRead(
+                    query_name='r1',
+                    reference_name='1',
+                    reference_start=900,
+                    cigarstring='50M',
+                    is_reverse=False,
+                ),
+                proper_pair=False,
             )
         ]
         event = call.EventCall(
@@ -380,28 +418,88 @@ class TestPullFlankingSupport:
         event = call.EventCall(b1, b2, evidence, SVTYPE.TRANS, CALL_METHOD.CONTIG)
         flanking_pairs = [
             mock_read_pair(
-                MockRead('x', '11', 128675264, 128677087, is_reverse=False),
-                MockRead('x', '22', 29683030, 29683105, is_reverse=True),
+                MockRead(
+                    query_name='x1',
+                    reference_name='11',
+                    reference_start=128675264,
+                    cigarstring=str(128677087 - 128675264 - 100) + 'M',
+                ),
+                MockRead(
+                    query_name='x1',
+                    reference_name='22',
+                    reference_start=29683030,
+                    cigarstring=str(29683105 - 29683030) + 'M',
+                ),
             ),
             mock_read_pair(
-                MockRead('x', '11', 128675286, 128677109, is_reverse=False),
-                MockRead('x', '22', 29683016, 29683091, is_reverse=True),
+                MockRead(
+                    query_name='x2',
+                    reference_name='11',
+                    reference_start=128675286,
+                    cigarstring=str(128677109 - 128675286) + 'M',
+                ),
+                MockRead(
+                    query_name='x2',
+                    reference_name='22',
+                    reference_start=29683016,
+                    cigarstring=str(29683091 - 29683016) + 'M',
+                ),
             ),
             mock_read_pair(
-                MockRead('x', '11', 128675260, 128677083, is_reverse=False),
-                MockRead('x', '22', 29683049, 29683123, is_reverse=True),
+                MockRead(
+                    query_name='x3',
+                    reference_name='11',
+                    reference_start=128675260,
+                    cigarstring=str(128677083 - 128675260) + 'M',
+                ),
+                MockRead(
+                    query_name='x3',
+                    reference_name='22',
+                    reference_start=29683049,
+                    cigarstring=str(29683123 - 29683049) + 'M',
+                ),
             ),
             mock_read_pair(
-                MockRead('x', '11', 128675289, 128677110, is_reverse=False),
-                MockRead('x', '22', 29683047, 29683122, is_reverse=True),
+                MockRead(
+                    query_name='x4',
+                    reference_name='11',
+                    reference_start=128675289,
+                    cigarstring=str(128677110 - 128675289) + 'M',
+                ),
+                MockRead(
+                    query_name='x4',
+                    reference_name='22',
+                    reference_start=29683047,
+                    cigarstring=str(29683122 - 29683047) + 'M',
+                ),
             ),
             mock_read_pair(
-                MockRead('x', '11', 128675306, 128677129, is_reverse=False),
-                MockRead('x', '22', 29683039, 29683114, is_reverse=True),
+                MockRead(
+                    query_name='x5',
+                    reference_name='11',
+                    reference_start=128675306,
+                    cigarstring=str(128677129 - 128675306) + 'M',
+                ),
+                MockRead(
+                    query_name='x5',
+                    reference_name='22',
+                    reference_start=29683039,
+                    cigarstring=str(29683114 - 29683039) + 'M',
+                ),
             ),
             mock_read_pair(
-                MockRead('x', '11', 128675289, 128677110, is_reverse=False),
-                MockRead('x', '22', 29683047, 29683122, is_reverse=True),
+                MockRead(
+                    query_name='x6',
+                    reference_name='11',
+                    reference_start=128675289,
+                    cigarstring=str(128677110 - 128675289) + 'M',
+                ),
+                MockRead(
+                    query_name='x6',
+                    reference_name='22',
+                    reference_start=29683047,
+                    cigarstring=str(29683122 - 29683047) + 'M',
+                ),
             ),
         ]
         event.add_flanking_support(flanking_pairs)
@@ -413,8 +511,20 @@ class TestPullFlankingSupport:
         )
         flanking_pairs = [
             mock_read_pair(
-                MockRead('r1', 0, 1201, 1249, is_reverse=True),
-                MockRead('r1', 1, 1201, 1249, is_reverse=False),
+                MockRead(
+                    query_name='r1',
+                    reference_name='1',
+                    reference_start=1201,
+                    cigarstring='48M',
+                    is_reverse=True,
+                ),
+                MockRead(
+                    query_name='r1',
+                    reference_name='2',
+                    reference_start=1201,
+                    cigarstring='48M',
+                    is_reverse=False,
+                ),
             )
         ]
         event = call.EventCall(
@@ -447,8 +557,20 @@ class TestPullFlankingSupport:
         )
         flanking_pairs = [
             mock_read_pair(
-                MockRead('r1', 0, 1205, 1250, is_reverse=True),
-                MockRead('r1', 0, 1260, 1295, is_reverse=False),
+                MockRead(
+                    query_name='r1',
+                    reference_name='1',
+                    reference_start=1205,
+                    cigarstring='45M',
+                    is_reverse=True,
+                ),
+                MockRead(
+                    query_name='r1',
+                    reference_name='1',
+                    reference_start=1260,
+                    cigarstring='35M',
+                    is_reverse=False,
+                ),
             )
         ]
         event = call.EventCall(
@@ -501,59 +623,64 @@ class TestEvidenceConsumption:
             Breakpoint('1', 450, 500, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        r1, r2 = mock_read_pair(
-            MockRead(
-                query_name='t1',
-                reference_id=0,
-                reference_name='1',
-                reference_start=40,
-                cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
-                query_sequence='A' * 100,
-            ),
-            MockRead(
-                query_name='t1',
-                reference_id=0,
-                reference_name='1',
-                reference_start=460,
-                cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
-                query_sequence='A' * 100,
-            ),
-        )
+
         contig = mock.Mock(
             **{
                 'seq': '',
                 'complexity.return_value': 1,
-                'alignments': [call_paired_read_event(r1, r2)],
+                'alignments': [
+                    call_paired_read_event(
+                        MockRead(
+                            query_name='assembly1',
+                            reference_name='1',
+                            reference_start=40,
+                            cigarstring='60=40S',
+                            query_sequence='A' * 100,
+                        ),
+                        MockRead(
+                            query_name='assembly1',
+                            reference_name='1',
+                            reference_start=460,
+                            cigarstring='40S60=',
+                            query_sequence='A' * 100,
+                        ),
+                    )
+                ],
             }
         )
         contig.input_reads = {
-            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])
+            MockRead(query_name='t0', reference_name='1', reference_start=100, cigarstring='20=80S')
         }
         evidence.contigs.append(contig)
 
-        evidence.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=100, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)])
+        split_read1, split_read2 = mock_read_pair(
+            MockRead(
+                query_name='t1', reference_name='1', reference_start=100, cigarstring='20=80S'
+            ),
+            MockRead(
+                query_name='t1',
+                reference_name='1',
+                reference_start=500,
+                cigarstring='50S50=',
+                query_sequence='A' * 100,
+            ),
         )
-        evidence.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=500, cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)])
-        )
+
+        evidence.split_reads[0].add(split_read1)
+        evidence.split_reads[1].add(split_read2)
         evidence.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
                     query_name='t4',
-                    reference_id=0,
+                    reference_name='1',
                     reference_start=10,
-                    reference_end=40,
-                    is_reverse=False,
-                    query_alignment_length=30,
+                    cigarstring='30M',
                 ),
                 MockRead(
                     query_name='t4',
-                    reference_id=0,
+                    reference_name='1',
+                    cigarstring='35M',
                     reference_start=505,
-                    reference_end=540,
-                    is_reverse=True,
-                    query_alignment_length=35,
                 ),
             )
         )
@@ -561,45 +688,48 @@ class TestEvidenceConsumption:
             mock_read_pair(
                 MockRead(
                     query_name='t3',
-                    reference_id=0,
+                    reference_name='1',
                     reference_start=49,
-                    reference_end=90,
-                    is_reverse=False,
-                    query_alignment_length=41,
+                    cigarstring='41M',
                 ),
                 MockRead(
                     query_name='t3',
-                    reference_id=0,
+                    reference_name='1',
                     reference_start=805,
-                    reference_end=840,
-                    is_reverse=True,
-                    query_alignment_length=35,
+                    cigarstring='35M',
                 ),
             )
         )
 
         events = call.call_events(evidence)
-        for ev in events:
-            print(ev, ev.event_type, ev.call_method)
         assert len(events) == 4
+
         assert events[0].call_method == 'contig'
         assert events[0].break1.start == 100
         assert events[0].break2.start == 481
         assert events[0].event_type == 'deletion'
+        assert 't0' in {r.query_name for r in events[0].support()}
+        assert 't4' in {r.query_name for r in events[0].support()}
+
         assert events[1].call_method == 'split reads'
         assert events[1].break1.start == 120
         assert events[1].break2.start == 501
         assert events[1].event_type == 'deletion'
+        assert 't1' in {r.query_name for r in events[1].support()}
+
         assert events[2].call_method == 'flanking reads'
         assert events[2].break1.start == 90
         assert events[2].break1.end == 299
         assert events[2].break2.start == 591
         assert events[2].break2.end == 806
         assert events[2].event_type == 'deletion'
+        assert 't3' in {r.query_name for r in events[2].support()}
+
         assert events[3].call_method == 'split reads'
         assert events[3].break1.start == 120
         assert events[3].break2.start == 501
         assert events[3].event_type == 'insertion'
+        assert 't1' in {r.query_name for r in events[3].support()}
 
     def test_call_contig_only(self):
         # event should only be 100L+, 501R+ deletion
@@ -608,34 +738,37 @@ class TestEvidenceConsumption:
             Breakpoint('1', 450, 500, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        r1, r2 = mock_read_pair(
-            MockRead(
-                query_name='t1',
-                reference_id=0,
-                reference_name='1',
-                reference_start=40,
-                cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
-                query_sequence='A' * 100,
-                query_alignment_length=100,
-            ),
-            MockRead(
-                query_name='t1',
-                reference_id=0,
-                reference_name='1',
-                reference_start=480,
-                cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
-                query_sequence='A' * 100,
-                query_alignment_length=100,
-            ),
+
+        contig = mock.Mock(
+            **{
+                'seq': '',
+                'complexity.return_value': 1,
+                'alignments': [
+                    call_paired_read_event(
+                        MockRead(
+                            query_name='t1',
+                            reference_name='1',
+                            reference_start=40,
+                            cigarstring='60=40S',
+                            query_sequence='A' * 100,
+                        ),
+                        MockRead(
+                            query_name='t1',
+                            reference_name='1',
+                            reference_start=480,
+                            cigarstring='40S60=',
+                            query_sequence='A' * 100,
+                        ),
+                    )
+                ],
+            }
         )
-        bpp = call_paired_read_event(r1, r2)
-        contig = mock.Mock(**{'seq': '', 'complexity.return_value': 1, 'alignments': [bpp]})
         contig.input_reads = {
             MockRead(
                 query_name='t1',
                 reference_start=100,
                 reference_name='1',
-                cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)],
+                cigarstring='20=80S',
             )
         }
         evidence.contigs.append(contig)
@@ -645,7 +778,7 @@ class TestEvidenceConsumption:
                 query_name='t1',
                 reference_name='1',
                 reference_start=80,
-                cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)],
+                cigarstring='20=80S',
             )
         )
         evidence.split_reads[1].add(
@@ -653,7 +786,7 @@ class TestEvidenceConsumption:
                 query_name='t1',
                 reference_name='1',
                 reference_start=500,
-                cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)],
+                cigarstring='50S50=',
             )
         )
         evidence.split_reads[0].add(
@@ -661,7 +794,7 @@ class TestEvidenceConsumption:
                 query_name='t2',
                 reference_name='1',
                 reference_start=40,
-                cigar=[(CIGAR.EQ, 50), (CIGAR.S, 50)],
+                cigarstring='50=50S',
             )
         )
         evidence.flanking_pairs.add(
@@ -669,20 +802,16 @@ class TestEvidenceConsumption:
                 MockRead(
                     query_name='t3',
                     reference_name='1',
-                    reference_id=0,
                     reference_start=49,
-                    reference_end=90,
                     is_reverse=False,
-                    query_alignment_length=100,
+                    cigarstring='41M',
                 ),
                 MockRead(
                     query_name='t3',
                     reference_name='1',
-                    reference_id=0,
                     reference_start=505,
-                    reference_end=550,
                     is_reverse=True,
-                    query_alignment_length=100,
+                    cigarstring='100M',
                 ),
             )
         )
@@ -702,29 +831,28 @@ class TestEvidenceConsumption:
             Breakpoint('1', 450, 500, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        r1, r2 = mock_read_pair(
-            MockRead(
-                query_name='t1',
-                reference_id=0,
-                reference_name='1',
-                reference_start=40,
-                cigar=[(CIGAR.EQ, 60), (CIGAR.S, 40)],
-                query_sequence='A' * 100,
-            ),
-            MockRead(
-                query_name='t1',
-                reference_id=0,
-                reference_name='1',
-                reference_start=480,
-                cigar=[(CIGAR.S, 40), (CIGAR.EQ, 60)],
-                query_sequence='A' * 100,
-            ),
-        )
         contig = mock.Mock(
             **{
                 'seq': '',
                 'complexity.return_value': 1,
-                'alignments': [call_paired_read_event(r1, r2)],
+                'alignments': [
+                    call_paired_read_event(
+                        MockRead(
+                            query_name='t1',
+                            reference_name='1',
+                            reference_start=40,
+                            cigarstring='60=40S',
+                            query_sequence='A' * 100,
+                        ),
+                        MockRead(
+                            query_name='t1',
+                            reference_name='1',
+                            reference_start=480,
+                            cigarstring='40S60=',
+                            query_sequence='A' * 100,
+                        ),
+                    )
+                ],
             }
         )
         contig.input_reads = {
@@ -732,46 +860,45 @@ class TestEvidenceConsumption:
                 query_name='t1',
                 reference_name='1',
                 reference_start=100,
-                cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)],
+                cigarstring='20=80S',
             )
         }
         evidence.contigs.append(contig)
 
-        evidence.split_reads[0].add(
+        split_read1, split_read2 = mock_read_pair(
             MockRead(
-                query_name='t1',
+                query_name='t2',
                 reference_start=100,
                 reference_name='1',
-                cigar=[(CIGAR.EQ, 20), (CIGAR.S, 80)],
-            )
-        )
-        evidence.split_reads[1].add(
+                cigarstring='20=80S',
+                query_sequence='C' * 100,
+            ),
             MockRead(
-                query_name='t1',
+                query_name='t2',
                 reference_start=520,
                 reference_name='1',
-                cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)],
-            )
+                cigarstring='50S50=',
+                query_sequence='A' * 100,
+            ),
         )
+
+        evidence.split_reads[0].add(split_read1)
+        evidence.split_reads[1].add(split_read2)
         evidence.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
                     query_name='t3',
-                    reference_id=0,
                     reference_start=49,
                     reference_name='1',
-                    reference_end=90,
                     is_reverse=False,
-                    query_alignment_length=100,
+                    cigarstring='41M',
                 ),
                 MockRead(
                     query_name='t3',
-                    reference_id=0,
                     reference_start=505,
                     reference_name='1',
-                    reference_end=550,
                     is_reverse=True,
-                    query_alignment_length=100,
+                    cigarstring='100M',
                 ),
             )
         )
@@ -782,9 +909,11 @@ class TestEvidenceConsumption:
         assert events[0].break1.start == 100
         assert events[0].break2.start == 501
         assert events[0].call_method == 'contig'
+
         assert events[1].call_method == 'split reads'
         assert events[1].break1.start == 120
         assert events[1].break2.start == 521
+
         assert events[2].event_type == 'insertion'
         assert events[2].call_method == 'split reads'
         assert events[2].break1.start == 120
@@ -797,28 +926,22 @@ class TestEvidenceConsumption:
             opposing_strands=False,
         )
         evidence.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=140, cigar=[(CIGAR.EQ, 30), (CIGAR.S, 70)])
+            MockRead(query_name='t1', reference_start=140, cigarstring='30=70S')
         )
         evidence.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=870, cigar=[(CIGAR.S, 50), (CIGAR.EQ, 50)])
+            MockRead(query_name='t1', reference_start=870, cigarstring='50S50=')
         )
         evidence.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
                     query_name='t3',
-                    reference_id=0,
                     reference_start=42,
-                    reference_end=140,
-                    is_reverse=False,
-                    query_alignment_length=100,
+                    cigarstring='100M',
                 ),
                 MockRead(
                     query_name='t3',
-                    reference_id=0,
                     reference_start=885,
-                    reference_end=905,
-                    is_reverse=True,
-                    query_alignment_length=100,
+                    cigarstring='100M',
                 ),
             )
         )
@@ -844,19 +967,15 @@ class TestEvidenceConsumption:
             mock_read_pair(
                 MockRead(
                     query_name='t1',
-                    reference_id=0,
+                    reference_name='1',
                     reference_start=42,
-                    reference_end=140,
-                    is_reverse=False,
-                    query_alignment_length=98,
+                    cigarstring='98M',
                 ),
                 MockRead(
                     query_name='t1',
-                    reference_id=0,
+                    reference_name='1',
                     reference_start=885,
-                    reference_end=905,
-                    is_reverse=True,
-                    query_alignment_length=20,
+                    cigarstring='20M',
                 ),
             )
         )
@@ -910,7 +1029,7 @@ def inversion_evidence():
             'validate.min_flanking_pairs_resolution': 1,
             'validate.min_linking_split_reads': 1,
             'validate.min_spanning_reads_resolution': 3,
-            'validate. min_call_complexity': 0,
+            'validate.min_call_complexity': 0,
         },
     )
 
@@ -922,10 +1041,10 @@ class TestCallBySupportingReads:
 
     def test_call_no_duplication_by_split_reads(self, duplication_ev, inversion_evidence):
         duplication_ev.split_reads[0].add(
-            MockRead(query_name='t1', reference_start=30, cigar=[(CIGAR.EQ, 20), (CIGAR.S, 20)])
+            MockRead(query_name='t1', reference_start=30, cigarstring='20=20S')
         )
         duplication_ev.split_reads[1].add(
-            MockRead(query_name='t1', reference_start=90, cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)])
+            MockRead(query_name='t1', reference_start=90, cigarstring='20S20=')
         )
 
         bpps = call._call_by_split_reads(inversion_evidence, SVTYPE.DUP)
@@ -936,7 +1055,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=100,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='A' * 40,
             )
         )
@@ -944,7 +1063,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=500,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='G' * 40,
             )
         )
@@ -952,7 +1071,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t2',
                 reference_start=100,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='C' * 40,
             )
         )
@@ -960,7 +1079,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t2',
                 reference_start=500,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='A' * 40,
             )
         )
@@ -979,7 +1098,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=100,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='A' * 40,
             )
         )
@@ -987,7 +1106,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=500,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='N' * 40,
             )
         )
@@ -1006,7 +1125,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=100,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='TCGGCTCCCGTACTTGTGTATAAGGGGCTTCTGATGTTAT',
             )
         )
@@ -1014,7 +1133,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=500,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='ATAACATCAGAAGCCCCTTATACACAAGTACGGGAGCCGA',
                 is_reverse=True,
             )
@@ -1033,7 +1152,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=100,
-                cigar=[(CIGAR.S, 22), (CIGAR.EQ, 18)],
+                cigarstring='22S18=',
                 query_sequence='TCGGCTCCCGTACTTGTGTATAAGGGGCTTCTGATGTTAT',
             )
         )
@@ -1041,7 +1160,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=500,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='ATAACATCAGAAGCCCCTTATACACAAGTACGGGAGCCGA',
                 is_reverse=True,
             )
@@ -1060,7 +1179,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=100,
-                cigar=[(CIGAR.S, 18), (CIGAR.EQ, 22)],
+                cigarstring='18S22=',
                 query_sequence='TCGGCTCCCGTACTTGTGTATAAGGGGCTTCTGATGTTAT',
             )
         )
@@ -1068,7 +1187,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=500,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='ATAACATCAGAAGCCCCTTATACACAAGTACGGGAGCCGA',
                 is_reverse=True,
             )
@@ -1085,30 +1204,57 @@ class TestCallBySupportingReads:
     def test_both_by_flanking_pairs(self, inversion_evidence):
         inversion_evidence.flanking_pairs.add(
             mock_read_pair(
-                MockRead(query_name='t1', reference_id=0, reference_start=150, reference_end=150),
-                MockRead(query_name='t1', reference_id=0, reference_start=500, reference_end=520),
+                MockRead(
+                    query_name='t1',
+                    reference_name='1',
+                    reference_start=150,
+                    cigarstring='0M',
+                    is_reverse=False,
+                ),
+                MockRead(
+                    query_name='t1',
+                    reference_name='1',
+                    reference_start=500,
+                    cigarstring='20M',
+                    is_reverse=False,
+                ),
+                proper_pair=False,
             )
         )
         inversion_evidence.flanking_pairs.add(
             mock_read_pair(
-                MockRead(query_name='t2', reference_id=0, reference_start=120, reference_end=140),
-                MockRead(query_name='t2', reference_id=0, reference_start=520, reference_end=520),
+                MockRead(
+                    query_name='t2',
+                    reference_name='1',
+                    reference_start=120,
+                    cigarstring='20M',
+                    is_reverse=False,
+                ),
+                MockRead(
+                    query_name='t2',
+                    reference_name='1',
+                    reference_start=520,
+                    cigarstring='0M',
+                    is_reverse=False,
+                ),
+                proper_pair=False,
             )
         )
         bpp = call._call_by_flanking_pairs(inversion_evidence, SVTYPE.INV)
         # 120-149  ..... 500-519
         # max frag = 150 - 80 = 70
-        assert bpp.break1.start == 42
-        assert bpp.break1.end == 120
-        assert bpp.break2.start == 412  # 70 - 21 = 49
-        assert bpp.break2.end == 500
+        print(bpp)
+        assert bpp.break1.orient == ORIENT.RIGHT
+        assert bpp.break2.orient == ORIENT.RIGHT
+        assert (bpp.break1.start, bpp.break1.end) == (42, 121)
+        assert (bpp.break2.start, bpp.break2.end) == (412, 501)
 
     def test_by_split_reads_multiple_calls(self, inversion_evidence):
         inversion_evidence.split_reads[0].add(
             MockRead(
                 query_name='t1',
                 reference_start=100,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='A' * 40,
             )
         )
@@ -1116,7 +1262,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t1',
                 reference_start=500,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='T' * 40,
             )
         )
@@ -1124,7 +1270,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t2',
                 reference_start=110,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='T' * 40,
             )
         )
@@ -1132,7 +1278,7 @@ class TestCallBySupportingReads:
             MockRead(
                 query_name='t2',
                 reference_start=520,
-                cigar=[(CIGAR.S, 20), (CIGAR.EQ, 20)],
+                cigarstring='20S20=',
                 query_sequence='A' * 40,
             )
         )
@@ -1160,64 +1306,73 @@ class TestCallBySupportingReads:
         evidence.split_reads[0].add(
             MockRead(
                 query_name='test1',
-                cigar=[(CIGAR.S, 110), (CIGAR.EQ, 40)],
+                cigarstring='110S40=',
                 reference_start=1114,
-                reference_end=1150,
+                reference_name='reference3',
             )
         )
         evidence.split_reads[0].add(
             MockRead(
+                reference_name='reference3',
                 query_name='test2',
-                cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)],
+                cigarstring='30=120S',
                 reference_start=1108,
-                reference_end=1115,
             )
         )
-        evidence.split_reads[0].add(
-            MockRead(
-                query_name='test3',
-                cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
-                reference_start=1114,
-                reference_end=1154,
-                tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)],
-            )
+        read = MockRead(
+            reference_name='reference3',
+            query_name='test3',
+            cigarstring='30S120=',
+            reference_start=1114,
         )
+        read.set_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)
+        evidence.split_reads[0].add(read)
         evidence.split_reads[1].add(
             MockRead(
-                query_name='test4', cigar=[(CIGAR.EQ, 30), (CIGAR.S, 120)], reference_start=2187
-            )
-        )
-        evidence.split_reads[1].add(
-            MockRead(
-                query_name='test5', cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)], reference_start=2187
-            )
-        )
-        evidence.split_reads[1].add(
-            MockRead(
-                query_name='test1',
-                cigar=[(CIGAR.S, 30), (CIGAR.EQ, 120)],
+                reference_name='reference3',
+                query_name='test4',
+                cigarstring='30=120S',
                 reference_start=2187,
-                reference_end=2307,
-                tags=[(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)],
             )
         )
+        evidence.split_reads[1].add(
+            MockRead(
+                reference_name='reference3',
+                query_name='test5',
+                cigarstring='30S120=',
+                reference_start=2187,
+            )
+        )
+        read = MockRead(
+            reference_name='reference3',
+            query_name='test1',
+            cigarstring='30S120=',
+            reference_start=2187,
+        )
+        read.set_tag(PYSAM_READ_FLAGS.TARGETED_ALIGNMENT, 1)
+        evidence.split_reads[1].add(read)
 
         evidence.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
                     query_name='t1',
-                    reference_id=3,
+                    reference_name='reference3',
                     reference_start=1200,
-                    reference_end=1250,
+                    is_reverse=True,
+                    cigarstring='50M',
+                ),
+                MockRead(
+                    reference_name='reference3',
+                    reference_start=2250,
+                    cigarstring='50M',
                     is_reverse=True,
                 ),
-                MockRead(reference_id=3, reference_start=2250, reference_end=2300, is_reverse=True),
             )
         )
 
         events = call._call_by_split_reads(evidence, event_type=SVTYPE.INV)
         for ev in events:
-            print(ev, ev.event_type, ev.call_method)
+            print(ev, ev.event_type, ev.call_method, [r.query_name for r in ev.support()])
         assert len(events) == 1
         event = events[0]
         assert len(event.flanking_pairs) == 1
@@ -1268,34 +1423,24 @@ class TestCallByFlankingReadsGenome:
         left_right_ev.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
-                    reference_start=19,
-                    reference_end=60,
-                    next_reference_start=599,
-                    query_alignment_length=25,
+                    reference_start=60 - 25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=599,
-                    reference_end=650,
-                    next_reference_start=19,
-                    query_alignment_length=25,
-                    is_reverse=True,
+                    cigarstring='25M',
                 ),
             )
         )
         left_right_ev.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
-                    reference_start=39,
-                    reference_end=80,
-                    next_reference_start=649,
-                    query_alignment_length=25,
+                    reference_start=80 - 25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=649,
-                    reference_end=675,
-                    next_reference_start=39,
-                    query_alignment_length=25,
-                    is_reverse=True,
+                    cigarstring='25M',
                 ),
             )
         )
@@ -1303,62 +1448,48 @@ class TestCallByFlankingReadsGenome:
         left_right_ev.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
-                    reference_start=39,
-                    reference_end=50,
-                    next_reference_start=91,
-                    query_alignment_length=25,
+                    reference_start=25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=91,
-                    reference_end=110,
-                    next_reference_start=39,
-                    query_alignment_length=25,
-                    is_reverse=True,
+                    cigarstring='25M',
                 ),
             )
         )
         bpp = call._call_by_flanking_pairs(left_right_ev, SVTYPE.DEL)
-        print(bpp, bpp.flanking_pairs)
+        print(bpp, len(bpp.flanking_pairs))
         assert bpp.break1.start == 80
-        assert bpp.break1.end == 80 + 125 - 45
-        assert bpp.break2.start == 600 - 125 + 75
+        assert bpp.break1.end == 80 + 125 - 45  # 160
+        assert bpp.break2.start == 600 - 125 + 75  # 550
         assert bpp.break2.end == 600
 
     def test_intrachromosomal_lr_coverage_overlaps_range(self, left_right_ev):
         # this test is for ensuring that if a theoretical window calculated for the
         # first breakpoint overlaps the actual coverage for the second breakpoint (or the reverse)
         # that we adjust the theoretical window accordingly
+        left_right_ev.median_fragment_size = 150
         left_right_ev.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
                     reference_start=21,
-                    reference_end=60,
-                    next_reference_start=80,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=80,
-                    reference_end=120,
-                    next_reference_start=21,
-                    query_alignment_length=25,
-                    is_reverse=True,
+                    cigarstring='25M',
                 ),
             )
         )
         left_right_ev.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
-                    reference_start=41,
-                    reference_end=80,
-                    next_reference_start=110,
-                    query_alignment_length=25,
+                    reference_start=80 - 25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=110,
-                    reference_end=140,
-                    next_reference_start=41,
-                    query_alignment_length=25,
-                    is_reverse=True,
+                    cigarstring='25M',
                 ),
             )
         )
@@ -1367,16 +1498,11 @@ class TestCallByFlankingReadsGenome:
             mock_read_pair(
                 MockRead(
                     reference_start=39,
-                    reference_end=80,
-                    next_reference_start=649,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=649,
-                    reference_end=675,
-                    next_reference_start=39,
-                    query_alignment_length=25,
-                    is_reverse=True,
+                    cigarstring='25M',
                 ),
             )
         )
@@ -1387,19 +1513,19 @@ class TestCallByFlankingReadsGenome:
         assert break2.end == 81
 
     def test_intrachromosomal_flanking_coverage_overlap_error(self, left_right_ev):
+        """
+        Cannot call with the flanking reads together since their coverage intervals overlap at the wrong ends
+        """
+        left_right_ev.config['validate.min_flanking_pairs_resolution'] = 2
         left_right_ev.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
                     reference_start=19,
-                    reference_end=60,
-                    next_reference_start=599,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=599,
-                    reference_end=650,
-                    next_reference_start=19,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
             )
         )
@@ -1407,35 +1533,35 @@ class TestCallByFlankingReadsGenome:
             mock_read_pair(
                 MockRead(
                     reference_start=620,
-                    reference_end=80,
-                    next_reference_start=780,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=780,
-                    reference_end=820,
-                    next_reference_start=620,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
             )
         )
-        with pytest.raises(AssertionError):
+        with pytest.raises(AssertionError) as e_info:
             call._call_by_flanking_pairs(left_right_ev, SVTYPE.DEL)
+        assert (
+            e_info.value.args[0]
+            == 'insufficient flanking pairs (1) to call deletion by flanking reads'
+        )
 
     def test_coverage_larger_than_max_expected_variance_error(self, left_right_ev):
+        """
+        Cannot group the reads to make a single call so the flanking call is below the acceptable resolution
+        """
+        left_right_ev.config['validate.min_flanking_pairs_resolution'] = 2
         left_right_ev.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
                     reference_start=19,
-                    reference_end=60,
-                    next_reference_start=599,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=599,
-                    reference_end=650,
-                    next_reference_start=19,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
             )
         )
@@ -1443,20 +1569,20 @@ class TestCallByFlankingReadsGenome:
             mock_read_pair(
                 MockRead(
                     reference_start=301,
-                    reference_end=350,
-                    next_reference_start=780,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=780,
-                    reference_end=820,
-                    next_reference_start=301,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
             )
         )
-        with pytest.raises(AssertionError):
+        with pytest.raises(AssertionError) as e_info:
             call._call_by_flanking_pairs(left_right_ev, SVTYPE.DEL)
+        assert (
+            e_info.value.args[0]
+            == 'insufficient flanking pairs (1) to call deletion by flanking reads'
+        )
 
     def test_close_to_zero(self, left_right_ev):
         # this test is for ensuring that if a theoretical window calculated for the
@@ -1479,33 +1605,23 @@ class TestCallByFlankingReadsGenome:
         ev.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
-                    reference_start=19,
-                    reference_end=60,
-                    next_reference_start=149,
-                    query_alignment_length=25,
+                    reference_name='fake', reference_start=19, cigarstring='25M', is_reverse=True
                 ),
                 MockRead(
-                    reference_start=149,
-                    reference_end=150,
-                    next_reference_start=19,
-                    query_alignment_length=25,
+                    reference_name='fake', reference_start=149, cigarstring='25M', is_reverse=True
                 ),
+                proper_pair=False,
             )
         )
         ev.flanking_pairs.add(
             mock_read_pair(
                 MockRead(
-                    reference_start=39,
-                    reference_end=80,
-                    next_reference_start=199,
-                    query_alignment_length=25,
+                    reference_name='fake', reference_start=39, cigarstring='25M', is_reverse=True
                 ),
                 MockRead(
-                    reference_start=199,
-                    reference_end=200,
-                    next_reference_start=39,
-                    query_alignment_length=25,
+                    reference_name='fake', reference_start=199, cigarstring='25M', is_reverse=True
                 ),
+                proper_pair=False,
             )
         )
         break1, break2 = call._call_by_flanking_pairs(ev, SVTYPE.INV)
@@ -1531,15 +1647,11 @@ class TestCallByFlankingReadsGenome:
             mock_read_pair(
                 MockRead(
                     reference_start=76186159,
-                    reference_end=76186309,
-                    next_reference_start=76186000,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
                 MockRead(
                     reference_start=76186000,
-                    reference_end=76186150,
-                    next_reference_start=76186159,
-                    query_alignment_length=25,
+                    cigarstring='25M',
                 ),
             )
         )
@@ -1589,6 +1701,7 @@ class TestCallByFlankingReadsTranscriptome:
         pre_transcript = PreTranscript(
             [(1001, 1100), (1501, 1700), (2001, 2100), (2201, 2300)], strand='+'
         )
+        pre_transcript.chr = '1'
         for patt in pre_transcript.generate_splicing_patterns():
             pre_transcript.transcripts.append(Transcript(pre_transcript, patt))
         evidence = self.build_transcriptome_evidence(
@@ -1597,18 +1710,28 @@ class TestCallByFlankingReadsTranscriptome:
         # now add the flanking pairs
         pair = mock_read_pair(
             MockRead(
-                'name', '1', 951, 1051, is_reverse=False, query_alignment_length=50, is_read1=False
+                query_name='name',
+                reference_name='1',
+                reference_start=1001,
+                is_reverse=False,
+                cigarstring='50M',
             ),
-            MockRead('name', '1', 2299, 2399, is_reverse=True, query_alignment_length=50),
+            MockRead(
+                query_name='name',
+                reference_name='1',
+                reference_start=2299,
+                is_reverse=True,
+                cigarstring='50M',
+            ),
+            proper_pair=False,
+            reverse_order=True,
         )
         print(read_pair_type(pair[0]))
         # following help in debugging the mockup
         assert not pair[0].is_reverse
         assert not pair[0].is_read1
-        assert pair[0].is_read2
         assert pair[1].is_reverse
         assert pair[1].is_read1
-        assert not pair[1].is_read2
         assert sequenced_strand(pair[0], 2) == STRAND.POS
         assert evidence.decide_sequenced_strand([pair[0]]) == STRAND.POS
         assert sequenced_strand(pair[1], 2) == STRAND.POS

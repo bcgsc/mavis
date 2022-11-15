@@ -7,12 +7,21 @@ from mavis.breakpoint import Breakpoint
 from mavis.constants import NA_MAPPING_QUALITY, ORIENT, PYSAM_READ_FLAGS
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence
+from mavis.validate.gather import collect_flanking_pair, collect_split_read, load_evidence
 from mavis_config import DEFAULTS
 
 from ...util import get_data, long_running_test
-from ..mock import MockLongString, MockObject, MockRead, mock_read_pair
+from ..mock import MockLongString, MockObject, MockRead, flags_from_number, mock_read_pair
 
 REFERENCE_GENOME = None
+
+
+class MockBamCache(BamCache):
+    def get_read_reference_name(self, read):
+        if isinstance(read, MockRead):
+            return read.reference_name
+        else:
+            return BamCache.get_read_reference_name(self, read)
 
 
 def setUpModule():
@@ -24,9 +33,9 @@ def setUpModule():
     ):
         raise AssertionError('fake genome file does not have the expected contents')
     global BAM_CACHE
-    BAM_CACHE = BamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
+    BAM_CACHE = MockBamCache(get_data('mini_mock_reads_for_events.sorted.bam'))
     global FULL_BAM_CACHE
-    FULL_BAM_CACHE = BamCache(get_data('mock_reads_for_events.sorted.bam'))
+    FULL_BAM_CACHE = MockBamCache(get_data('mock_reads_for_events.sorted.bam'))
     global READS
     READS = {}
     for read in BAM_CACHE.fetch('reference3', 1, 8000):
@@ -125,7 +134,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference19', 964, orient=ORIENT.LEFT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 14
         assert self.count_original_reads(ev1.split_reads[1]) == 20
@@ -137,7 +146,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference4', 2000, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 21
         # one of the reads that appears to look good in the bam is too low quality % match
@@ -152,7 +161,7 @@ class TestFullEvidenceGathering:
             opposing_strands=True,
         )
 
-        ev1.load_evidence()
+        load_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 54
         assert self.count_original_reads(ev1.split_reads[1]) == 20
@@ -164,7 +173,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference7', 19000, orient=ORIENT.RIGHT),
             opposing_strands=True,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[1]) == 15
         assert self.count_original_reads(ev1.split_reads[0]) == 27
@@ -176,7 +185,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference7', 11000, orient=ORIENT.LEFT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 35
@@ -190,7 +199,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference20', 6000, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert len(ev1.flanking_pairs) == 49
@@ -204,7 +213,7 @@ class TestFullEvidenceGathering:
             Breakpoint('referenceX', 6000, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 4
@@ -218,7 +227,7 @@ class TestFullEvidenceGathering:
             Breakpoint('referenceX', 14000, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 8
@@ -232,7 +241,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 3818, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
         assert self.count_original_reads(ev1.split_reads[0]) == 20
@@ -246,7 +255,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference11', 6003, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -264,7 +273,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference11', 10030, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -283,7 +292,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference12', 2120, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -302,7 +311,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 3818, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         assert self.count_original_reads(ev1.split_reads[0]) == 20
         assert self.count_original_reads(ev1.split_reads[1]) == 18
@@ -315,7 +324,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 8927, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -334,7 +343,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 13123, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -353,7 +362,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 17899, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -372,7 +381,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 24330, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
         print(len(ev1.spanning_reads))
@@ -389,7 +398,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 31827, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -407,7 +416,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference10', 42159, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -426,7 +435,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference12', 6016, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -449,7 +458,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference1', 2001, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -469,7 +478,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference9', 2001, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -487,7 +496,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference16', 2001, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -506,7 +515,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference12', 10021, orient=ORIENT.LEFT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -525,7 +534,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference17', 2020, orient=ORIENT.LEFT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
 
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs), len(ev1.spanning_reads))
@@ -544,7 +553,7 @@ class TestFullEvidenceGathering:
             Breakpoint('reference19', 5219, 5219, orient=ORIENT.RIGHT),
             opposing_strands=False,
         )
-        ev1.load_evidence()
+        load_evidence(ev1)
         self.print_evidence(ev1)
         print(len(ev1.spanning_reads))
         print(len(ev1.split_reads[0]), len(ev1.flanking_pairs))
@@ -576,57 +585,49 @@ class TestEvidenceGathering:
     def test_collect_split_read(self, ev_gathering_setup):
         ev1_sr = MockRead(
             query_name='HISEQX1_11:3:1105:15351:25130:split',
-            reference_id=1,
-            cigar=[(4, 68), (7, 82)],
+            reference_name='reference3',
+            cigarstring='68S82=',
             reference_start=1114,
-            reference_end=1154,
-            query_alignment_start=110,
             query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
-            query_alignment_end=150,
-            flag=113,
-            next_reference_id=1,
+            **flags_from_number(113),
+            next_reference_name='1',
             next_reference_start=2341,
         )
-        ev_gathering_setup.collect_split_read(ev1_sr, True)
+        collect_split_read(ev_gathering_setup, ev1_sr, True)
+        assert len(ev_gathering_setup.split_reads[0]) > 0
         assert list(ev_gathering_setup.split_reads[0])[0] == ev1_sr
 
     def test_collect_split_read_failure(self, ev_gathering_setup):
         # wrong cigar string
         ev1_sr = MockRead(
             query_name='HISEQX1_11:4:1203:3062:55280:split',
-            reference_id=1,
-            cigar=[(7, 110), (7, 40)],
+            reference_name='reference3',
+            cigarstring='40=110S',
             reference_start=1114,
-            reference_end=1154,
-            query_alignment_start=110,
             query_sequence='CTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATG',
-            query_alignment_end=150,
-            flag=371,
-            next_reference_id=1,
+            **flags_from_number(371),
+            next_reference_name='1',
             next_reference_start=2550,
         )
-        assert not ev_gathering_setup.collect_split_read(ev1_sr, True)
+        assert not collect_split_read(ev_gathering_setup, ev1_sr, True)
 
     def test_collect_flanking_pair(self, ev_gathering_setup):
-        ev_gathering_setup.collect_flanking_pair(
-            MockRead(
-                reference_id=1,
-                reference_start=2214,
-                reference_end=2364,
-                is_reverse=True,
-                next_reference_id=1,
-                next_reference_start=1120,
-                mate_is_reverse=True,
-            ),
-            MockRead(
-                reference_id=1,
-                reference_start=1120,
-                reference_end=2364,
-                is_reverse=True,
-                next_reference_id=1,
-                next_reference_start=1120,
-                mate_is_reverse=True,
-                is_read1=False,
+        collect_flanking_pair(
+            ev_gathering_setup,
+            *mock_read_pair(
+                MockRead(
+                    reference_name='reference3',
+                    reference_start=2214,
+                    cigarstring=str(2364 - 2214) + 'M',
+                    is_reverse=True,
+                ),
+                MockRead(
+                    reference_name='reference3',
+                    reference_start=1120,
+                    cigarstring=str(2364 - 1120) + 'M',
+                    is_reverse=True,
+                ),
+                proper_pair=False,
             ),
         )
         assert len(ev_gathering_setup.flanking_pairs) == 1
@@ -635,15 +636,26 @@ class TestEvidenceGathering:
         # first read in pair does not overlap the first evidence window
         # therefore this should return False and not add to the flanking_pairs
         pair = mock_read_pair(
-            MockRead(reference_id=1, reference_start=1903, reference_end=2053, is_reverse=True),
-            MockRead(reference_id=1, reference_start=2052, reference_end=2053, is_reverse=True),
+            MockRead(
+                reference_name='reference3',
+                reference_start=1903,
+                cigarstring=str(2053 - 1903) + 'M',
+                is_reverse=True,
+            ),
+            MockRead(
+                reference_name='reference3',
+                reference_start=2052,
+                cigarstring=str(2053 - 2052) + 'M',
+                is_reverse=True,
+            ),
+            proper_pair=False,
         )
-        assert not ev_gathering_setup.collect_flanking_pair(*pair)
+        assert not collect_flanking_pair(ev_gathering_setup, *pair)
         assert len(ev_gathering_setup.flanking_pairs) == 0
 
     def test_load_evidence(self, ev_gathering_setup):
         print(ev_gathering_setup)
-        ev_gathering_setup.load_evidence()
+        load_evidence(ev_gathering_setup)
         print(ev_gathering_setup.spanning_reads)
         assert (
             len(
@@ -669,41 +681,59 @@ class TestEvidenceGathering:
 
     def test_assemble_split_reads(self, ev_gathering_setup):
         sr1 = MockRead(
+            cigarstring='150M',
+            reference_start=1,
             query_name='HISEQX1_11:3:1105:15351:25130:split',
             query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
-            flag=113,
+            **flags_from_number(113),
         )
         sr2 = MockRead(
+            cigarstring='150M',
+            reference_start=1,
             query_sequence='GTCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTT',
-            flag=121,
+            **flags_from_number(121),
         )
         sr3 = MockRead(
+            cigarstring='150M',
+            reference_start=1,
             query_sequence='TCGTGAGTGGCAGGTGCCATCGTGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTG',
-            flag=113,
+            **flags_from_number(113),
         )
         sr7 = MockRead(
+            cigarstring='150M',
+            reference_start=1,
             query_sequence='TGAAAGCCCTGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATA',
-            flag=113,
+            **flags_from_number(113),
         )
         sr9 = MockRead(
+            cigarstring='150M',
+            reference_start=1,
             query_sequence='TGTAAACACAGAATTTGGATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGC',
-            flag=113,
+            **flags_from_number(113),
         )
         sr12 = MockRead(
+            cigarstring='150M',
+            reference_start=1,
             query_sequence='GATTCTTTCCTGTTTGGTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAG',
-            flag=113,
+            **flags_from_number(113),
         )
         sr15 = MockRead(
+            cigarstring='150M',
+            reference_start=1,
             query_sequence='GTTCCTGGTCGTGAGTGGCAGGTGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACA',
-            flag=113,
+            **flags_from_number(113),
         )
         sr19 = MockRead(
+            cigarstring='150M',
+            reference_start=1,
             query_sequence='TGCCATCATGTTTCATTCTGCCTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCA',
-            flag=113,
+            **flags_from_number(113),
         )
         sr24 = MockRead(
+            cigarstring='150M',
+            reference_start=1,
             query_sequence='CTGAGAGCAGTCTACCTAAATATATAGCTCTGCTCACAGTTTCCCTGCAATGCATAATTAAAATAGCACTATGCAGTTGCTTACACTTCAGATAATGGCTTCCTACATATTGTTGGTTATGAAATTTCAGGGTTTTCATTTCTGTATGTT',
-            flag=113,
+            **flags_from_number(113),
         )
         ev_gathering_setup.split_reads = (
             {sr1},

@@ -24,80 +24,52 @@ from mavis.constants import CIGAR
 from ...util import get_data
 from ..mock import MockObject, MockRead
 
-REFERENCE_GENOME = None
 
-
-def setUpModule():
+@pytest.fixture(scope='module')
+def mock_reference_genome():
     warnings.simplefilter('ignore')
-    global REFERENCE_GENOME
-    REFERENCE_GENOME = load_reference_genome(get_data('mock_reference_genome.fa'))
-    if (
-        'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT'
-        != REFERENCE_GENOME['fake'].seq[0:50].upper()
-    ):
+    ref = load_reference_genome(get_data('mock_reference_genome.fa'))
+    if 'CTCCAAAGAAATTGTAGTTTTCTTCTGGCTTAGAGGTAGATCATCTTGGT' != ref['fake'].seq[0:50].upper():
         raise AssertionError('fake genome file does not have the expected contents')
+    return ref
 
 
-class TestRecomputeCigarMismatch:
-    def test_simple(self):
-        r = MockRead(
-            reference_start=1456,
-            query_sequence='CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
-            cigar=[(CIGAR.M, 45)],
-        )
-        assert recompute_cigar_mismatch(r, REFERENCE_GENOME['fake']) == [(CIGAR.EQ, 45)]
-
-    def test_hardclipping(self):
-        r = MockRead(
-            reference_start=1456,
-            query_sequence='CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
-            cigar=[(CIGAR.H, 20), (CIGAR.M, 45)],
-        )
-        assert [(CIGAR.H, 20), (CIGAR.EQ, 45)] == recompute_cigar_mismatch(
-            r, REFERENCE_GENOME['fake']
-        )
-
-    def test_with_events(self):
-        r = MockRead(
-            reference_start=1456,
-            query_sequence='TATA' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
-            cigar=[(CIGAR.S, 4), (CIGAR.M, 10), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)],
-        )
-        assert [
-            (CIGAR.S, 4),
-            (CIGAR.EQ, 10),
-            (CIGAR.D, 10),
-            (CIGAR.I, 10),
-            (CIGAR.EQ, 25),
-        ] == recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
-
-    def test_mismatch_to_mismatch(self):
-        r = MockRead(
-            reference_start=1452,
-            query_sequence='CAGC' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
-            cigar=[(CIGAR.X, 4), (CIGAR.M, 10), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)],
-        )
-        assert [
-            (CIGAR.X, 4),
-            (CIGAR.EQ, 10),
-            (CIGAR.D, 10),
-            (CIGAR.I, 10),
-            (CIGAR.EQ, 25),
-        ] == recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
-
-    def test_m_to_mismatch(self):
-        r = MockRead(
-            reference_start=1452,
-            query_sequence='CAGC' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
-            cigar=[(CIGAR.M, 14), (CIGAR.D, 10), (CIGAR.I, 10), (CIGAR.M, 25)],
-        )
-        assert [
-            (CIGAR.X, 4),
-            (CIGAR.EQ, 10),
-            (CIGAR.D, 10),
-            (CIGAR.I, 10),
-            (CIGAR.EQ, 25),
-        ] == recompute_cigar_mismatch(r, REFERENCE_GENOME['fake'])
+@pytest.mark.parametrize(
+    'reference_start,query_sequence,cigar_in,cigar_out',
+    [
+        [1456, 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT', '45M', '45='],
+        [1456, 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT', '20H45M', '20H45='],
+        [
+            1456,
+            'TATA' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
+            '4S10M10D10I25M',
+            '4S10=10D10I25=',
+        ],
+        [
+            1452,
+            'CAGC' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
+            '4X10M10D10I25M',
+            '4X10=10D10I25=',
+        ],
+        [
+            1452,
+            'CAGC' 'CCCAAACAAC' 'TATAAATTTT' 'GTAATACCTA' 'GAACAATATA' 'AATAT',
+            '14M10D10I25M',
+            '4X10=10D10I25=',
+        ],
+    ],
+)
+def test_recompute_cigar_mismatch(
+    reference_start, query_sequence, cigar_in, cigar_out, mock_reference_genome
+):
+    r = MockRead(
+        reference_start=reference_start,
+        query_sequence=query_sequence,
+        cigarstring=cigar_in,
+    )
+    assert recompute_cigar_mismatch(r, mock_reference_genome['fake']) == convert_string_to_cigar(
+        cigar_out
+    )
 
 
 class TestExtendSoftclipping:
@@ -108,22 +80,64 @@ class TestExtendSoftclipping:
         assert cnew == convert_string_to_cigar('70=80S')
 
 
+@pytest.mark.parametrize(
+    'input_cigars,output_cigar',
+    [
+        [['10M10X10X'], '10M20X'],
+        [['10X10M10X'], '10X10M10X'],
+        [['10M10X10X', '10X10M10X'], '10M30X10M10X'],
+        [['1S2S5=7X2=5X28=1X99='], '3S5=7X2=5X28=1X99='],
+        [['10H10M10X10X'], '10H10M20X'],
+    ],
+)
+def test_join(input_cigars, output_cigar):
+    assert join(*[convert_string_to_cigar(c) for c in input_cigars]) == convert_string_to_cigar(
+        output_cigar
+    )
+
+
+@pytest.mark.parametrize(
+    'seq1,seq2,opt,cigar_string,ref_start',
+    [
+        ['GTGAGTAAATTCAACATCGTTTTT', 'AACTTAGAATTCAAC---------', {}, '7S8=', 7],
+        ['GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------', {}, '5S8=', 7],
+        [
+            'GTGAGTAAATTCAACATCGTTTTT',
+            '--CTTAGAATTCAAC---------',
+            dict(force_softclipping=False),
+            '5S8=',
+            7,
+        ],
+        [
+            'GTGAGTAAATTC--CATCGTTTTT',
+            '--CTTAGAATTCAAC---------',
+            dict(force_softclipping=False),
+            '5S5=2I1=',
+            7,
+        ],
+        ['CCTG', 'CCGT', dict(min_exact_to_stop_softclipping=10), '2=2X', 0],
+        [
+            '--GAGTAAATTCAACATCGTTTTT',
+            '--CTTAGAATTCAAC---------',
+            dict(force_softclipping=False),
+            '5S8=',
+            5,
+        ],
+    ],
+)
+def test_compute(seq1, seq2, opt, cigar_string, ref_start):
+    assert compute(seq1, seq2, **opt) == (convert_string_to_cigar(cigar_string), ref_start)
+
+
+def test_compute_error():
+    with pytest.raises(AttributeError):
+        compute('CCTG', 'CCG')
+
+
 class TestCigarTools:
     def test_alignment_matches(self):
         c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]
         assert alignment_matches(c) == 30
-
-    def test_join(self):
-        c = [(CIGAR.M, 10), (CIGAR.X, 10), (CIGAR.X, 10)]
-        assert join(c) == [(CIGAR.M, 10), (CIGAR.X, 20)]
-        k = [(CIGAR.X, 10), (CIGAR.M, 10), (CIGAR.X, 10)]
-        assert join(c, k) == [(CIGAR.M, 10), (CIGAR.X, 30), (CIGAR.M, 10), (CIGAR.X, 10)]
-        k = [(4, 1), (4, 2), (7, 5), (8, 7), (7, 2), (8, 5), (7, 28), (8, 1), (7, 99)]
-        assert [(4, 3), (7, 5), (8, 7), (7, 2), (8, 5), (7, 28), (8, 1), (7, 99)] == join(k)
-
-    def test_join_hardclipping(self):
-        c = [(CIGAR.H, 10), (CIGAR.M, 10), (CIGAR.X, 10), (CIGAR.X, 10)]
-        assert join(c) == [(CIGAR.H, 10), (CIGAR.M, 10), (CIGAR.X, 20)]
 
     def test_longest_fuzzy_match(self):
         c = [
@@ -170,34 +184,6 @@ class TestCigarTools:
         with pytest.raises(AttributeError):
             match_percent([(CIGAR.S, 100)])
 
-    def test_compute(self):
-        # GTGAGTAAATTCAACATCGTTTTT
-        # aacttagAATTCAAC---------
-        assert ([(CIGAR.S, 7), (CIGAR.EQ, 8)], 7) == compute(
-            'GTGAGTAAATTCAACATCGTTTTT', 'AACTTAGAATTCAAC---------'
-        )
-        assert ([(CIGAR.S, 5), (CIGAR.EQ, 8)], 7) == compute(
-            'GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------'
-        )
-        assert ([(CIGAR.S, 5), (CIGAR.EQ, 8)], 7) == compute(
-            'GTGAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------', False
-        )
-
-        assert ([(CIGAR.S, 5), (CIGAR.EQ, 5), (CIGAR.I, 2), (CIGAR.EQ, 1)], 7) == compute(
-            'GTGAGTAAATTC--CATCGTTTTT', '--CTTAGAATTCAAC---------', False
-        )
-
-        with pytest.raises(AttributeError):
-            compute('CCTG', 'CCG')
-
-        assert ([(CIGAR.EQ, 2), (CIGAR.X, 2)], 0) == compute(
-            'CCTG', 'CCGT', min_exact_to_stop_softclipping=10
-        )
-
-        assert ([(CIGAR.S, 5), (CIGAR.EQ, 8)], 5) == compute(
-            '--GAGTAAATTCAACATCGTTTTT', '--CTTAGAATTCAAC---------', False
-        )
-
     def test_convert_for_igv(self):
         c = [(CIGAR.M, 10), (CIGAR.EQ, 10), (CIGAR.X, 10)]
         assert convert_for_igv(c) == [(CIGAR.M, 30)]
@@ -206,17 +192,22 @@ class TestCigarTools:
 class TestHgvsStandardizeCigars:
     def no_change_aligned(self):
         ref = 'AAATTTGGGCCCAATT'
-        read = MockRead('name', '1', 1, cigar=[(CIGAR.M, 10)], query_sequence='AAATTTGGGC')
+        read = MockRead(
+            query_name='name',
+            reference_name='1',
+            reference_start=1,
+            cigarstring='10M',
+            query_sequence='AAATTTGGGC',
+        )
         assert hgvs_standardize_cigar(read, ref) == [(CIGAR.M, 10)]
 
     def no_change_proper_indel(self):
-        ref = 'ATAGGC' 'ATCTACGAG' 'ATCGCTACG'
+        ref = 'ATAGGC' 'ATCTAC' 'GAG' 'ATCG' 'CTACG'
         read = MockRead(
-            'name',
-            1,
-            6,
+            query_name='name',
+            reference_start=6,
             query_sequence='ATCTAC' 'CCC' 'ATCG',
-            cigar=[(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)],
+            cigarstring='6=3I3D4=',
         )
         assert [(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)] == hgvs_standardize_cigar(
             read, ref
@@ -225,11 +216,10 @@ class TestHgvsStandardizeCigars:
     def ins_after_deletion(self):
         ref = 'ATAGGC' 'ATCTACGAG' 'ATCGCTACG'
         read = MockRead(
-            'name',
-            1,
-            6,
+            query_name='name',
+            reference_start=6,
             query_sequence='ATCTAC' 'CCC' 'ATCG',
-            cigar=[(CIGAR.EQ, 6), (CIGAR.D, 3), (CIGAR.I, 3), (CIGAR.EQ, 4)],
+            cigarstring='6=3D3I4=',
         )
         assert [(CIGAR.EQ, 6), (CIGAR.I, 3), (CIGAR.D, 3), (CIGAR.EQ, 4)] == hgvs_standardize_cigar(
             read, ref
@@ -238,22 +228,20 @@ class TestHgvsStandardizeCigars:
     def test_insertion_in_repeat(self):
         ref = 'ATAGGC' 'ATCT' 'ACGA' 'GATCGCTACG'
         read = MockRead(
-            'name',
-            1,
-            6,
+            query_name='name',
+            reference_start=6,
             query_sequence='ATCT' 'ACGA' 'ACGA' 'GATC',
-            cigar=[(CIGAR.EQ, 4), (CIGAR.I, 4), (CIGAR.EQ, 8)],
+            cigarstring='4=4I8=',
         )
         assert [(CIGAR.EQ, 8), (CIGAR.I, 4), (CIGAR.EQ, 4)] == hgvs_standardize_cigar(read, ref)
 
     def test_deletion_in_repeat(self):
         ref = 'ATAGGC' 'ATCT' 'ACGA' 'ACGA' 'ACGA' 'GATCGCTACG'
         read = MockRead(
-            'name',
-            1,
-            6,
+            query_name='name',
+            reference_start=6,
             query_sequence='ATCT' 'ACGA' 'ACGA' 'GATC',
-            cigar=[(CIGAR.EQ, 4), (CIGAR.D, 4), (CIGAR.EQ, 12)],
+            cigarstring='4=4D12=',
         )
         assert [(CIGAR.EQ, 12), (CIGAR.D, 4), (CIGAR.EQ, 4)] == hgvs_standardize_cigar(read, ref)
 
@@ -261,18 +249,7 @@ class TestHgvsStandardizeCigars:
         rseq = 'ATAGGC' 'ATCT' 'GG' 'GA' 'GCGA' 'GATCGCTACG'
         qseq = 'ATCT' 'TTT' 'TT' 'GCGA' 'GATC'
         read = MockRead(
-            'name',
-            1,
-            6,
-            query_sequence=qseq,
-            cigar=[
-                (CIGAR.EQ, 4),
-                (CIGAR.D, 2),
-                (CIGAR.I, 3),
-                (CIGAR.D, 2),
-                (CIGAR.I, 2),
-                (CIGAR.EQ, 8),
-            ],
+            query_name='name', reference_start=6, query_sequence=qseq, cigarstring='4=2D3I2D2I8='
         )
         assert [(CIGAR.EQ, 4), (CIGAR.I, 5), (CIGAR.D, 4), (CIGAR.EQ, 8)] == hgvs_standardize_cigar(
             read, rseq
@@ -283,19 +260,7 @@ class TestHgvsStandardizeCigars:
         #                ATCT   CTTTT                 TACGA
         qseq = 'ATCT' 'C' 'TT' 'TTT' 'ACGA' 'GATC'
         read = MockRead(
-            'name',
-            1,
-            6,
-            query_sequence=qseq,
-            cigar=[
-                (CIGAR.EQ, 4),
-                (CIGAR.X, 1),
-                (CIGAR.D, 3),
-                (CIGAR.I, 2),
-                (CIGAR.D, 5),
-                (CIGAR.I, 3),
-                (CIGAR.EQ, 8),
-            ],
+            query_name='name', reference_start=6, query_sequence=qseq, cigarstring='4=1X3D2I5D3I8='
         )
         assert [(CIGAR.EQ, 4), (CIGAR.I, 5), (CIGAR.D, 8), (CIGAR.EQ, 9)] == hgvs_standardize_cigar(
             read, rseq
@@ -310,21 +275,11 @@ class TestHgvsStandardizeCigars:
         # ATAGGCATCT      ACGAACGAACGAGATCGCTACG
         #       ATCTCTTTTT     CGAACG
         read = MockRead(
-            'name',
-            1,
-            6,
+            query_name='name',
+            reference_start=6,
             reference_name='1',
             query_sequence='ATCTCTTTTTCGAACG',
-            cigar=[
-                (CIGAR.H, 10),
-                (CIGAR.EQ, 4),
-                (CIGAR.X, 1),
-                (CIGAR.D, 2),
-                (CIGAR.I, 3),
-                (CIGAR.D, 2),
-                (CIGAR.I, 2),
-                (CIGAR.EQ, 6),
-            ],
+            cigarstring='10H4=1X2D3I2D2I6=',
         )
         print(SamRead.deletion_sequences(read, {'1': MockObject(seq=ref)}))
         print(SamRead.insertion_sequences(read))
@@ -340,11 +295,10 @@ class TestHgvsStandardizeCigars:
     def test_homopolymer_even_odd(self):
         ref = 'ATCGAGAT' + 'A' * 15 + 'TCGAGAT'
         read = MockRead(
-            'name',
-            1,
-            1,
+            query_name='name',
+            reference_start=1,
             query_sequence='ATCGAGATA' + 'A' * 12 + 'TCGAGAT',
-            cigar=[(CIGAR.EQ, 8), (CIGAR.D, 2), (CIGAR.EQ, 20)],
+            cigarstring='8=2D20=',
         )
         assert [(CIGAR.EQ, 9 + 12), (CIGAR.D, 2), (CIGAR.EQ, 7)] == hgvs_standardize_cigar(
             read, ref
@@ -355,15 +309,14 @@ class TestHgvsStandardizeCigars:
         )
 
         read = MockRead(
-            'name',
-            '1',
-            0,
-            149,
+            query_name='name',
+            reference_name='1',
+            reference_start=0,
             query_sequence=(
                 'CCCCGGCTCATGTCTGGTTTTGTTTTCCGGGGGCGGGGGGGCTCCCTGGGGATGATGGTGATTTTTTTTTTTTTTTTTAATCCTCAACTAGGAGAGAAAA'
                 'TGAGGCAGAGACAATGTGGGGAGCGAGAGAGGGGAAAAGGACGGGGGAGG'
             ),
-            cigar=[(CIGAR.EQ, 61), (CIGAR.I, 2), (CIGAR.EQ, 87)],
+            cigarstring='61=2I87=',
         )
         assert [(CIGAR.EQ, 61 + 15), (CIGAR.I, 2), (CIGAR.EQ, 87 - 15)] == hgvs_standardize_cigar(
             read, ref
@@ -375,15 +328,14 @@ class TestHgvsStandardizeCigars:
         )
 
         read = MockRead(
-            'name',
-            '1',
-            0,
-            149,
+            query_name='name',
+            reference_name='1',
+            reference_start=0,
             query_sequence=(
                 'CCCCTCCTCGGTCGGGCAGATCTTTCAGAAGCAGGAGCCCAGGATCATGTCTGGTTTTGTTTTCCGAGGGCGAGGGGGCTCCCTGAGGATGATGGTGATTTT'
                 'TTTTTTTTTTTTTAATCCTCAACTAGGAGAGAAAATGAGGCAGAGACA'
             ),
-            cigar=[(CIGAR.S, 2), (CIGAR.EQ, 96), (CIGAR.I, 2), (CIGAR.EQ, 50)],
+            cigarstring='2S96=2I50=',
         )
         assert [
             (CIGAR.S, 2),
@@ -405,10 +357,10 @@ class TestHgvsStandardizeCigars:
         )
         print(len(qseq) - 28)
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='1',
             reference_start=4,
-            cigar=convert_string_to_cigar('4S13=2D64='),
+            cigarstring='4S13=2D64=',
             query_sequence=qseq,
         )
         reference_genome = {'1': MockObject(seq=rseq)}
@@ -430,10 +382,10 @@ class TestHgvsStandardizeCigars:
         )
         print(len(qseq) - 28)
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='1',
             reference_start=4,
-            cigar=convert_string_to_cigar('4S13=3D63='),
+            cigarstring='4S13=3D63=',
             query_sequence=qseq,
         )
         reference_genome = {'1': MockObject(seq=rseq)}
@@ -448,10 +400,10 @@ class TestHgvsStandardizeCigars:
         rseq = 'qwertyuiopasdfghjklzxcvbnm'
         qseq = 'qwertyuiopasdfghjklzxcvbnm'
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='1',
             reference_start=0,
-            cigar=convert_string_to_cigar('13=1I1D12='),
+            cigarstring='13=1I1D12=',
             query_sequence=qseq,
         )
         exp = convert_string_to_cigar('26=')
@@ -462,10 +414,10 @@ class TestHgvsStandardizeCigars:
         rseq = 'qwertyuiopasdfghjklzxcvbnm'
         qseq = 'qwertyuiopasdfkghjklzxcvbnm'
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='1',
             reference_start=0,
-            cigar=convert_string_to_cigar('13=2I1D12='),
+            cigarstring='13=2I1D12=',
             query_sequence=qseq,
         )
         exp = convert_string_to_cigar('14=1I12=')
@@ -476,10 +428,10 @@ class TestHgvsStandardizeCigars:
         rseq = 'qwertyuiopasdfghjklzxcvbnm'
         qseq = 'qwertyuiopasdfkmkghjklzxcvbnm'
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='1',
             reference_start=0,
-            cigar=convert_string_to_cigar('14=5I2D10='),
+            cigarstring='14=5I2D10=',
             query_sequence=qseq,
         )
         exp = convert_string_to_cigar('14=3I12=')
@@ -490,10 +442,10 @@ class TestHgvsStandardizeCigars:
         rseq = 'GGGTGCAGTGGCTTACACCT' 'GTAATCCAAACACCTTGGGAGCCGCCCCCTGAG' 'CCTCCAGGCCCGGGACAGA'
         qseq = 'GGGTGCAGTGGCTTACACCT' 'CCAGG' 'CCTCCAGGCCCGGGACAGA'
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='1',
             reference_start=0,
-            cigar=convert_string_to_cigar('20=5I33D19='),
+            cigarstring='20=5I33D19=',
             query_sequence=qseq,
         )
         exp = convert_string_to_cigar('20=4I32D20=')
@@ -513,10 +465,10 @@ class TestHgvsStandardizeCigars:
         )
         print(len(qseq) - 13 - 4)
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='1',
             reference_start=4,
-            cigar=convert_string_to_cigar('4S13=2I66='),
+            cigarstring='4S13=2I66=',
             query_sequence=qseq,
         )
         exp = convert_string_to_cigar('4S26=2I53=')
@@ -524,7 +476,7 @@ class TestHgvsStandardizeCigars:
         read.cigar = new_cigar
         assert new_cigar == exp
 
-    def test_deletion_repeat(self):
+    def test_deletion_repeat(self, mock_reference_genome):
         qseq = (
             'GAGT'
             'GAGACTCTGT'
@@ -539,21 +491,10 @@ class TestHgvsStandardizeCigars:
         # deleted reference: TATGTGTAATATACATCATGTATCAAA
         print(qseq[:76], qseq[76:])
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='11_86018001-86018500',
             reference_start=28,
-            cigar=[
-                (CIGAR.S, 4),
-                (CIGAR.EQ, 10),
-                (CIGAR.X, 3),
-                (CIGAR.EQ, 14),
-                (CIGAR.X, 1),
-                (CIGAR.EQ, 21),
-                (CIGAR.X, 1),
-                (CIGAR.EQ, 22),
-                (CIGAR.D, 27),
-                (CIGAR.EQ, 74),
-            ],
+            cigarstring='4S10=3X14=1X21=1X22=27D74=',
             query_sequence=qseq,
         )
         expected_cigar = [
@@ -568,10 +509,10 @@ class TestHgvsStandardizeCigars:
             (CIGAR.D, 27),
             (CIGAR.EQ, 74 - 30),
         ]
-        std_cigar = hgvs_standardize_cigar(read, REFERENCE_GENOME[read.reference_name].seq)
-        print(SamRead.deletion_sequences(read, REFERENCE_GENOME))
+        std_cigar = hgvs_standardize_cigar(read, mock_reference_genome[read.reference_name].seq)
+        print(SamRead.deletion_sequences(read, mock_reference_genome))
         read.cigar = std_cigar
-        print(SamRead.deletion_sequences(read, REFERENCE_GENOME))
+        print(SamRead.deletion_sequences(read, mock_reference_genome))
         assert std_cigar == expected_cigar
 
     @timeout_decorator.timeout(1)
@@ -600,23 +541,11 @@ class TestHgvsStandardizeCigars:
             'ACACACACACACACACAC'
         )
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='mock',
             reference_start=0,
             query_sequence=qseq,
-            cigar=[
-                (CIGAR.EQ, 33),
-                (CIGAR.X, 1),
-                (CIGAR.EQ, 49),
-                (CIGAR.I, 26),
-                (CIGAR.EQ, 18),
-                (CIGAR.X, 1),
-                (CIGAR.EQ, 1),
-                (CIGAR.I, 1),
-                (CIGAR.EQ, 1),
-                (CIGAR.I, 1),
-                (CIGAR.EQ, 18),
-            ],
+            cigarstring='33=1X49=26I18=1X1=1I1=1I18=',
         )
         print(rseq)
         print(
@@ -648,11 +577,11 @@ class TestHgvsStandardizeCigars:
         qseq = 'ATCTTAGCCAGGT' 'AGTTACATACATATC'
         rseq = 'ATCTTAGCCAGGT' 'AGCTAT' 'AGTTACATACATATC'
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='mock',
             reference_start=0,
             query_sequence=qseq,
-            cigar=convert_string_to_cigar('13=6D15='),
+            cigarstring='13=6D15=',
         )
         assert convert_string_to_cigar('15=6D13=') == hgvs_standardize_cigar(read, rseq)
 
@@ -662,22 +591,22 @@ class TestHgvsStandardizeCigars:
         print(qseq)
         print(rseq)
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='mock',
             reference_start=0,
             query_sequence=qseq,
-            cigar=convert_string_to_cigar('13=1I6D15='),
+            cigarstring='13=1I6D15=',
         )
         assert convert_string_to_cigar('13=1I6D15=') == hgvs_standardize_cigar(read, rseq)
 
     def test_shift_complex_indel(self):
         refseq = 'ATATATCTATTTTTTTCTTTCTTTTTTTTACTTTCATTAAGTGCCACTAAAAAATTAGGTTCAATTAAACTTTATTAATCTCTTCTGAGTTTTGATTGAGTATATATATATATATACCCAGTTTCAAGCAGGTATCTGCCTTTAAAGATAAGAGACCTCCTAAATGCTTTCTTTTATTAGTTGCCCTGTTTCAGATTCAGCTTTGTATCTATATCACCTGTTAATATGTGTGGACTCACAGAAATGATCATTGAGGGAATGCACCCTGTTTGGGTGTAAGTAGCTCAGGGAAAAAATCCTAG'
         read = MockRead(
-            'name',
+            query_name='name',
             reference_name='18',
             reference_start=40237946 - 40237890,
             query_sequence='AGGTTCAATTAAACTTTATTAATCTCTTCTGAGTTTTGATTGAGTGTATATATATATATATATATATATATATATATACCCAGTTTCAAGCAGGTATCTGCCTTTAAAGATAAGAGACCTCCTAAGTGCTTTCTTTTATTAGTGGCCCTG',
-            cigar=convert_string_to_cigar('44M18I88M'),
+            cigarstring='44M18I88M',
         )
         print(_read.convert_cigar_to_string(read.cigar))
         read.cigar = recompute_cigar_mismatch(read, refseq)
@@ -705,21 +634,34 @@ class TestMergeInternalEvents:
         assert new_cigar == exp
 
 
-class TestConvertStringToCigar:
-    def test(self):
-        string = '283M' '17506D' '5M' '21275D' '596M' '17506D' '5M' '21275D' '313M'
-        exp = [
-            (CIGAR.M, 283),
-            (CIGAR.D, 17506),
-            (CIGAR.M, 5),
-            (CIGAR.D, 21275),
-            (CIGAR.M, 596),
-            (CIGAR.D, 17506),
-            (CIGAR.M, 5),
-            (CIGAR.D, 21275),
-            (CIGAR.M, 313),
-        ]
-        assert convert_string_to_cigar(string) == exp
+@pytest.mark.parametrize(
+    'string,cigartuples',
+    [
+        [
+            '283M' '17506D' '5M' '21275D' '596M' '17506D' '5M' '21275D' '313M',
+            [
+                (CIGAR.M, 283),
+                (CIGAR.D, 17506),
+                (CIGAR.M, 5),
+                (CIGAR.D, 21275),
+                (CIGAR.M, 596),
+                (CIGAR.D, 17506),
+                (CIGAR.M, 5),
+                (CIGAR.D, 21275),
+                (CIGAR.M, 313),
+            ],
+        ],
+        [
+            '42H25M',
+            [
+                (CIGAR.H, 42),
+                (CIGAR.M, 25),
+            ],
+        ],
+    ],
+)
+def test_convert_string_to_cigar(string, cigartuples):
+    assert convert_string_to_cigar(string) == cigartuples
 
 
 class TestGetSequences:
@@ -729,7 +671,7 @@ class TestGetSequences:
             reference_start=0,
             reference_name='1',
             query_sequence='',
-            cigar=convert_string_to_cigar('2=3D8=4D9='),
+            cigarstring='2=3D8=4D9=',
         )
         assert (
             SamRead.deletion_sequences(read, {'1': MockObject(seq='abcdefghijklmnopqrstuvwxyz')})
@@ -742,6 +684,6 @@ class TestGetSequences:
             reference_start=0,
             reference_name='1',
             query_sequence='abcdekkkfghijklmnopqkkkkrstuvwxyz',
-            cigar=convert_string_to_cigar('5=3I12=4I9='),
+            cigarstring='5=3I12=4I9=',
         )
         assert SamRead.insertion_sequences(read) == exp

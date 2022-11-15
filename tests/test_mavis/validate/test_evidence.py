@@ -11,6 +11,7 @@ from mavis.constants import ORIENT, STRAND
 from mavis.interval import Interval
 from mavis.validate.base import Evidence
 from mavis.validate.evidence import GenomeEvidence, TranscriptomeEvidence
+from mavis.validate.gather import collect_flanking_pair
 from mavis_config import DEFAULTS
 
 from ..mock import MockBamFileHandle, MockObject, MockRead, mock_read_pair
@@ -202,8 +203,18 @@ class TestComputeFragmentSizes:
     def test_genomic_vs_trans_no_annotations(self, genomic_evidence, read_length, trans_evidence):
         # should be identical
         read, mate = mock_read_pair(
-            MockRead('name', '1', 1051 - read_length + 1, 1051, is_reverse=False),
-            MockRead('name', '1', 2300, 2300 + read_length - 1, is_reverse=True),
+            MockRead(
+                query_name='name',
+                reference_name='1',
+                reference_start=1051 - read_length + 1,
+                cigarstring=str(read_length) + 'M',
+            ),
+            MockRead(
+                query_name='name',
+                reference_name='1',
+                reference_start=2300,
+                cigarstring=str(read_length) + 'M',
+            ),
         )
         assert genomic_evidence.compute_fragment_size(
             read, mate
@@ -211,8 +222,18 @@ class TestComputeFragmentSizes:
 
     def test_reverse_reads(self, genomic_evidence, trans_evidence):
         read, mate = mock_read_pair(
-            MockRead('name', '1', 1001, 1100, is_reverse=False),
-            MockRead('name', '1', 2201, 2301, is_reverse=True),
+            MockRead(
+                query_name='name',
+                reference_name='1',
+                reference_start=1001,
+                cigarstring='99M',
+            ),
+            MockRead(
+                query_name='name',
+                reference_name='1',
+                reference_start=2300,
+                cigarstring='100M',
+            ),
         )
         assert genomic_evidence.compute_fragment_size(read, mate) == Interval(1300)
         assert genomic_evidence.compute_fragment_size(mate, read) == Interval(1300)
@@ -613,58 +634,143 @@ def flanking_ge(read_length):
 class TestGenomeEvidenceAddReads:
     def test_collect_flanking_pair_error_unmapped_read(self, flanking_ge):
         read, mate = mock_read_pair(
-            MockRead('test', 0, 900, 1000, is_reverse=False),
-            MockRead('test', 0, 6000, 6099, is_reverse=True),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=900,
+                cigarstring='100M',
+                is_reverse=False,
+            ),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=6000,
+                cigarstring=str(6099 - 6000) + 'M',
+                is_reverse=True,
+            ),
         )
         read.is_unmapped = True
         with pytest.raises(ValueError):
-            flanking_ge.collect_flanking_pair(read, mate)
+            collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_error_mate_unmapped(self, flanking_ge):
         read, mate = mock_read_pair(
-            MockRead('test', 0, 900, 1000, is_reverse=False),
-            MockRead('test', 0, 6000, 6099, is_reverse=True),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=900,
+                cigarstring=str(1000 - 900) + 'M',
+                is_reverse=False,
+            ),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=6000,
+                cigarstring=str(6099 - 6000) + 'M',
+                is_reverse=True,
+            ),
         )
         mate.is_unmapped = True
         with pytest.raises(ValueError):
-            flanking_ge.collect_flanking_pair(read, mate)
+            collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_error_query_names_dont_match(self, flanking_ge):
         read, mate = mock_read_pair(
-            MockRead('test1', 0, 900, 1000, is_reverse=False),
-            MockRead('test', 0, 6000, 6099, is_reverse=True),
+            MockRead(
+                query_name='test1',
+                reference_name='1',
+                reference_start=900,
+                cigarstring=str(1000 - 900) + 'M',
+                is_reverse=False,
+            ),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=6000,
+                cigarstring=str(6099 - 6000) + 'M',
+                is_reverse=True,
+            ),
         )
         with pytest.raises(ValueError):
-            flanking_ge.collect_flanking_pair(read, mate)
+            collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_error_template_lengths_dont_match(self, flanking_ge):
         read, mate = mock_read_pair(
-            MockRead('test', 0, 900, 1000, is_reverse=False, template_length=50),
-            MockRead('test', 0, 6000, 6099, is_reverse=True),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=900,
+                cigarstring=str(1000 - 900) + 'M',
+                is_reverse=False,
+                template_length=50,
+            ),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=6000,
+                cigarstring=str(6099 - 6000) + 'M',
+                is_reverse=True,
+            ),
         )
         mate.template_length = 55
         with pytest.raises(ValueError):
-            flanking_ge.collect_flanking_pair(read, mate)
+            collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_read_low_mq(self, flanking_ge):
         read, mate = mock_read_pair(
-            MockRead('test', 0, 900, 1000, is_reverse=False),
-            MockRead('test', 0, 6000, 6099, is_reverse=True),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=900,
+                cigarstring=str(1000 - 900) + 'M',
+                is_reverse=False,
+            ),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=6000,
+                cigarstring=str(6099 - 6000) + 'M',
+                is_reverse=True,
+            ),
         )
         read.mapping_quality = 0
-        assert not flanking_ge.collect_flanking_pair(read, mate)
+        assert not collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_mate_low_mq(self, flanking_ge):
         read, mate = mock_read_pair(
-            MockRead('test', 0, 900, 1000, is_reverse=False),
-            MockRead('test', 0, 6000, 6099, is_reverse=True),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=900,
+                cigarstring=str(1000 - 900) + 'M',
+                is_reverse=False,
+            ),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=6000,
+                cigarstring=str(6099 - 6000) + 'M',
+                is_reverse=True,
+            ),
         )
         mate.mapping_quality = 0
-        assert not flanking_ge.collect_flanking_pair(read, mate)
+        assert not collect_flanking_pair(flanking_ge, read, mate)
 
     def test_collect_flanking_pair_interchromosomal(self, flanking_ge):
         read, mate = mock_read_pair(
-            MockRead('test', 1, 900, 1000, is_reverse=False),
-            MockRead('test', 0, 6000, 6099, is_reverse=True),
+            MockRead(
+                query_name='test',
+                reference_name='2',
+                reference_start=900,
+                cigarstring=str(1000 - 900) + 'M',
+                is_reverse=False,
+            ),
+            MockRead(
+                query_name='test',
+                reference_name='1',
+                reference_start=6000,
+                cigarstring=str(6099 - 6000) + 'M',
+                is_reverse=True,
+            ),
         )
-        assert not flanking_ge.collect_flanking_pair(read, mate)
+        assert not collect_flanking_pair(flanking_ge, read, mate)

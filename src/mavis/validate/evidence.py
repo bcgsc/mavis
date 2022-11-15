@@ -210,11 +210,14 @@ class TranscriptomeEvidence(Evidence):
         return Interval.from_iterable(genomic_end_positions)
 
     def compute_fragment_size(self, read, mate):
+        """
+        Template_length to match genome template length (aka. fragment size - 1 read length if all mapped perfectly)
+        """
         if read.reference_start > mate.reference_start:
             read, mate = mate, read
         if read.reference_name == mate.reference_name:
             start, end = self.distance(
-                read.reference_start + 1, mate.reference_end, chrom=read.reference_name
+                read.reference_start + 1, mate.reference_start + 1, chrom=read.reference_name
             )
             return Interval(start + 1, end + 1)
         return Interval(0)

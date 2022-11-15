@@ -3,7 +3,7 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-
+from ..interval import Interval
 import pandas as pd
 
 try:
@@ -37,6 +37,7 @@ class VcfInfoType(TypedDict, total=False):
     CHR2: str
     CIPOS: Tuple[int, int]
     CIEND: Tuple[int, int]
+    CILEN: Tuple[int, int]
     CT: str
     END: Optional[int]
     PRECISE: bool
@@ -122,6 +123,98 @@ def parse_bnd_alt(alt: str) -> Tuple[str, int, str, str, str, str]:
         raise NotImplementedError('alt specification in unexpected format', alt)
 
 
+def convert_imprecise_breakend(std_row: Dict, record: List[VcfRecordType], bp_end: int):
+    """
+    Handles IMPRECISE calls, that leveraged uncertainty from the CIPOS/CIEND/CILEN fields.
+
+    bp1_s = breakpoint1 start
+    bp1_e = breakpoint1 end
+    bp2_s = breakpoint2 start
+    bp2_e = breakpoint2 end
+
+    Insertion and deletion edge case - in which bp1_e > bp2_s
+    E.g bp1_s = 1890, bp1_e = 2000, bp2_s = 1900, bp2_e = 1900.
+    break1 ------------------------=======================--------------
+    break2 ------------------------==========---------------------------
+
+    Insertion edge case - in which bp1_e > bp1_s
+    E.g bp1_s = 1890, bp1_e = 1800, bp2_s = 1800, bp2_e = 1800.
+    break1 ------------------------==-----------------------------------
+    break2 ------------------------=------------------------------------
+
+    Insertion edge case - in which bp1_s > bp2_s
+    E.g bp1_s = 1950, bp1_e = 2000, bp2_s = 1900, bp2_e = 3000.
+    break1 ------------------------==-----------------------------------
+    break2 -----------------------========------------------------------
+    """
+    is_intrachromosomal = std_row["break1_chromosome"] == std_row["break2_chromosome"]
+
+    if record.info.get(
+        'CILEN'
+    ):  # as per https://github.com/samtools/hts-specs/issues/615, CILEN takes priority over CIPOS in dictating breakpoint2
+        std_row.update(
+            {
+                COLUMNS.break1_position_start: max(
+                    1, record.pos + record.info.get('CIPOS', (0, 0))[0]
+                ),
+                COLUMNS.break1_position_end: record.pos + record.info.get('CIPOS', (0, 0))[1],
+                COLUMNS.break2_position_start: max(1, bp_end + record.info.get('CILEN', (0, 0))[0]),
+                COLUMNS.break2_position_end: bp_end + record.info.get('CILEN', (0, 0))[1],
+            }
+        )
+    else:
+        std_row.update(
+            {
+                COLUMNS.break1_position_start: max(
+                    1, record.pos + record.info.get('CIPOS', (0, 0))[0]
+                ),
+                COLUMNS.break1_position_end: record.pos + record.info.get('CIPOS', (0, 0))[1],
+                COLUMNS.break2_position_start: max(1, bp_end + record.info.get('CIEND', (0, 0))[0]),
+                COLUMNS.break2_position_end: bp_end + record.info.get('CIEND', (0, 0))[1],
+            }
+        )
+
+    if is_intrachromosomal and (
+        Interval.overlaps(
+            (std_row['break1_position_start'], std_row['break1_position_end']),
+            (std_row['break2_position_start'], std_row['break2_position_end']),
+        )
+    ):
+        if std_row.get('event_type') != 'BND':
+            std_row['break2_position_start'] = max(
+                std_row['break1_position_start'], std_row['break2_position_start']
+            )
+            std_row['break1_position_end'] = min(
+                std_row['break1_position_end'], std_row['break2_position_end']
+            )
+            std_row['break1_position_start'] = min(
+                std_row['break1_position_start'], std_row['break2_position_end']
+            )
+    if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
+        # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
+        std_row.update({'break1_position_end': 1})
+    if std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
+        std_row.update({'break2_position_end': 1})
+
+    if is_intrachromosomal and (
+        std_row['break2_position_start'] > std_row['break2_position_end']
+        or std_row['break1_position_start'] > std_row['break1_position_end']
+    ):
+        if 'event_type' in std_row and std_row['event_type'] != 'BND':
+            raise ValueError(
+                f'Improper entry. One of the following breakpoints start is greater than breakpoint end: Breakpoint1_start: {std_row["break1_position_start"]}, Breakpoint1_end: {std_row["break1_position_end"]} Breakpoint2_start: {std_row["break2_position_start"]}, Breakpoint2_end: {std_row["break2_position_end"]} This call has been dropped.'
+            )
+
+    if (
+        None not in (record.pos, record.info.get('END'))
+        and record.pos > record.info.get('END')
+        and is_intrachromosomal
+    ):
+        raise ValueError(
+            f'Improper entry. Starting position ({record.pos}) cannot be greater than ending position ({record.info.get("END")}). This call has been dropped.'
+        )
+
+
 def convert_record(record: VcfRecordType) -> List[Dict]:
     """
     converts a vcf record
@@ -181,6 +274,10 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                 elif size < 0:
                     std_row[COLUMNS.event_type] = SVTYPE.DEL
         std_row.update({COLUMNS.break1_chromosome: record.chrom, COLUMNS.break2_chromosome: chr2})
+
+        if 'SVTYPE' in info:
+            std_row[COLUMNS.event_type] = info['SVTYPE']
+
         if info.get(
             'PRECISE', False
         ):  # DELLY CI only apply when split reads were not used to refine the breakpoint which is then flagged
@@ -193,24 +290,7 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
                 }
             )
         else:
-            std_row.update(
-                {
-                    COLUMNS.break1_position_start: max(
-                        1, record.pos + info.get('CIPOS', (0, 0))[0]
-                    ),
-                    COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
-                    COLUMNS.break2_position_start: max(1, end + info.get('CIEND', (0, 0))[0]),
-                    COLUMNS.break2_position_end: end + info.get('CIEND', (0, 0))[1],
-                }
-            )
-        if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
-            # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
-            std_row.update({'break1_position_end': 1})
-        if std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
-            std_row.update({'break2_position_end': 1})
-
-        if 'SVTYPE' in info:
-            std_row[COLUMNS.event_type] = info['SVTYPE']
+            convert_imprecise_breakend(std_row, record, end)
 
         try:
             orient1, orient2 = info['CT'].split('to')
@@ -220,7 +300,11 @@ def convert_record(record: VcfRecordType) -> List[Dict]:
         except KeyError:
             pass
         std_row.update(
-            {k: v for k, v in info.items() if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CT'}}
+            {
+                k: v
+                for k, v in info.items()
+                if k not in {'CHR2', 'SVTYPE', 'CIPOS', 'CIEND', 'CILEN', 'CT'}
+            }
         )
         records.append(std_row)
     return records
@@ -238,7 +322,7 @@ def convert_pandas_rows_to_variants(df: pd.DataFrame) -> List[VcfRecordType]:
 
         # convert info types
         for key in info:
-            if key in {'CIPOS', 'CIEND'}:
+            if key in {'CIPOS', 'CIEND', 'CILEN'}:
                 ci_start, ci_end = info[key].split(',')
                 info[key] = (int(ci_start), int(ci_end))
             elif key == 'END':
@@ -327,6 +411,6 @@ def convert_file(input_file: str) -> List[Dict]:
     for variant_record in convert_pandas_rows_to_variants(data):
         try:
             rows.extend(convert_record(variant_record))
-        except NotImplementedError as err:
+        except (NotImplementedError, ValueError) as err:
             logging.warning(str(err))
     return rows

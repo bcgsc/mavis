@@ -9,16 +9,16 @@ from typing import TYPE_CHECKING, Dict, List
 
 import pysam
 
-from .bam import cigar as _cigar
-from .bam import read as _read
-from .breakpoint import Breakpoint, BreakpointPair
-from .constants import CIGAR, ORIENT, STRAND, SVTYPE, MavisNamespace, reverse_complement
-from .interval import Interval
-from .types import ReferenceGenome
-from .util import logger
+from ..bam import cigar as _cigar
+from ..bam import read as _read
+from ..breakpoint import Breakpoint, BreakpointPair, classify_breakpoint_pair
+from ..constants import CIGAR, ORIENT, STRAND, SVTYPE, MavisNamespace, reverse_complement
+from ..interval import Interval
+from ..types import ReferenceGenome
+from ..util import logger
 
 if TYPE_CHECKING:
-    from .bam.cache import BamCache
+    from ..bam.cache import BamCache
 
 
 class SUPPORTED_ALIGNER(MavisNamespace):
@@ -34,7 +34,7 @@ class SUPPORTED_ALIGNER(MavisNamespace):
     BLAT = 'blat'
 
 
-class SplitAlignment(BreakpointPair):
+class DiscontinuousAlignment(BreakpointPair):
     def __init__(self, *pos, **kwargs):
         self.read1 = kwargs.pop('read1')
         self.read2 = kwargs.pop('read2', None)
@@ -177,9 +177,8 @@ def query_coverage_interval(read: pysam.AlignedSegment) -> Interval:
     Returns:
         The portion of the original query sequence that is aligned by this read
     """
-    seq = read.query_sequence
     st = 0
-    end = len(seq) - 1
+    end = read.query_length - 1
     if read.cigar[0][0] == CIGAR.S:
         st += read.cigar[0][1]
     if read.cigar[-1][0] == CIGAR.S:
@@ -210,7 +209,7 @@ def convert_to_duplication(alignment, reference_genome: ReferenceGenome):
             if refseq != alignment.untemplated_seq[:dup_len]:
                 continue
 
-            result = SplitAlignment(
+            result = DiscontinuousAlignment(
                 Breakpoint(
                     alignment.break2.chr,
                     alignment.break2.start - dup_len,
@@ -280,7 +279,7 @@ def call_read_events(read, secondary_read=None, is_stranded=False):
     result = []
     strand = STRAND.NEG if read.is_reverse else STRAND.POS
     for ref_start, delsize, insseq in events:
-        bpp = SplitAlignment(
+        bpp = DiscontinuousAlignment(
             Breakpoint(
                 read.reference_name,
                 ref_start,
@@ -333,7 +332,8 @@ def read_breakpoint(read):
 def call_paired_read_event(read1, read2, is_stranded=False):
     """
     For a given pair of reads call all applicable events. Assume there is a major
-    event from both reads and then call indels from the individual reads
+    event from both reads and then call indels from the individual reads. Should be alternate alignments of
+    the same read
     """
     # sort the reads so that we are calling consistently
     break1 = read_breakpoint(read1)
@@ -383,7 +383,9 @@ def call_paired_read_event(read1, read2, is_stranded=False):
     if not is_stranded:
         break1.strand = STRAND.NS
         break2.strand = STRAND.NS
-    return SplitAlignment(break1, break2, untemplated_seq=untemplated_seq, read1=read1, read2=read2)
+    return DiscontinuousAlignment(
+        break1, break2, untemplated_seq=untemplated_seq, read1=read1, read2=read2
+    )
 
 
 def align_sequences(
@@ -521,7 +523,7 @@ def select_contig_alignments(evidence, reads_by_query):
     standardize/simplify reads and filter bad/irrelevant alignments
     adds the contig alignments to the contigs
     """
-    putative_types = BreakpointPair.classify(evidence)
+    putative_types = classify_breakpoint_pair(evidence)
     if {SVTYPE.DUP, SVTYPE.INS} & putative_types:
         putative_types.update({SVTYPE.DUP, SVTYPE.INS})
 
@@ -541,7 +543,7 @@ def select_contig_alignments(evidence, reads_by_query):
     def supports_primary_event(alignment):
         return all(
             [
-                BreakpointPair.classify(alignment) & putative_types,
+                classify_breakpoint_pair(alignment) & putative_types,
                 alignment.break1.chr == evidence.break1.chr,
                 alignment.break2.chr == evidence.break2.chr,
                 alignment.break1 & evidence.outer_window1,

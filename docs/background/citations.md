@@ -23,6 +23,11 @@ Chen,X. et al. (2016) Manta: rapid detection of structural variants
     and indels for germline and cancer sequencing applications.
     Bioinformatics, 32, 1220--1222.
 
+## Chiu-2021
+
+Chiu,R. et al. (2021) Straglr: discovering and genotyping tandem repeat
+    expansions using whole genome long-read sequences. Genome Biol., 22, 224.
+
 ## Haas-2017
 
 Haas,B et al. (2017) STAR-Fusion: Fast and Accurate Fusion
@@ -61,6 +66,11 @@ Robertson,G. et al. (2010) De novo assembly and analysis of RNA-seq
 Saunders,C.T. et al. (2012) Strelka: accurate somatic small-variant
     calling from sequenced tumor--normal sample pairs. Bioinformatics,
     28, 1811--1817.
+
+## Uhrig-2021
+
+Uhrig,S. et al. (2021) Accurate and efficient detection of gene
+    fusions from RNA sequencing data. Genome Res., 31, 448--460.
 
 ## Yates-2016
 

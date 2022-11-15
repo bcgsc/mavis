@@ -1,11 +1,19 @@
 import os
 import types
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 
-from mavis.align import query_coverage_interval
 from mavis.annotate.file_io import load_annotations, load_reference_genome
 from mavis.annotate.genomic import PreTranscript, Transcript
 from mavis.annotate.protein import Translation
-from mavis.constants import CIGAR, NA_MAPPING_QUALITY
+from mavis.bam.cigar import (
+    QUERY_ALIGNED_STATES,
+    REFERENCE_ALIGNED_STATES,
+    convert_cigar_to_string,
+    convert_string_to_cigar,
+)
+from mavis.bam.read import SamRead
+from mavis.constants import CIGAR, NA_MAPPING_QUALITY, PYSAM_READ_FLAGS
 
 from ..util import get_data
 
@@ -89,151 +97,186 @@ class MockObject:
             setattr(self, arg, val)
 
 
+def flags_from_number(flag: int) -> Dict:
+    return dict(
+        is_unmapped=bool(flag & int(0x4)),
+        mate_is_unmapped=bool(flag & int(0x8)),
+        is_reverse=bool(flag & int(0x10)),
+        mate_is_reverse=bool(flag & int(0x20)),
+        is_read1=bool(flag & int(0x40)),
+        is_secondary=bool(flag & int(0x100)),
+        is_supplementary=bool(flag & int(0x400)),
+    )
+
+
+class MockString(str):
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            size = key.stop - key.start
+        else:
+            size = 1
+        return 'N' * size
+
+
+@dataclass
 class MockRead:
-    def __init__(
-        self,
-        query_name=None,
-        reference_id=0,
-        reference_start=None,
-        reference_end=None,
-        cigar=None,
-        is_reverse=False,
-        mate_is_reverse=True,
-        next_reference_start=None,
-        next_reference_id=None,
-        reference_name=None,
-        query_sequence=None,
-        template_length=None,
-        query_alignment_sequence=None,
-        query_alignment_start=None,
-        query_alignment_end=None,
-        query_alignment_length=None,
-        flag=None,
-        tags=[],
-        is_read1=True,
-        is_paired=True,
-        is_unmapped=False,
-        is_supplementary=False,
-        mate_is_unmapped=False,
-        mapping_quality=NA_MAPPING_QUALITY,
-        **kwargs
-    ):
-        for attr, val in kwargs.items():
-            setattr(self, attr, val)
-        self.mapping_quality = mapping_quality
-        self.query_name = query_name
-        self.reference_id = reference_id
-        self.reference_start = reference_start
-        self.reference_end = reference_end
-        self.cigar = cigar
-        self.query_alignment_length = query_alignment_length
-        self.query_sequence = query_sequence
-        if self.reference_end is None and cigar and reference_start is not None:
-            self.reference_end = reference_start + sum(
-                [f for v, f in cigar if v not in [CIGAR.S, CIGAR.I]]
-            )
-        if not self.query_alignment_length:
-            if cigar:
-                self.query_alignment_length = sum(
-                    [v for s, v in cigar if s not in [CIGAR.S, CIGAR.H]]
-                )
-            elif self.query_sequence:
-                self.query_alignment_length = len(self.query_sequence)
-            else:
-                self.query_alignment_length = 0
-        self.is_reverse = is_reverse
-        self.mate_is_reverse = mate_is_reverse
-        self.next_reference_start = next_reference_start
-        self.next_reference_id = next_reference_id
-        self.reference_name = reference_name
+    cigarstring: str
+    reference_start: int
+    reference_name: str = ''
+    query_sequence: str = MockString()
+    is_reverse: bool = False
+    query_name: str = ''
+    is_read1: bool = False
+    is_supplementary: bool = False
+    is_secondary: bool = False
+    is_paired: bool = True
+    template_length: Optional[int] = None
+    is_unmapped: bool = False
+    mapping_quality: int = NA_MAPPING_QUALITY
 
-        self.query_alignment_sequence = query_alignment_sequence
-        self.query_alignment_start = query_alignment_start
-        self.query_alignment_end = query_alignment_end
-        self.flag = flag
-        self.tags = tags
-        if query_alignment_sequence is None and cigar and query_sequence:
-            s = 0 if cigar[0][0] != CIGAR.S else cigar[0][1]
-            t = len(query_sequence)
-            if cigar[-1][0] == CIGAR.S:
-                t -= cigar[-1][1]
-            self.query_alignment_sequence = query_sequence[s:t]
-        if cigar and query_sequence:
-            if len(query_sequence) != sum(
-                [f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]
-            ):
-                raise AssertionError(
-                    'length of sequence does not match cigar',
-                    len(query_sequence),
-                    sum([f for v, f in cigar if v not in [CIGAR.H, CIGAR.N, CIGAR.D]]),
-                )
-        if template_length is None and reference_end and next_reference_start:
-            self.template_length = next_reference_start - reference_end
-        else:
-            self.template_length = template_length
-        self.is_read1 = is_read1
-        self.is_read2 = not is_read1
-        self.is_paired = is_paired
-        self.is_unmapped = is_unmapped
-        self.mate_is_unmapped = mate_is_unmapped
-        self.is_supplementary = is_supplementary
-        if self.reference_start and self.reference_end:
-            if not cigar:
-                self.cigar = [(CIGAR.M, self.reference_end - self.reference_start)]
-            if not self.query_sequence:
-                self.query_sequence = 'N' * (self.reference_end - self.reference_start)
-        if flag:
-            self.is_unmapped = bool(self.flag & int(0x4))
-            self.mate_is_unmapped = bool(self.flag & int(0x8))
-            self.is_reverse = bool(self.flag & int(0x10))
-            self.mate_is_reverse = bool(self.flag & int(0x20))
-            self.is_read1 = bool(self.flag & int(0x40))
-            self.is_read2 = bool(self.flag & int(0x80))
-            self.is_secondary = bool(self.flag & int(0x100))
-            self.is_qcfail = bool(self.flag & int(0x200))
-            self.is_supplementary = bool(self.flag & int(0x400))
+    # mate flags
+    next_reference_name: str = ''
+    mate_is_reverse: bool = False
+    next_reference_start: Optional[int] = None
+    mate_is_unmapped: bool = False
 
-    def query_coverage_interval(self):
-        return query_coverage_interval(self)
+    # custom flags for assembly reads
+    alignment_rank: Optional[int] = None
 
-    def set_tag(self, tag, value, value_type=None, replace=True):
-        new_tag = (tag, value)
-        if not replace and new_tag in self.tags:
-            self.tags.append(new_tag)
-        else:
-            self.tags.append(new_tag)
+    def __hash__(self):
+        return hash(SamRead.__hash__(self))
 
-    def has_tag(self, tag):
-        return tag in dict(self.tags).keys()
-
-    def get_tag(self, tag):
-        return dict(self.tags)[tag] if tag in dict(self.tags).keys() else False
-
-    def __str__(self):
-        return '{}(ref_id={}, start={}, end={}, seq={})'.format(
-            self.__class__.__name__,
-            self.reference_id,
-            self.reference_start,
-            self.reference_end,
-            self.query_sequence,
+    @property
+    def query_length(self):
+        return sum(
+            [
+                size
+                for (cigar_state, size) in self.cigar
+                if cigar_state in QUERY_ALIGNED_STATES - {CIGAR.H}
+            ]
         )
 
+    @property
+    def is_proper_pair(self):
+        return self.is_paired
+
+    @property
+    def reference_id(self):
+        try:
+            return int(self.reference_name) - 1
+        except ValueError:
+            return hash(str(self.reference_name))
+
+    @property
+    def next_reference_id(self):
+        try:
+            return int(self.next_reference_name) - 1
+        except ValueError:
+            return hash(str(self.next_reference_name))
+
+    @property
+    def seq(self):
+        return self.query_sequence
+
+    @property
+    def cigar(self) -> List[Tuple[int, int]]:
+        return convert_string_to_cigar(self.cigarstring)
+
+    @cigar.setter
+    def cigar(self, cigartuples: List[Tuple[int, int]]):
+        self.cigarstring = convert_cigar_to_string(cigartuples)
+
+    @property
+    def reference_end(self):
+        reference_pos = self.reference_start
+        for state, size in self.cigar:
+            if state in REFERENCE_ALIGNED_STATES:
+                reference_pos += size
+        return reference_pos
+
+    @property
+    def query_alignment_start(self):
+        query_pos = 0
+        for state, size in self.cigar:
+            if state == CIGAR.H:
+                continue
+            elif state in QUERY_ALIGNED_STATES - REFERENCE_ALIGNED_STATES:
+                query_pos += size
+            elif state in QUERY_ALIGNED_STATES:
+                return query_pos
+        return None
+
+    @property
+    def query_alignment_end(self):
+        query_pos = 0
+        for state, size in self.cigar[::-1]:
+            if state == CIGAR.H:
+                continue
+            elif state in QUERY_ALIGNED_STATES - REFERENCE_ALIGNED_STATES:
+                query_pos += size
+            elif state in QUERY_ALIGNED_STATES:
+                return self.query_length - query_pos
+        return None
+
+    @property
+    def query_alignment_length(self):
+        return self.query_alignment_end - self.query_alignment_start
+
+    @property
+    def query_alignment_sequence(self):
+        return self.query_sequence[self.query_alignment_start : self.query_alignment_end]
+
+    def has_tag(self, tag_name: str) -> bool:
+        return hasattr(self, tag_name)
+
+    def get_tag(self, tag_name: str) -> bool:
+        if self.has_tag(tag_name):
+            return getattr(self, tag_name)
+        return False
+
+    def set_tag(self, tag_name: str, value, value_type='') -> bool:
+        setattr(self, tag_name, value)
+
+    # SamRead methods
     def key(self):
-        """
-        uses a stored _key attribute, if available. This is to avoid the hash changing if the reference start (for example)
-        is changed but also allow this attribute to be used and calculated for non SamRead objects
+        return SamRead.key(self)
 
-        This way to change the hash behaviour the user must be explicit and use the set_key method
-        """
-        if hasattr(self, '_key') and self._key is not None:
-            return self._key
-        return (
-            self.query_name,
-            self.query_sequence,
-            self.reference_id,
-            self.reference_start,
-            self.is_supplementary,
-        )
+    @property
+    def flag(self):
+        flag = 0
+        for flag_value, attr_name in [
+            ('REVERSE', 'is_reverse'),
+            ('MATE_REVERSE', 'mate_is_reverse'),
+            ('MATE_UNMAPPED', 'mate_is_unmapped'),
+            ('UNMAPPED', 'is_unmapped'),
+            ('SECONDARY', 'is_secondary'),
+            ('SUPPLEMENTARY', 'is_supplementary'),
+        ]:
+            if getattr(self, attr_name):
+                flag |= PYSAM_READ_FLAGS[flag_value]
+
+        if self.is_paired:
+            if self.is_read1:
+                flag |= PYSAM_READ_FLAGS.FIRST_IN_PAIR
+            else:
+                flag |= PYSAM_READ_FLAGS.LAST_IN_PAIR
+        return flag
+
+    @flag.setter
+    def flag(self, value):
+        for flag_value, attr_name in [
+            ('REVERSE', 'is_reverse'),
+            ('MATE_REVERSE', 'mate_is_reverse'),
+            ('MATE_UNMAPPED', 'mate_is_unmapped'),
+            ('UNMAPPED', 'is_unmapped'),
+            ('FIRST_IN_PAIR', 'is_read1'),
+            ('SECONDARY', 'is_secondary'),
+            ('SUPPLEMENTARY', 'is_supplementary'),
+        ]:
+            if value & PYSAM_READ_FLAGS[flag_value]:
+                setattr(self, attr_name, True)
+        if value & PYSAM_READ_FLAGS.LAST_IN_PAIR:
+            self.is_read1 = False
 
 
 class MockBamFileHandle:
@@ -256,35 +299,33 @@ class MockBamFileHandle:
         raise KeyError('invalid id')
 
 
-class MockString:
-    def __init__(self, char=' '):
-        self.char = char
+def mock_read_pair(mock1: MockRead, mock2: MockRead, proper_pair=True, reverse_order=False):
+    # make sure pair flags are set
+    mock1.is_paired = True
+    mock2.is_paired = True
 
-    def __getitem__(self, index):
-        if isinstance(index, slice):
-            return self.char * (index.stop - index.start)
-        else:
-            return self.char
+    mock1.is_read1 = not reverse_order
+    mock2.is_read1 = reverse_order
 
+    if not mock1.is_reverse and proper_pair:
+        mock2.is_reverse = True
 
-def mock_read_pair(mock1, mock2):
-    if mock1.reference_id != mock2.reference_id:
+    if mock1.reference_name != mock2.reference_name:
         mock1.template_length = 0
         mock2.template_length = 0
-    mock1.next_reference_id = mock2.reference_id
+    mock1.next_reference_name = mock2.reference_name
     mock1.next_reference_start = mock2.reference_start
     mock1.mate_is_reverse = mock2.is_reverse
-    mock1.is_paired = True
-    mock1.is_read2 = not mock1.is_read1
-    if mock1.template_length is None:
-        mock1.template_length = mock2.reference_end - mock1.reference_start
 
-    mock2.next_reference_id = mock1.reference_id
+    if mock1.template_length is None:
+        # mock1.template_length = abs(mock1.reference_start - mock1.next_reference_start) + 1
+        # if reverse_order:
+        #     mock1.template_length *= -1
+        mock1.template_length = mock1.next_reference_start - mock1.reference_start + 1
+
+    mock2.next_reference_name = mock1.reference_name
     mock2.next_reference_start = mock1.reference_start
     mock2.mate_is_reverse = mock1.is_reverse
-    mock2.is_paired = True
-    mock2.is_read1 = not mock1.is_read1
-    mock2.is_read2 = not mock1.is_read2
     if mock2.query_name is None:
         mock2.query_name = mock1.query_name
     mock2.template_length = -1 * mock1.template_length

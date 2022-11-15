@@ -129,7 +129,9 @@ def group_events(events):
                 bpp.break2.strand != new_bpp.break2.strand,
             ]
         ):
-            raise AssertionError('cannot group events differing on key elements', bpp, new_bpp)
+            raise AssertionError(
+                'cannot group events differing on key elements', str(bpp), str(new_bpp)
+            )
 
     # Note: There are some attributes that shouldn't be lost if different, currently appending the information
     # The evidence could be better off as a max instead of a join
@@ -208,10 +210,11 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
     for bpp in [
         b for b in bpps if not b.interchromosomal and b.break1.chr in dgv_regions_by_reference_name
     ]:
+        bpp.data['dgv'] = []
         for dgv_region in dgv_regions_by_reference_name[bpp.break1.chr]:
             dist = abs(Interval.dist(Interval(dgv_region.start), bpp.break1))
             if dist > lowest_resolution + distance:
-                break
+                continue
             elif (
                 dist > distance
                 or abs(Interval.dist(Interval(dgv_region.end), bpp.break2)) > distance
@@ -222,9 +225,10 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
                 refname = dgv_region.reference_object.name
             except AttributeError:
                 pass
-            bpp.data['dgv'] = '{}({}:{}-{})'.format(
-                dgv_region.name, refname, dgv_region.start, dgv_region.end
+            bpp.data['dgv'].append(
+                '{}({}:{}-{})'.format(dgv_region.name, refname, dgv_region.start, dgv_region.end)
             )
+        bpp.data['dgv'] = ';'.join(bpp.data['dgv'])
 
 
 def get_pairing_state(
