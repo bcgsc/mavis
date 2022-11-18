@@ -52,6 +52,7 @@ jobs:
         export PATH=$PATH:$(pwd):$(pwd)/bwa
         pytest tests -v \
           --junitxml=junit/test-results-${{ matrix.python-version }}.xml \
-          --durations=10
+          --durations=10 \
+          -n auto
       env:
         RUN_FULL: 0

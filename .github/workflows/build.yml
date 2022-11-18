@@ -57,6 +57,7 @@ jobs:
           --cov-report term-missing \
           --cov-report xml \
           --durations=10 \
+          -n auto \
           --cov-branch
       env:
         RUN_FULL: 1
