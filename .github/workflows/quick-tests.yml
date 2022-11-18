@@ -6,12 +6,12 @@ name: quick-tests
 on: [push]
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
-    name: python-${{ matrix.python-version }} quick
+    name: python-${{ matrix.python-version }} lint
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -36,6 +36,22 @@ jobs:
       run: |
         pip install isort
         isort src tests --check
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
+    name: python-${{ matrix.python-version }} quick
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install .[test]
     - name: install bwa
       run: |
         git clone https://github.com/lh3/bwa.git
