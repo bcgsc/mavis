@@ -182,7 +182,6 @@ def parse_annotations_json(
     domain_errors = 0
 
     for gene_dict in data['genes']:
-
         gene = Gene(
             chr=gene_dict['chr'],
             start=gene_dict['start'],

@@ -228,7 +228,6 @@ class EnsemblAnnotation(object):
     def __init__(
         self, release, species, output, best_file=None, alias_file=None, custom_cache=None
     ):
-
         self.annotation = {}
 
         self.custom_cache = custom_cache

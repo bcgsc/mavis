@@ -89,23 +89,18 @@ def _convert_tool_row(
         SUPPORTED_TOOL.BREAKSEQ,
         SUPPORTED_TOOL.STRELKA,
     ]:
-
         std_row.update(row)
 
     elif file_type == SUPPORTED_TOOL.CHIMERASCAN:
-
         std_row.update(_parse_chimerascan(row))
 
     elif file_type == SUPPORTED_TOOL.CNVNATOR:
-
         std_row.update(_parse_cnvnator(row))
 
     elif file_type == SUPPORTED_TOOL.STARFUSION:
-
         std_row.update(_parse_starfusion(row))
 
     elif file_type == SUPPORTED_TOOL.DEFUSE:
-
         std_row[COLUMNS.break1_orientation] = (
             ORIENT.LEFT if row['genomic_strand1'] == STRAND.POS else ORIENT.RIGHT
         )
@@ -126,11 +121,9 @@ def _convert_tool_row(
             std_row[TRACKING_COLUMN] = '{}-{}'.format(file_type, row['cluster_id'])
 
     elif file_type == SUPPORTED_TOOL.TA:
-
         std_row.update(_parse_transabyss(row))
 
     elif file_type == SUPPORTED_TOOL.BREAKDANCER:
-
         std_row.update(
             {
                 COLUMNS.event_type: row['Type'],
@@ -145,11 +138,9 @@ def _convert_tool_row(
         )
 
     elif file_type == SUPPORTED_TOOL.ARRIBA:
-
         std_row.update(_parse_arriba(row))
 
     elif file_type == SUPPORTED_TOOL.STRAGLR:
-
         std_row.update(_parse_straglr(row))
 
     else:

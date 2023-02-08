@@ -127,7 +127,6 @@ class TestEventCall:
             )
 
     def test_flanking_support_empty(self):
-
         ev = call.EventCall(
             Breakpoint('reference3', 1114, orient=ORIENT.RIGHT),
             Breakpoint('reference3', 2187, orient=ORIENT.RIGHT),

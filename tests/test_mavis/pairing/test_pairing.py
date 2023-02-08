@@ -310,7 +310,6 @@ class TestPairing:
         assert pairing.inferred_equivalent(trans_ev, genome_ev, transcripts)
 
     def test_mixed_protocol_both_predicted(self):
-
         raise unittest.SkipTest('TODO')
 
     def test_mixed_protocol_neither_predicted_one_match(self):
