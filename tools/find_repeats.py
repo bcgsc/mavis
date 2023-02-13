@@ -6,7 +6,7 @@ import os
 
 from mavis.annotate.base import BioInterval
 from mavis.annotate.file_io import load_reference_genome
-from mavis.util import log
+from mavis.util import LOG as log
 
 
 def parse_arguments():
