@@ -210,7 +210,6 @@ def generate_interval_mapping(
 
     for i, curr in enumerate(intervals):
         if i > 0 and intervals[i - 1].end + 1 < curr.start:  # add between the intervals
-
             prev = intervals[i - 1]
             ifrom = Interval(prev.end + 1, curr.start - 1)
             s = max(intergenic_unit(len(ifrom)), 0)

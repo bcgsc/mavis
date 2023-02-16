@@ -115,7 +115,9 @@ def predict_transcriptome_breakpoint(breakpoint: Breakpoint, transcript):
                                 orient=breakpoint.orient,
                             )
                         )
-            except AttributeError:  # for introns that are smaller than this ignore (covered by exon check)
+            except (
+                AttributeError
+            ):  # for introns that are smaller than this ignore (covered by exon check)
                 pass
 
     if not tbreaks:

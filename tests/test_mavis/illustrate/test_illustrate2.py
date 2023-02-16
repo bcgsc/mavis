@@ -90,7 +90,6 @@ class TestDraw:
         assert t[2] == [(3, 10)]
 
     def test_draw_genes(self, canvas):
-
         x = genomic.Gene('1', 1000, 2000, strand=STRAND.POS)
         y = genomic.Gene('1', 5000, 7000, strand=STRAND.NEG)
         z = genomic.Gene('1', 1500, 2500, strand=STRAND.POS)

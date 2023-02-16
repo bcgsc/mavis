@@ -408,7 +408,6 @@ def assemble(
 
     path_scores = {}
     for component in digraph_connected_components(assembly):
-
         # pull the path scores
         path_scores.update(
             pull_contigs_from_component(

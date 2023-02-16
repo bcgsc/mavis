@@ -337,7 +337,6 @@ def convert_pandas_rows_to_variants(df: pd.DataFrame) -> List[VcfRecordType]:
 
     rows = []
     for _, row in df.iterrows():
-
         rows.append(
             VcfRecordType(
                 id=row['ID'],

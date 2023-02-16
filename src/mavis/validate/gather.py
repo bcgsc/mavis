@@ -367,7 +367,6 @@ def collect_flanking_pair(
             return False
 
     for event_type in evidence_bpp.putative_event_types():
-
         # check that the pair orientation is correct
         if not _read.orientation_supports_type(read, event_type):
             continue
@@ -518,11 +517,9 @@ def collect_spanning_read(evidence_bpp: Evidence, read: pysam.AlignedSegment):
     read_interval = Interval(read.reference_start + 1, read.reference_end)
 
     if Interval.overlaps(combined, read_interval):
-
         if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(
             PYSAM_READ_FLAGS.RECOMPUTED_CIGAR
         ):
-
             read = evidence_bpp.standardize_read(read)
         # in the correct position, now determine if it can support the event types
         for event_type in evidence_bpp.putative_event_types():
