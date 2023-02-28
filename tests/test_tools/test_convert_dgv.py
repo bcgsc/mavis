@@ -26,7 +26,6 @@ def test_dgv_examples(tmp_path, filename, expected_file):
     ]
 
     with patch.object(convert_dgv_main, "main", create=True):
-
         with patch.object(sys, "argv", args):
             convert_dgv_main()
 

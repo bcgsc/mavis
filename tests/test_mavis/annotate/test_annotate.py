@@ -377,7 +377,6 @@ class TestIndelCall:
         assert call.hgvs_protein_notation() == 'p.L18dupL'
 
     def test_nterminal_extension(self):
-
         ref = 'MABCDEFGH'
         mut = 'MAFMABCDEFGH'
 
