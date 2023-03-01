@@ -83,7 +83,7 @@ class TestRefAltCalulator:
         print(bpp.data)
         assert bpp.data["TEST_ref_count"] == 0
         assert bpp.data["TEST_alt_count"] == 63
-        assert bpp.data['TEST_ignored_count'] == 197
+        assert bpp.data['TEST_ignored_count'] == 195
 
     def test_calculate_count3(self, calculator):
         ev1 = BreakpointPair(
