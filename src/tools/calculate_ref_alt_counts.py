@@ -7,6 +7,7 @@ import logging
 import statistics as stats
 
 import pysam
+
 from mavis.annotate.file_io import load_reference_genome
 from mavis.constants import SVTYPE
 from mavis.util import logger, output_tabbed_file, read_inputs
@@ -90,6 +91,9 @@ def calculate_ref_count(bpp, read_length, reference_genome, bam_cache, buffer=1)
     )
 
     for read in all_reads:
+        if read.is_duplicate or read.is_unmapped or read.is_qcfail:
+            continue
+
         # compare the actual sequence
         ref_align = ref_sequence in read.seq
         alt_align = alt_sequence in read.seq

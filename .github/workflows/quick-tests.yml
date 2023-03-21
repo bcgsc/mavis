@@ -7,7 +7,7 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
@@ -26,12 +26,16 @@ jobs:
       run: |
         pip install flake8
         # stop the build if there are Python syntax errors or undefined names
-        flake8 src/mavis --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 src tests --count --show-source --statistics
     - name: Lint with black
       run: |
         pip install black
         # stop the build if black needs to be run
-        black src/mavis -S -l 100 --check
+        black src tests -S -l 100 --check
+    - name: Lint with isort
+      run: |
+        pip install isort
+        isort src tests --check
     - name: install bwa
       run: |
         git clone https://github.com/lh3/bwa.git

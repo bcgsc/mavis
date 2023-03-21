@@ -223,7 +223,7 @@ class CIGAR(MavisNamespace):
     """
 
     M = 0
-    I = 1
+    I = 1  # noqa
     D = 2
     N = 3
     S = 4
@@ -386,6 +386,7 @@ class COLUMNS(MavisNamespace):
     library: str = 'library'
     cluster_id: str = 'cluster_id'
     cluster_size: str = 'cluster_size'
+    dgv: str = 'dgv'
     validation_id: str = 'validation_id'
     annotation_id: str = 'annotation_id'
     product_id: str = 'product_id'
@@ -463,6 +464,7 @@ class COLUMNS(MavisNamespace):
     contig_strand_specific: str = 'contig_strand_specific'
     contigs_assembled: str = 'contigs_assembled'
     call_sequence_complexity: str = 'call_sequence_complexity'
+    known_sv_count: str = 'known_sv_count'
     spanning_reads: str = 'spanning_reads'
     spanning_read_names: str = 'spanning_read_names'
     flanking_median_fragment_size: str = 'flanking_median_fragment_size'
@@ -555,4 +557,6 @@ SUMMARY_LIST_COLUMNS = {
     COLUMNS.tools,
     COLUMNS.tools,
     COLUMNS.tracking_id,
+    COLUMNS.dgv,
+    COLUMNS.known_sv_count,
 }

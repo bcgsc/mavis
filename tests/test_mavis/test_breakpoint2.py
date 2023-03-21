@@ -1,6 +1,7 @@
 from functools import partial
 
 import pytest
+
 from mavis.annotate.file_io import load_reference_genome
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import ORIENT, STRAND

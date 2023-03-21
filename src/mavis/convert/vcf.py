@@ -3,8 +3,10 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-from ..interval import Interval
+
 import pandas as pd
+
+from ..interval import Interval
 
 try:
     # TypedDict added to typing package directly in later versions
@@ -335,7 +337,6 @@ def convert_pandas_rows_to_variants(df: pd.DataFrame) -> List[VcfRecordType]:
 
     rows = []
     for _, row in df.iterrows():
-
         rows.append(
             VcfRecordType(
                 id=row['ID'],

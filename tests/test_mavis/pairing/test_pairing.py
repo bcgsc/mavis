@@ -1,6 +1,7 @@
 import unittest
 
 import pytest
+
 from mavis.annotate.genomic import PreTranscript
 from mavis.breakpoint import Breakpoint, BreakpointPair
 from mavis.constants import CALL_METHOD, COLUMNS, ORIENT, PROTOCOL, STRAND, SVTYPE
@@ -309,7 +310,6 @@ class TestPairing:
         assert pairing.inferred_equivalent(trans_ev, genome_ev, transcripts)
 
     def test_mixed_protocol_both_predicted(self):
-
         raise unittest.SkipTest('TODO')
 
     def test_mixed_protocol_neither_predicted_one_match(self):

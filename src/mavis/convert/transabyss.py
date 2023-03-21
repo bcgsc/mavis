@@ -1,7 +1,6 @@
 import re
 
 from ..constants import COLUMNS
-
 from .constants import SUPPORTED_TOOL, TRACKING_COLUMN
 
 

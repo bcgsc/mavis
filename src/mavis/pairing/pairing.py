@@ -115,7 +115,9 @@ def predict_transcriptome_breakpoint(breakpoint: Breakpoint, transcript):
                                 orient=breakpoint.orient,
                             )
                         )
-            except AttributeError:  # for introns that are smaller than this ignore (covered by exon check)
+            except (
+                AttributeError
+            ):  # for introns that are smaller than this ignore (covered by exon check)
                 pass
 
     if not tbreaks:
@@ -154,9 +156,18 @@ def comparison_distance(
     return max_distance
 
 
-def equivalent(event1: BreakpointPair, event2: BreakpointPair, distances=None) -> bool:
+def equivalent(
+    event1: BreakpointPair, event2: BreakpointPair, distances=None, matching_event_type=True
+) -> bool:
     """
     compares two events by breakpoint position to see if they are equivalent
+
+    Args:
+        - event1: first BreakpointPair to be compared
+        - event2: second BreakpointPair to be compared
+        - distances: distance between two BreakpointPairs to be considered equivalent
+        - matching_event_type: specificies whether event type must match
+
     """
 
     max_distance = comparison_distance(event1, event2, distances)
@@ -175,9 +186,10 @@ def equivalent(event1: BreakpointPair, event2: BreakpointPair, distances=None) -
         [
             abs(Interval.dist(event1.break1, event2.break1)) > max_distance,
             abs(Interval.dist(event1.break2, event2.break2)) > max_distance,
-            event1.data[COLUMNS.event_type] != event2.data[COLUMNS.event_type],
         ]
     ):
+        return False
+    if matching_event_type and event1.event_type != event2.event_type:
         return False
     return True
 

@@ -7,7 +7,6 @@ import tempfile
 from unittest.mock import patch
 
 import pytest
-
 from snakemake import main as snakemake_main
 
 from ..util import glob_exists, long_running_test, package_relative_file

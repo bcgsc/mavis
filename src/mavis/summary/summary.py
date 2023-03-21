@@ -1,7 +1,9 @@
-from typing import Dict, List
+from itertools import chain
+from typing import Dict, List, Tuple, Union
 
-from ..annotate.genomic import Transcript
+from ..annotate.genomic import BioInterval, Transcript
 from ..breakpoint import Breakpoint, BreakpointPair
+from ..cluster.cluster import merge_breakpoint_pairs
 from ..constants import CALL_METHOD, COLUMNS, DISEASE_STATUS, PROTOCOL, SVTYPE
 from ..interval import Interval
 from ..pairing.pairing import pair_by_distance, product_key
@@ -60,6 +62,7 @@ def filter_by_call_method(bpp_list):
     Filters a set of breakpoint pairs to returns the call with the most evidence.
     Prefers contig evidence over spanning over split over flanking, etc.
     """
+
     # ranking scores of the methods (more is better)
     def sort_key(bpp):
         key = [
@@ -190,34 +193,85 @@ def group_by_distance(calls, distances):
     return grouped_calls, removed_calls
 
 
-def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
+def annotate_with_dgv_bpp(
+    bpps: List[BreakpointPair],
+    dgv_regions_list: List[BreakpointPair],
+    input_cluster_radius: int,
+):
     """
-    given a list of bpps and a dgv reference, annotate the events that are within the set distance of both breakpoints
+    Given a list of breakpoint pairs (bpps) and bpps from another reference set, annotate the events that are within the set distance of both breakpoints
 
     Args:
-        bpps (list) : the list of BreakpointPair objects
-        dgv_regions_by_reference_name (dict) : the dgv reference regions file loaded by load_masking_regions
-        distance (int) : the minimum distance required to match a dgv event with a breakpoint
+        bpps: the list of BreakpointPair objects
+        dgv_regions_list: the dgv reference regions specified by the MAVIS input file represented as BreakpointPairs
+        input_cluster_radius: Distance used in matching input SVs to reference SVs through clusterind, defined by summary.cluster_radius in the configuration file
+    """
+    bpps_copy = bpps.copy()
+    for variant in bpps:
+        variant.data[COLUMNS.dgv] = False
+        variant.data[COLUMNS.known_sv_count] = 0
+    for variant in dgv_regions_list:
+        variant.data[COLUMNS.dgv] = True
+        variant.data[COLUMNS.known_sv_count] = 0
+    bpps_copy.extend(dgv_regions_list)
+
+    clusters = merge_breakpoint_pairs(
+        bpps_copy, cluster_radius=input_cluster_radius
+    )  # all breakpoint pairs (bpps + dgv)
+
+    flag_col = '_is_variant'
+    for variant in bpps:
+        variant.data[flag_col] = True
+        variant.data[COLUMNS.dgv] = ''
+        variant.data[COLUMNS.known_sv_count] = 0
+
+    for clustered_bpp_key, clustered_bpp_val in clusters.items():
+        dgv_tracking_ids = [
+            bpp.tracking_id for bpp in clustered_bpp_val if bpp.data.get(flag_col) is not True
+        ]
+        dgv_field = ';'.join(sorted(dgv_tracking_ids))
+        variant_bpp = [bpp for bpp in clustered_bpp_val if bpp.data.get(flag_col) is True]
+        for variant in variant_bpp:
+            variant.data[COLUMNS.dgv] = dgv_field
+            variant.data[COLUMNS.known_sv_count] = len(dgv_tracking_ids)
+
+    for bpp in bpps:
+        if flag_col in bpp.data:
+            del bpp.data[flag_col]
+
+
+def annotate_with_dgv_bed(
+    bpps: List[BreakpointPair],
+    dgv_regions_by_reference_name: Dict[Tuple[str], List[BioInterval]],
+    input_cluster_radius: int,
+):
+    """
+    Given a list of breakpoint pairs (bpps) and bpps from another reference set, annotate the events that are within the set distance of both breakpoints
+
+    Args:
+        bpps: the list of BreakpointPair objects
+        dgv_regions_by_reference_name: the dgv reference regions specified by the bed input file represented as BioIntervals
+        input_cluster_radius: Distance used in matching input SVs to reference SVs through clusterind, defined by summary.cluster_radius in the configuration file
     """
     for chrom in dgv_regions_by_reference_name:
         dgv_regions_by_reference_name[chrom] = sorted(
             dgv_regions_by_reference_name[chrom], key=lambda x: x.start
         )
-
     lowest_resolution = max([len(b.break1) for b in bpps])  # only need start res
-
+    for bpp in bpps:
+        bpp.data[COLUMNS.dgv] = []
+        bpp.data[COLUMNS.known_sv_count] = 0
     # only look at the bpps that dgv events could pair to, Intrachromosomal
     for bpp in [
         b for b in bpps if not b.interchromosomal and b.break1.chr in dgv_regions_by_reference_name
     ]:
-        bpp.data['dgv'] = []
         for dgv_region in dgv_regions_by_reference_name[bpp.break1.chr]:
             dist = abs(Interval.dist(Interval(dgv_region.start), bpp.break1))
-            if dist > lowest_resolution + distance:
+            if dist > lowest_resolution + input_cluster_radius:
                 continue
             elif (
-                dist > distance
-                or abs(Interval.dist(Interval(dgv_region.end), bpp.break2)) > distance
+                dist > input_cluster_radius
+                or abs(Interval.dist(Interval(dgv_region.end), bpp.break2)) > input_cluster_radius
             ):
                 continue
             refname = dgv_region.reference_object
@@ -225,10 +279,37 @@ def annotate_dgv(bpps, dgv_regions_by_reference_name, distance=0):
                 refname = dgv_region.reference_object.name
             except AttributeError:
                 pass
-            bpp.data['dgv'].append(
+            bpp.data[COLUMNS.dgv].append(
                 '{}({}:{}-{})'.format(dgv_region.name, refname, dgv_region.start, dgv_region.end)
             )
-        bpp.data['dgv'] = ';'.join(bpp.data['dgv'])
+        bpp.data[COLUMNS.known_sv_count] = len(bpp.data[COLUMNS.dgv])
+        bpp.data[COLUMNS.dgv] = ';'.join(bpp.data[COLUMNS.dgv])
+
+
+def annotate_dgv(
+    bpps: List[BreakpointPair],
+    dgv_regions_by_reference_name: Dict[Tuple[str], Union[List[BreakpointPair], List[BioInterval]]],
+    input_cluster_radius: int,
+):
+    """
+    Given a list of breakpoint pairs (bpps) and bpps from another reference set, annotate the events that are within the set distance of both breakpoints
+
+    Args:
+        bpps: the list of BreakpointPair objects
+        dgv_regions_by_reference_name: tuple of strings of chr name and its associated list of BreakpointPair/BioInterval objects specified by the MAVIS input file
+        input_cluster_radius: Distance used in matching input SVs to reference SVs through clusterind, defined by summary.cluster_radius in the configuration file
+    """
+
+    if not dgv_regions_by_reference_name:
+        pass
+
+    elif isinstance(list(dgv_regions_by_reference_name.values())[0][0], BreakpointPair):
+        annotate_with_dgv_bpp(
+            bpps, list(chain(*dgv_regions_by_reference_name.values())), input_cluster_radius
+        )
+
+    else:
+        annotate_with_dgv_bed(bpps, dgv_regions_by_reference_name, input_cluster_radius)
 
 
 def get_pairing_state(
