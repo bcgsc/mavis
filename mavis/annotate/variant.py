@@ -343,7 +343,6 @@ class IndelCall:
                 self.ins_seq = self.mut_seq[: 0 - self.cterm_aligned]
 
             elif len(self.ref_seq) - self.cterm_aligned + 1 <= self.nterm_aligned:
-
                 # repeat region
                 diff = len(self.mut_seq) - len(self.ref_seq)
                 if diff > 0:

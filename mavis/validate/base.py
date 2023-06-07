@@ -280,11 +280,9 @@ class Evidence(BreakpointPair):
         read_interval = Interval(read.reference_start + 1, read.reference_end)
 
         if Interval.overlaps(combined, read_interval):
-
             if not read.has_tag(PYSAM_READ_FLAGS.RECOMPUTED_CIGAR) or not read.get_tag(
                 PYSAM_READ_FLAGS.RECOMPUTED_CIGAR
             ):
-
                 read = self.standardize_read(read)
             # in the correct position, now determine if it can support the event types
             for event_type in self.putative_event_types():
@@ -480,7 +478,6 @@ class Evidence(BreakpointPair):
                 return False
 
         for event_type in self.putative_event_types():
-
             # check that the pair orientation is correct
             if not _read.orientation_supports_type(read, event_type):
                 continue

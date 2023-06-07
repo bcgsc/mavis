@@ -524,7 +524,6 @@ def augment_parser(arguments, parser, required=None):
             pass
 
     for arg in arguments:
-
         if arg == 'help':
             parser.add_argument(
                 '-h', '--help', action='help', help='show this help message and exit'
