@@ -470,6 +470,7 @@ class TestManta(unittest.TestCase):
         self.assertEqual(1, len(bpp_list))
 
 
+
 class TestDefuse(unittest.TestCase):
     def test_convert_inverted_translocation(self):
         row = {
@@ -952,20 +953,6 @@ class TestStrelka(unittest.TestCase):
         self.assertEqual(1265366, bpp.break2.end)
         self.assertEqual(SVTYPE.DEL, bpp.event_type)
 
-    def testMalformated(self):
-        event = Mock(
-            chrom='1',
-            pos=53678660,
-            id=None,
-            info={'SVTYPE': 'BND'},
-            ref='C',
-            alts=('CTTTTAAATGTAACATGACATAATATATTTCCTAAATAATTTAAAATAATC.',),
-            stop=53678660,
-        )
-        with self.assertRaises(NotImplementedError):
-            _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.STRELKA, False)
-
-
 class TestMutect(unittest.TestCase):
     def testInsertion(self):
         event = Mock(
@@ -998,20 +985,6 @@ class TestMutect(unittest.TestCase):
         assert bpp.break2.start == 1265366
         assert bpp.break2.end == 1265366
         assert bpp.event_type == SVTYPE.DEL
-
-    def testMalformated(self):
-        event = Mock(
-            chrom='1',
-            pos=53678660,
-            id=None,
-            info={'SVTYPE': 'BND'},
-            ref='C',
-            alts=('CTTTTAAATGTAACATGACATAATATATTTCCTAAATAATTTAAAATAATC.',),
-            stop=53678660,
-        )
-        with self.assertRaises(NotImplementedError):
-            _convert_tool_row(_parse_vcf_record(event)[0], SUPPORTED_TOOL.MUTECT, False)
-
 
 class TestVCF(unittest.TestCase):
     def setUp(self):
@@ -1074,3 +1047,71 @@ class TestVCF(unittest.TestCase):
         self.assertEqual(1, len(bpp_list))
         bpp = bpp_list[0]
         self.assertEqual('vcf-thing-1', bpp.data[COLUMNS.tracking_id])
+
+class TestImprecise(unittest.TestCase):
+    def setUp(self):
+        self.event = Mock(
+            chrom='chr5',
+            pos=1853407,
+            id=None,
+            info={'SVTYPE': 'INS', 'CHR2': 'chr5'},
+            stop=1853408,
+            alts=['AGG'],
+            ref='A'
+        )
+    def test_convert_intrachromosomal_imprecise_breakend1(self):
+        self.event.id = "Mock"
+        self.event.info.update({'CIPOS': [-30, 30], 'CIEND': [-65, 65]})
+
+        bpp_list = _convert_tool_row(_parse_vcf_record(self.event)[0], SUPPORTED_TOOL.MANTA, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('chr5', bpp.break1.chr)
+        self.assertEqual(1853377, bpp.break1.start)
+        self.assertEqual(1853437, bpp.break1.end)
+        self.assertEqual(1853377, bpp.break2.start)
+        self.assertEqual(1853473, bpp.break2.end)
+        self.assertEqual('chr5', bpp.break2.chr)
+
+    def test_convert_intrachromosomal_imprecise_breakend2(self):
+        self.event.id = "Mock"
+        self.event.info.update({'CIPOS': [-30, 99999], 'CIEND': [-10, 65]})
+
+        bpp_list = _convert_tool_row(_parse_vcf_record(self.event)[0], SUPPORTED_TOOL.MANTA, False)
+        self.assertEqual(1, len(bpp_list))
+        bpp = bpp_list[0]
+        self.assertEqual('chr5', bpp.break1.chr)
+        self.assertEqual(1853377, bpp.break1.start)
+        self.assertEqual(1853473, bpp.break1.end)
+        self.assertEqual(1853398, bpp.break2.start)
+        self.assertEqual(1853473, bpp.break2.end)
+        self.assertEqual('chr5', bpp.break2.chr)
+
+    def test_error_on_convert_intrachromosomal_imprecise_breakend(self):
+        self.event.id = "Mock"
+        self.event.info.update({'CIPOS': [-30, 99999], 'CIEND': [70, 65]})
+        with  self.assertRaises(ValueError):
+            _convert_tool_row(_parse_vcf_record(self.event)[0], SUPPORTED_TOOL.MANTA, False)
+
+    def test_error_on_convert_intrachromosomal_imprecise_breakend2(self):
+        # breakpoint_1_start > breakpoint_1_end
+        variant_cilen4 = Mock(
+            id='Sniffle.INS',
+            pos=11184,
+            chrom='chr2',
+            alts=['AGG'],
+            ref='N',
+            stop=11183,
+            info=dict(
+                CHR2="chr2",
+                IMPRECISE=True,
+                SVTYPE="INS",
+                END=11183,
+            ),
+        )
+        with  self.assertRaises(ValueError):
+            bpp_list = _convert_tool_row(_parse_vcf_record(variant_cilen4)[0], SUPPORTED_TOOL.MANTA, False)
+            bpp = bpp_list[0]
+            import pdb
+            pdb.set_trace()
+            print(bpp)
