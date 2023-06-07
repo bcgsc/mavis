@@ -182,6 +182,7 @@ def convert_record(record, record_mapping={}, log=DEVNULL):
         records.append(std_row)
     return records
 
+
 def convert_imprecise_breakend(std_row, record, info, bp_end):
     """
     Handles IMPRECISE calls, that leveraged uncertainty from the CIPOS/CIEND/CILEN fields.
@@ -210,54 +211,53 @@ def convert_imprecise_breakend(std_row, record, info, bp_end):
 
     std_row.update(
         {
-            COLUMNS.break1_position_start: max(
-                1, record.pos + info.get('CIPOS', (0, 0))[0]
-            ),
-            COLUMNS.break1_position_end: record.pos + info.get('CIPOS', (0, 0))[1],
-            COLUMNS.break2_position_start: max(1, bp_end + info.get('CIEND', (0, 0))[0]),
-            COLUMNS.break2_position_end: bp_end + info.get('CIEND', (0, 0))[1],
+            COLUMNS.break1_position_start: max(1, record.pos + info.get("CIPOS", (0, 0))[0]),
+            COLUMNS.break1_position_end: record.pos + info.get("CIPOS", (0, 0))[1],
+            COLUMNS.break2_position_start: max(1, bp_end + info.get("CIEND", (0, 0))[0]),
+            COLUMNS.break2_position_end: bp_end + info.get("CIEND", (0, 0))[1],
         }
     )
 
     if is_intrachromosomal and (
         Interval.overlaps(
-            (std_row['break1_position_start'], std_row['break1_position_end']),
-            (std_row['break2_position_start'], std_row['break2_position_end']),
+            (std_row["break1_position_start"], std_row["break1_position_end"]),
+            (std_row["break2_position_start"], std_row["break2_position_end"]),
         )
     ):
-        if std_row.get('event_type') != 'BND':
-            std_row['break2_position_start'] = max(
-                std_row['break1_position_start'], std_row['break2_position_start']
+        if std_row.get("event_type") != "BND":
+            std_row["break2_position_start"] = max(
+                std_row["break1_position_start"], std_row["break2_position_start"]
             )
-            std_row['break1_position_end'] = min(
-                std_row['break1_position_end'], std_row['break2_position_end']
+            std_row["break1_position_end"] = min(
+                std_row["break1_position_end"], std_row["break2_position_end"]
             )
-            std_row['break1_position_start'] = min(
-                std_row['break1_position_start'], std_row['break2_position_end']
+            std_row["break1_position_start"] = min(
+                std_row["break1_position_start"], std_row["break2_position_end"]
             )
-    if std_row['break1_position_end'] == 0 and std_row['break1_position_start'] == 1:
+    if std_row["break1_position_end"] == 0 and std_row["break1_position_start"] == 1:
         # addresses cases where pos = 0 and telomeric BND alt syntax https://github.com/bcgsc/mavis/issues/294
-        std_row.update({'break1_position_end': 1})
-    if std_row['break2_position_end'] == 0 and std_row['break2_position_start'] == 1:
-        std_row.update({'break2_position_end': 1})
+        std_row.update({"break1_position_end": 1})
+    if std_row["break2_position_end"] == 0 and std_row["break2_position_start"] == 1:
+        std_row.update({"break2_position_end": 1})
 
     if is_intrachromosomal and (
-        std_row['break2_position_start'] > std_row['break2_position_end']
-        or std_row['break1_position_start'] > std_row['break1_position_end']
+        std_row["break2_position_start"] > std_row["break2_position_end"]
+        or std_row["break1_position_start"] > std_row["break1_position_end"]
     ):
-        if 'event_type' in std_row and std_row['event_type'] != 'BND':
+        if "event_type" in std_row and std_row["event_type"] != "BND":
             raise ValueError(
                 f'Improper entry. One of the following breakpoints start is greater than breakpoint end: Breakpoint1_start: {std_row["break1_position_start"]}, Breakpoint1_end: {std_row["break1_position_end"]} Breakpoint2_start: {std_row["break2_position_start"]}, Breakpoint2_end: {std_row["break2_position_end"]} This call has been dropped.'
             )
 
     if (
-        None not in (record.pos, record.info.get('END'))
-        and record.pos > record.info.get('END')
+        None not in (record.pos, record.info.get("END"))
+        and record.pos > record.info.get("END")
         and is_intrachromosomal
     ):
         raise ValueError(
             f'Improper entry. Starting position ({record.pos}) cannot be greater than ending position ({record.info.get("END")}). This call has been dropped.'
         )
+
 
 def convert_file(input_file: str, file_type: str, log):
     """process a VCF file
