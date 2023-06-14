@@ -3,7 +3,7 @@ import re
 
 from setuptools import find_packages, setup
 
-VERSION = '2.2.10'
+VERSION = '2.2.11'
 
 
 def parse_md_readme():
@@ -110,7 +110,7 @@ setup(
         'tools': ['pyensembl', 'simplejson'],
     },
     tests_require=TEST_REQS,
-    setup_requires=['pip>=9.0.0', 'setuptools>=36.0.0,<58'],
+    setup_requires=['pip>=9.0.0'],
     python_requires='>=3.2',
     author='Caralyn Reisle',
     author_email='creisle@bcgsc.ca',
