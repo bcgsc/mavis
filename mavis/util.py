@@ -193,7 +193,9 @@ def mkdirp(dirname):
     LOG("creating output directory: '{}'".format(dirname))
     try:
         os.makedirs(dirname)
-    except OSError as exc:  # Python >2.5: http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+    except (
+        OSError
+    ) as exc:  # Python >2.5: http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
         if exc.errno == errno.EEXIST and os.path.isdir(dirname):
             pass
         else:

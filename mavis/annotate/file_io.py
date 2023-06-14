@@ -472,7 +472,6 @@ def load_templates(*filepaths):
 
 
 class ReferenceFile:
-
     CACHE = {}  # store loaded file to avoid re-loading
 
     LOAD_FUNCTIONS = {

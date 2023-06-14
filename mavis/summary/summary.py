@@ -57,6 +57,7 @@ def filter_by_call_method(bpp_list):
     Filters a set of breakpoint pairs to returns the call with the most evidence.
     Prefers contig evidence over spanning over split over flanking, etc.
     """
+
     # ranking scores of the methods (more is better)
     def sort_key(bpp):
         key = [
