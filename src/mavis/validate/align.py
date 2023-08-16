@@ -563,7 +563,10 @@ def select_contig_alignments(evidence, reads_by_query):
         std_reads = set()
         alignments = []
         for raw_read in reads_by_query.get(contig.seq, []):
-            if raw_read.reference_name != evidence.break1.chr and raw_read.reference_name != evidence.break2.chr:
+            if (
+                raw_read.reference_name != evidence.break1.chr
+                and raw_read.reference_name != evidence.break2.chr
+            ):
                 continue
             read = evidence.standardize_read(raw_read)
             read.cigar = _cigar.merge_internal_events(
