@@ -110,13 +110,15 @@ def main(inputs: List[str], output: str, config: Dict, start_time=int(time.time(
             if match:
                 netsize_min = abs(int(match.group(1)))
                 netsize_max = abs(int(match.group(2)))
+                if pd.isnull(bpp.repeat_count):
+                    bpp.data["repeat_count"] = 0
 
                 if all(
                     [
                         int(bpp.repeat_count) + 1
                         >= HOMOPOLYMER_MIN_LENGTH,  # repeat count is 1 less than the length of the repeat
                         netsize_min == netsize_max and netsize_min == 1,
-                        PROTOCOL.GENOME not in bpp.data.get(COLUMNS.pairing, ''),
+                        PROTOCOL.GENOME not in (bpp.data.get(COLUMNS.pairing, '') or ''),
                     ]
                 ):
                     bpp.data[COLUMNS.filter_comment] = 'homopolymer filter'

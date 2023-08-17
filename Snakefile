@@ -11,7 +11,8 @@ from mavis_config import (
 from mavis_config.constants import SUBCOMMAND
 
 # env variable mainly for CI/CD
-CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://bcgsc/mavis:v3.1.1')
+CONTAINER = os.environ.get('SNAKEMAKE_CONTAINER', 'docker://bcgsc/mavis:v3.1.2')
+
 MAX_TIME = 57600
 DEFAULT_MEMORY_MB = 16000
 
@@ -38,7 +39,7 @@ except Exception as err:
     raise WorkflowError(short_msg)
 
 # ADD bindings for singularity
-workflow.singularity_args = f'-B {",".join(get_singularity_bindings(config))}'
+workflow._singularity_args = f'-B {",".join(get_singularity_bindings(config))}'
 
 libraries = sorted(list(config['libraries']))
 VALIDATE_OUTPUT = output_dir('{library}/validate/batch-{job_id}/validation-passed.tab')
