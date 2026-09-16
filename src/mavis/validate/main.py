@@ -224,7 +224,7 @@ def main(
             calls = call_events(evidence)
             event_calls.extend(calls)
         except UserWarning as err:
-            logger.warning('error in calling events {repr(err)}')
+            logger.warning(f'error in calling events {repr(err)}')
             failure_comment = str(err)
 
         if not calls:

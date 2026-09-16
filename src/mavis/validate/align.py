@@ -559,14 +559,18 @@ def select_contig_alignments(evidence, reads_by_query):
             ]
         )
 
+    bp1_chr = re.sub('^chr', '', evidence.break1.chr)
+    bp2_chr = re.sub('^chr', '', evidence.break2.chr)
+    
     for contig in evidence.contigs:
         std_reads = set()
         alignments = []
         for raw_read in reads_by_query.get(contig.seq, []):
+            raw_chr = re.sub('^chr','', raw_read.reference_name)
             if (
-                raw_read.reference_name != evidence.break1.chr
-                and raw_read.reference_name != evidence.break2.chr
-            ):
+                raw_chr != bp1_chr 
+                and raw_chr != bp2_chr
+            ): 
                 continue
             read = evidence.standardize_read(raw_read)
             read.cigar = _cigar.merge_internal_events(
